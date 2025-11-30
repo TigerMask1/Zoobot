@@ -237,11 +237,11 @@ Bragging rights on leaderboard
 ### Trust Factor 3: Anti-Cheat & Fair Play
 **Current:** No protection against exploit farming
 **Required:**
-- [ ] Rate limiting (10 commands/5 seconds per player)
-- [ ] Suspicious activity detection (1M coins in 1 hour = flag)
-- [ ] Transaction logging (admins can see all trades/economy changes)
-- [ ] Rollback capability (restore player balances if hacked)
-- [ ] Ban system (permanently disable cheaters)
+- [x] Rate limiting (10 commands/5 seconds per player)
+- [x] Suspicious activity detection (1M coins in 1 hour = flag)
+- [x] Transaction logging (admins can see all trades/economy changes)
+- [x] Rollback capability (restore player balances if hacked)
+- [x] Ban system (permanently disable cheaters)
 
 **Cost:** 6-8 hours development
 
@@ -261,10 +261,10 @@ Bragging rights on leaderboard
 **Opportunity:** Add moderation features to become "all-in-one bot"
 
 **Quick wins:**
-- [ ] `!warn @user reason` - Add warnings to users
-- [ ] `!ban @user reason` - Ban users from ZooBot economy
-- [ ] `!clear 50` - Delete last 50 messages
-- [ ] `!announce message` - Broadcast to all channels
+- [x] `!warn @user reason` - Add warnings to users (Bot Admin only)
+- [x] `!ban @user reason` - Ban users from ZooBot economy (Bot Admin only)
+- [x] `!clear 50` - Delete last 50 messages (Bot Admin only)
+- [x] `!announce message` - Broadcast to all channels (Bot Admin only)
 
 **Impact:** Competes with MEE6/Dyno, keeps servers on ZooBot
 
