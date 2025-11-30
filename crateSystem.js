@@ -3,8 +3,9 @@ const { assignMovesToCharacter, calculateBaseHP } = require('./battleUtils.js');
 const eventSystem = require('./eventSystem.js');
 const { checkTaskProgress, completePersonalizedTask, initializePersonalizedTaskData } = require('./personalizedTaskSystem.js');
 const { getEmojiForCharacter } = require('./emojiAssetManager.js');
-const { getCrateEligibleCharacters, isCustomCharacter, recordCustomCharacterObtained } = require('./customCharacterManager.js');
+const { getCrateEligibleCharacters, isCustomCharacter, recordCustomCharacterObtained, getCustomCharacterAbility, getCustomCharacterSpecialMove } = require('./customCharacterManager.js');
 const { getSpecialMoveForCharacter } = require('./moves.js');
+const { getCharacterAbilityAsync } = require('./characterAbilities.js');
 
 const CRATE_TYPES = {
   bronze: {
@@ -203,6 +204,22 @@ async function openCrate(data, userId, crateType, client = null) {
         characterId: randomChar.characterId || null
       };
       
+      if (randomChar.isCustom) {
+        const customAbility = await getCustomCharacterAbility(randomChar.name);
+        const customSpecialMove = await getCustomCharacterSpecialMove(randomChar.name);
+        if (customAbility) {
+          newCharacter.ability = customAbility;
+        }
+        if (customSpecialMove) {
+          newCharacter.specialMove = customSpecialMove;
+        }
+      } else {
+        const builtInAbility = await getCharacterAbilityAsync(randomChar.name);
+        if (builtInAbility) {
+          newCharacter.ability = builtInAbility;
+        }
+      }
+      
       user.characters.push(newCharacter);
       
       user.questProgress.charsFromCrates = (user.questProgress.charsFromCrates || 0) + 1;
@@ -322,6 +339,22 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
           isCustom: randomChar.isCustom || false,
           characterId: randomChar.characterId || null
         };
+        
+        if (randomChar.isCustom) {
+          const customAbility = await getCustomCharacterAbility(randomChar.name);
+          const customSpecialMove = await getCustomCharacterSpecialMove(randomChar.name);
+          if (customAbility) {
+            newCharacter.ability = customAbility;
+          }
+          if (customSpecialMove) {
+            newCharacter.specialMove = customSpecialMove;
+          }
+        } else {
+          const builtInAbility = await getCharacterAbilityAsync(randomChar.name);
+          if (builtInAbility) {
+            newCharacter.ability = builtInAbility;
+          }
+        }
         
         user.characters.push(newCharacter);
         charactersGained.push({ 
