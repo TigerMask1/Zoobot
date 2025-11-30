@@ -683,13 +683,37 @@ async function updateCustomCharacterStats(characterId, statsUpdate) {
   }
 }
 
-async function addSkinToCustomCharacter(characterId, skinName, skinUrl) {
+async function findCharacterIdByName(characterIdOrName) {
   const collection = await getApprovedCharactersCollection();
+  
+  // Try to find by characterId first
+  let character = await collection.findOne({ characterId: characterIdOrName.toUpperCase() });
+  
+  if (!character) {
+    // Try to find by character name
+    character = await collection.findOne({ 
+      name: { $regex: new RegExp(`^${characterIdOrName}$`, 'i') }
+    });
+  }
+  
+  return character ? character.characterId : null;
+}
+
+async function addSkinToCustomCharacter(characterIdOrName, skinName, skinUrl) {
+  const collection = await getApprovedCharactersCollection();
+  
+  // Resolve name/ID to actual characterId
+  const characterId = await findCharacterIdByName(characterIdOrName);
+  
+  if (!characterId) {
+    return { success: false, error: `Custom character **${characterIdOrName}** not found. Use character ID (CS00001) or name (Shadow).` };
+  }
+  
   await collection.updateOne(
     { characterId: characterId },
     { $set: { [`skins.${skinName}`]: skinUrl } }
   );
-  return { success: true };
+  return { success: true, characterId: characterId };
 }
 
 async function removeSkinFromCustomCharacter(characterId, skinName) {
@@ -810,6 +834,7 @@ module.exports = {
   getAllApprovedCharacters,
   getApprovedCharacter,
   findApprovedCharacterByName,
+  findCharacterIdByName,
   deleteCustomCharacter,
   editCustomCharacter,
   updateCustomCharacterStats,

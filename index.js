@@ -5924,23 +5924,23 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const customSkinCharId = args[0];
-        const customSkinName = args[1];
-        const customSkinUrlArg = args[2];
+        const customSkinCharIdOrName = args.join(' ').split(' ').slice(0, -2).join(' ');
+        const customSkinName = args[args.length - 2];
+        const customSkinUrlArg = args[args.length - 1];
         
-        if (!customSkinCharId || !customSkinName || !customSkinUrlArg) {
-          await message.reply('❌ Usage: `!addcustomskin <characterId> <skinName> <imageUrl>`');
+        if (!customSkinCharIdOrName || !customSkinName || !customSkinUrlArg) {
+          await message.reply('❌ Usage: `!addcustomskin <character_id_or_name> <skinName> <imageUrl>`\n**Examples:**\n• By ID: `!addcustomskin CS00001 Galaxy https://example.com/image.png`\n• By name: `!addcustomskin Shadow Galaxy https://example.com/image.png`');
           return;
         }
         
-        const customSkinResult = await addSkinToCustomCharacter(customSkinCharId.toUpperCase(), customSkinName, customSkinUrlArg);
+        const customSkinResult = await addSkinToCustomCharacter(customSkinCharIdOrName, customSkinName, customSkinUrlArg);
         
         if (!customSkinResult.success) {
-          await message.reply(`❌ ${customSkinResult.error || 'Failed to add skin'}`);
+          await message.reply(`❌ ${customSkinResult.error}`);
           return;
         }
         
-        await message.reply(`✅ Added skin **${customSkinName}** to custom character \`${customSkinCharId.toUpperCase()}\`!`);
+        await message.reply(`✅ Added skin **${customSkinName}** to custom character!`);
         break;
       
       case 'backfillabilities':
