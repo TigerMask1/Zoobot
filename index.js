@@ -83,6 +83,7 @@ const {
   rejectSubmission,
   getAllApprovedCharacters,
   getApprovedCharacter,
+  findApprovedCharacterByName,
   deleteCustomCharacter,
   editCustomCharacter,
   addSkinToCustomCharacter,
@@ -2367,7 +2368,7 @@ client.on('messageCreate', async (message) => {
         
         // Check custom characters if not found in main roster
         if (!foundChar) {
-          const customChar = await getApprovedCharacter(charToGrant);
+          const customChar = await findApprovedCharacterByName(charToGrant);
           if (customChar) {
             foundChar = customChar;
           } else {
@@ -2438,7 +2439,7 @@ client.on('messageCreate', async (message) => {
         
         let foundSkinChar = CHARACTERS.find(c => c.name.toLowerCase() === skinCharName.toLowerCase());
         if (!foundSkinChar) {
-          const customChar = await getApprovedCharacter(skinCharName);
+          const customChar = await findApprovedCharacterByName(skinCharName);
           if (customChar) {
             foundSkinChar = customChar;
           } else {
@@ -2484,7 +2485,7 @@ client.on('messageCreate', async (message) => {
         
         let foundUpdateChar = CHARACTERS.find(c => c.name.toLowerCase() === updateCharName.toLowerCase());
         if (!foundUpdateChar) {
-          const customChar = await getApprovedCharacter(updateCharName);
+          const customChar = await findApprovedCharacterByName(updateCharName);
           if (customChar) {
             foundUpdateChar = customChar;
           } else {
@@ -2632,7 +2633,7 @@ client.on('messageCreate', async (message) => {
         
         let foundDeleteChar = CHARACTERS.find(c => c.name.toLowerCase() === deleteCharName.toLowerCase());
         if (!foundDeleteChar) {
-          const customChar = await getApprovedCharacter(deleteCharName);
+          const customChar = await findApprovedCharacterByName(deleteCharName);
           if (customChar) {
             foundDeleteChar = customChar;
           } else {
@@ -2716,7 +2717,7 @@ client.on('messageCreate', async (message) => {
         
         let foundUploadChar = CHARACTERS.find(c => c.name.toLowerCase() === uploadCharName.toLowerCase());
         if (!foundUploadChar) {
-          const customChar = await getApprovedCharacter(uploadCharName);
+          const customChar = await findApprovedCharacterByName(uploadCharName);
           if (customChar) {
             foundUploadChar = customChar;
           } else {
@@ -3147,7 +3148,7 @@ client.on('messageCreate', async (message) => {
         // Check custom characters if not found in main roster
         let charData = genCharData;
         if (!charData) {
-          const customChar = await getApprovedCharacter(infoCharName);
+          const customChar = await findApprovedCharacterByName(infoCharName);
           if (customChar) {
             charData = customChar;
           } else {
