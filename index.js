@@ -2395,14 +2395,15 @@ client.on('messageCreate', async (message) => {
         
         let grantedMoves;
         if (foundChar.isCustom) {
-          // Custom characters already have special move stored
-          const baseDamage = foundChar.specialMove.damage;
+          // Custom characters use their special move + get tier moves from the move pool based on ST
+          const { getMovesForST } = require('./moves.js');
+          const tierMoves = getMovesForST(grantedST);
+          const shuffled = [...tierMoves].sort(() => Math.random() - 0.5);
+          const selectedMoves = shuffled.slice(0, 2);
+          
           grantedMoves = {
             special: foundChar.specialMove,
-            tierMoves: [
-              { name: `${foundChar.specialMove.name} I`, damage: Math.floor(baseDamage * 0.7), energyCost: 25 },
-              { name: `${foundChar.specialMove.name} II`, damage: Math.floor(baseDamage * 0.5), energyCost: 15 }
-            ]
+            tierMoves: selectedMoves
           };
         } else {
           grantedMoves = assignMovesToCharacter(foundChar.name, grantedST);
