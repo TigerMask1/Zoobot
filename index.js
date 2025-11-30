@@ -3142,7 +3142,12 @@ client.on('messageCreate', async (message) => {
           // Get ability - custom chars store it directly, others use getAbilityDescription
           let abilityDesc = getAbilityDescription(userInfoChar.name);
           if (!abilityDesc && userInfoChar.ability) {
-            abilityDesc = `${userInfoChar.ability.emoji} ${userInfoChar.ability.name}\n${userInfoChar.ability.description}`;
+            const ab = userInfoChar.ability;
+            abilityDesc = `${ab.emoji || '⭐'} **${ab.name || 'Unknown Ability'}**\n${ab.description || 'No description'}`;
+          }
+          if (!abilityDesc) {
+            // Fallback for missing abilities
+            abilityDesc = '⚠️ Run `!backfillabilities` to restore ability data';
           }
           
           const infoEmbed = new EmbedBuilder()
@@ -3151,7 +3156,7 @@ client.on('messageCreate', async (message) => {
             .setImage(infoSkinUrl)
             .setDescription(`**Level:** ${userInfoChar.level}\n**ST:** ${userInfoChar.st}%\n**HP:** ${userInfoChar.baseHp}\n**Tokens:** ${userInfoChar.tokens}\n**Skin:** ${userInfoChar.currentSkin || 'default'}`)
             .addFields(
-              { name: '✨ Ability', value: abilityDesc, inline: false },
+              { name: '✨ Ability', value: abilityDesc || 'No ability data', inline: false },
               { name: '⚔️ Moves', value: movesList, inline: false },
               { name: '📊 Battle Info', value: `Energy system: Moves cost ⚡\nCritical hits: 15% base chance\nSpecial moves cost more energy but deal more damage`, inline: false }
             );
@@ -3175,7 +3180,11 @@ client.on('messageCreate', async (message) => {
           }
         }
         
-        const genAbility = await getCharacterAbilityAsync(charData.name);
+        let genAbility = await getCharacterAbilityAsync(charData.name);
+        // For custom characters, use stored ability from MongoDB
+        if (!genAbility && charData.isCustom && charData.ability) {
+          genAbility = charData.ability;
+        }
         const genSkinUrl = await getSkinUrl(charData.name, 'default');
         
         const genInfoEmbed = new EmbedBuilder()
@@ -3188,8 +3197,8 @@ client.on('messageCreate', async (message) => {
         
         if (genAbility) {
           genInfoEmbed.addFields({
-            name: `${genAbility.emoji} Special Ability: ${genAbility.name}`,
-            value: genAbility.description,
+            name: `${genAbility.emoji} ${genAbility.name || 'Special Ability'}`,
+            value: genAbility.description || 'No description',
             inline: false
           });
         }
@@ -5940,22 +5949,28 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        let updatedCount = 0;
+        let backfillCount = 0;
+        let customCharCount = 0;
         const allCustomChars = await getAllApprovedCharacters();
         
-        for (const user of Object.values(data.users)) {
-          if (!user.characters) continue;
-          for (const char of user.characters) {
-            const customChar = allCustomChars.find(c => c.name === char.name && c.isCustom);
-            if (customChar && !char.ability && customChar.ability) {
-              char.ability = customChar.ability;
-              updatedCount++;
+        // Backfill abilities to existing character owners
+        for (const userEntry of Object.values(data.users)) {
+          if (!userEntry.characters) continue;
+          for (const ownedChar of userEntry.characters) {
+            const mongoChar = allCustomChars.find(c => c.name === ownedChar.name && c.isCustom);
+            if (mongoChar) {
+              customCharCount++;
+              // Update if missing ability
+              if (!ownedChar.ability && mongoChar.ability) {
+                ownedChar.ability = mongoChar.ability;
+                backfillCount++;
+              }
             }
           }
         }
         
         await saveDataImmediate(data);
-        await message.reply(`✅ Backfill complete! Updated **${updatedCount}** characters with ability data.`);
+        await message.reply(`✅ Backfill complete!\n**Custom chars found:** ${customCharCount}\n**Updated with ability data:** ${backfillCount}`);
         break;
         
       default:
