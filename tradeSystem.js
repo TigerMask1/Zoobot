@@ -1,6 +1,9 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { saveData } = require('./dataManager.js');
 const { checkTaskProgress, completePersonalizedTask, initializePersonalizedTaskData } = require('./personalizedTaskSystem.js');
+const { trackChallengeProgress } = require('./weeklyChallengeSystem.js');
+const { checkAchievements } = require('./achievementSystem.js');
+const { recordEvent } = require('./analyticsSystem.js');
 
 const activeTrades = new Map();
 
@@ -184,6 +187,9 @@ async function completeTrade(trade, data, channel) {
   initiatorData.questProgress.tradesCompleted = (initiatorData.questProgress.tradesCompleted || 0) + 1;
   initiatorData.lastActivity = Date.now();
   
+  trackChallengeProgress(initiatorData, 'tradesCompleted', 1);
+  checkAchievements(initiatorData);
+  
   const ptDataInitiator = initializePersonalizedTaskData(initiatorData);
   if (ptDataInitiator.taskProgress.tradesCompleted !== undefined || ptDataInitiator.taskProgress.anyTrade !== undefined) {
     if (ptDataInitiator.taskProgress.tradesCompleted !== undefined) {
@@ -221,6 +227,13 @@ async function completeTrade(trade, data, channel) {
   if (!receiverData.questProgress) receiverData.questProgress = {};
   receiverData.questProgress.tradesCompleted = (receiverData.questProgress.tradesCompleted || 0) + 1;
   receiverData.lastActivity = Date.now();
+  
+  trackChallengeProgress(receiverData, 'tradesCompleted', 1);
+  checkAchievements(receiverData);
+  
+  if (channel.guild) {
+    recordEvent(data, channel.guild.id, 'tradesCompleted', 1, trade.initiator);
+  }
   
   const ptDataReceiver = initializePersonalizedTaskData(receiverData);
   if (ptDataReceiver.taskProgress.tradesCompleted !== undefined || ptDataReceiver.taskProgress.anyTrade !== undefined) {

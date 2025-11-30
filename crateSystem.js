@@ -2,6 +2,9 @@ const characterManager = require('./characterManager.js');
 const { assignMovesToCharacter, calculateBaseHP } = require('./battleUtils.js');
 const eventSystem = require('./eventSystem.js');
 const { checkTaskProgress, completePersonalizedTask, initializePersonalizedTaskData } = require('./personalizedTaskSystem.js');
+const { trackChallengeProgress } = require('./weeklyChallengeSystem.js');
+const { checkAchievements } = require('./achievementSystem.js');
+const { recordEvent } = require('./analyticsSystem.js');
 const { getEmojiForCharacter } = require('./emojiAssetManager.js');
 const { getServerGame, DEFAULT_GAME } = require('./serverConfigManager.js');
 
@@ -129,6 +132,13 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
   if (!user.questProgress) user.questProgress = {};
   user.questProgress.cratesOpened = (user.questProgress.cratesOpened || 0) + 1;
   user.lastActivity = Date.now();
+  
+  trackChallengeProgress(user, 'cratesOpened', 1);
+  checkAchievements(user);
+  
+  if (serverId) {
+    recordEvent(data, serverId, 'cratesOpened', 1, userId);
+  }
   
   if (client) {
     const ptData = initializePersonalizedTaskData(user);
@@ -319,6 +329,13 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
   if (!user.questProgress) user.questProgress = {};
   user.questProgress.cratesOpened = (user.questProgress.cratesOpened || 0) + quantity;
   user.lastActivity = Date.now();
+  
+  trackChallengeProgress(user, 'cratesOpened', quantity);
+  checkAchievements(user);
+  
+  if (serverId) {
+    recordEvent(data, serverId, 'cratesOpened', quantity, userId);
+  }
   
   if (crateType === 'tyrant') {
     user.questProgress.tyrantCratesOpened = (user.questProgress.tyrantCratesOpened || 0) + quantity;

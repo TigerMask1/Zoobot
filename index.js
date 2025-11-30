@@ -101,6 +101,11 @@ const {
   sendCustomTask
 } = require('./personalizedTaskSystem.js');
 const { getHistory, getHistorySummary, formatHistory } = require('./historySystem.js');
+const { claimDaily, formatStreakDisplay } = require('./dailyRewardSystem.js');
+const { displayGlobalLeaderboard, handleGlobalLeaderboardButton } = require('./globalLeaderboardSystem.js');
+const { displayChallenges, claimChallenge, handleChallengeButton, trackChallengeProgress } = require('./weeklyChallengeSystem.js');
+const { displayAchievements, checkAchievements, formatAchievementBadges, notifyNewAchievement } = require('./achievementSystem.js');
+const { displayServerStats, recordEvent } = require('./analyticsSystem.js');
 const { 
   initializeClanData,
   getClan,
@@ -912,6 +917,10 @@ client.on('interactionCreate', async (interaction) => {
       await handleDiceClashButton(interaction, data);
     } else if (interaction.customId.startsWith('door_')) {
       await handleDoorButton(interaction, data);
+    } else if (interaction.customId.startsWith('globalboard_')) {
+      await handleGlobalLeaderboardButton(interaction, data);
+    } else if (interaction.customId.startsWith('challenge_')) {
+      await handleChallengeButton(interaction, data);
     } else if (interaction.customId.startsWith('auction_')) {
       if (!interaction.guild.auctionMenus) {
         interaction.guild.auctionMenus = new Map();
@@ -1570,7 +1579,9 @@ client.on('messageCreate', async (message) => {
             { name: '💎 Gems', value: `${user.gems}`, inline: true },
             { name: '🏆 Trophies', value: `${user.trophies || 200}`, inline: true },
             { name: '🎮 Characters', value: `${user.characters.length}/51`, inline: true },
-            { name: '💬 Messages', value: `${user.messageCount || 0}`, inline: true }
+            { name: '💬 Messages', value: `${user.messageCount || 0}`, inline: true },
+            { name: '🔥 Daily Streak', value: formatStreakDisplay(user), inline: true },
+            { name: '🏅 Badges', value: formatAchievementBadges(user), inline: true }
           );
         
         if (user.selectedCharacter) {
@@ -2585,6 +2596,12 @@ client.on('messageCreate', async (message) => {
               data.users[userId].questProgress.dropsCaught = (data.users[userId].questProgress.dropsCaught || 0) + 1;
               data.users[userId].lastActivity = Date.now();
               
+              trackChallengeProgress(data.users[userId], 'dropsCaught', 1);
+              checkAchievements(data.users[userId]);
+              if (message.guild) {
+                recordEvent(data, message.guild.id, 'dropsClaimed', 1, userId);
+              }
+              
               const ptData = initializePersonalizedTaskData(data.users[userId]);
               if (ptData.taskProgress.dropsCaught !== undefined) {
                 const completedTask = checkTaskProgress(data.users[userId], 'dropsCaught', 1);
@@ -2620,6 +2637,12 @@ client.on('messageCreate', async (message) => {
             if (!data.users[userId].questProgress) data.users[userId].questProgress = {};
             data.users[userId].questProgress.dropsCaught = (data.users[userId].questProgress.dropsCaught || 0) + 1;
             data.users[userId].lastActivity = Date.now();
+            
+            trackChallengeProgress(data.users[userId], 'dropsCaught', 1);
+            checkAchievements(data.users[userId]);
+            if (message.guild) {
+              recordEvent(data, message.guild.id, 'dropsClaimed', 1, userId);
+            }
             
             const ptData2 = initializePersonalizedTaskData(data.users[userId]);
             if (ptData2.taskProgress.dropsCaught !== undefined) {
@@ -4072,36 +4095,58 @@ client.on('messageCreate', async (message) => {
         break;
         
       case 'daily':
-        const now = new Date();
-        const lastClaim = data.users[userId].lastDailyClaim ? new Date(data.users[userId].lastDailyClaim) : null;
+        await claimDaily(message, data);
+        break;
         
-        if (lastClaim) {
-          const timeDiff = now - lastClaim;
-          const hoursDiff = timeDiff / (1000 * 60 * 60);
-          
-          if (hoursDiff < 24) {
-            const hoursLeft = Math.ceil(24 - hoursDiff);
-            await message.reply(`❌ You already claimed your daily reward! Come back in **${hoursLeft} hours**.`);
-            return;
-          }
+      case 'globalboard':
+      case 'gboard':
+      case 'globalleaderboard':
+      case 'glb':
+        if (!data.users[userId] || !data.users[userId].started) {
+          await message.reply('❌ Start your journey with `!start` first!');
+          return;
         }
+        await displayGlobalLeaderboard(message, args, data);
+        break;
         
-        const trophyReward = 15;
-        const coinReward = Math.floor(Math.random() * 91) + 10;
-        const gemReward = Math.floor(Math.random() * 3) + 1;
+      case 'challenges':
+      case 'challenge':
+      case 'weekly':
+      case 'weeklychallenges':
+        if (!data.users[userId] || !data.users[userId].started) {
+          await message.reply('❌ Start your journey with `!start` first!');
+          return;
+        }
+        await displayChallenges(message, data);
+        break;
         
-        data.users[userId].trophies = (data.users[userId].trophies || 200) + trophyReward;
-        data.users[userId].coins += coinReward;
-        data.users[userId].gems += gemReward;
-        data.users[userId].lastDailyClaim = now.toISOString();
-        await saveDataImmediate(data);
+      case 'claimchallenge':
+      case 'claimchal':
+        if (!data.users[userId] || !data.users[userId].started) {
+          await message.reply('❌ Start your journey with `!start` first!');
+          return;
+        }
+        await claimChallenge(message, args, data);
+        break;
         
-        const dailyEmbed = new EmbedBuilder()
-          .setColor('#FFD700')
-          .setTitle('🎁 Daily Reward Claimed!')
-          .setDescription(`<@${userId}> claimed their daily rewards!\n\n**Rewards:**\n🏆 ${trophyReward} Trophies\n💰 ${coinReward} Coins\n💎 ${gemReward} Gems\n\nCome back tomorrow for more!`);
+      case 'achievements':
+      case 'badges':
+      case 'achieve':
+        if (!data.users[userId] || !data.users[userId].started) {
+          await message.reply('❌ Start your journey with `!start` first!');
+          return;
+        }
+        await displayAchievements(message, data);
+        break;
         
-        await message.reply({ embeds: [dailyEmbed] });
+      case 'serverstats':
+      case 'stats':
+      case 'analytics':
+        if (!isZooAdmin(message.member) && !isBotAdmin(userId) && !isSuperAdmin(userId)) {
+          await message.reply('❌ Only ZooAdmins can view server stats!');
+          return;
+        }
+        await displayServerStats(message, data);
         break;
         
       case 'coinduel':
@@ -4928,6 +4973,8 @@ client.on('messageCreate', async (message) => {
             { name: '📦 Crates & Shop', value: '`!crate [type]` - Open crates\n`!pickcrate <type>` - Choose crate to open\n`!opencrate` - Open selected crate\n`!buycrate <type>` - Buy crates' },
             { name: '💱 Trading', value: '`!t @user` - Trade with users' },
             { name: '📜 Quests & Tasks', value: '`!quests [page]` - View quests\n`!quest <id>` - Quest details\n`!claim <id>` - Claim quest rewards\n`!ptoggle on/off` - Toggle personalized tasks' },
+            { name: '🔥 Daily & Challenges', value: '`!daily` - Claim daily streak rewards\n`!challenges` - View weekly challenges\n`!claimchallenge <id>` - Claim challenge rewards' },
+            { name: '🏅 Achievements & Stats', value: '`!achievements` - View your badges\n`!globalboard [type]` - Global rankings\n`!serverstats` - Server analytics (Admin)' },
             { name: '🔷 ST Boosters', value: '`!shards` - View shard info\n`!craft` - Craft booster (8 shards)\n`!boost <character>` - Reroll character ST' },
             { name: '📬 Mail & News', value: '`!mail [page]` - View mailbox\n`!claimmail <#>` - Claim mail rewards\n`!clearmail` - Clear claimed mail\n`!news` - Latest bot news' },
             { name: '🏆 Leaderboards & Rankings', value: '`!leaderboard <type>` - Top 10 rankings\nTypes: coins, gems, battles, collection, trophies' },

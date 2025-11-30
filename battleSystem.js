@@ -6,6 +6,9 @@ const { MOVE_EFFECTS, applyEffect, processEffects, hasEffect, getEffectsDisplay,
 const { getUserBattleItems, useItem } = require('./itemsSystem.js');
 const eventSystem = require('./eventSystem.js');
 const { checkTaskProgress, completePersonalizedTask, initializePersonalizedTaskData } = require('./personalizedTaskSystem.js');
+const { trackChallengeProgress } = require('./weeklyChallengeSystem.js');
+const { checkAchievements } = require('./achievementSystem.js');
+const { recordEvent } = require('./analyticsSystem.js');
 
 const activeBattles = new Map();
 const battleInvites = new Map();
@@ -1056,6 +1059,13 @@ async function endBattle(battle, channel, data, reason, winner = null) {
     data.users[winner].questProgress.battlesWon = (data.users[winner].questProgress.battlesWon || 0) + 1;
     data.users[winner].questProgress.totalBattles = (data.users[winner].questProgress.totalBattles || 0) + 1;
     data.users[winner].lastActivity = Date.now();
+    
+    trackChallengeProgress(data.users[winner], 'battlesWon', 1);
+    checkAchievements(data.users[winner]);
+    
+    if (channel.guild) {
+      recordEvent(data, channel.guild.id, 'battlesPlayed', 1, winner);
+    }
     
     const ptDataWinner = initializePersonalizedTaskData(data.users[winner]);
     if (ptDataWinner.taskProgress.battlesWon !== undefined) {

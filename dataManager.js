@@ -61,6 +61,21 @@ function backfillUserData(data) {
       needsSave = true;
     }
     
+    if (user.dailyStreak === undefined) {
+      user.dailyStreak = 0;
+      needsSave = true;
+    }
+    
+    if (user.highestDailyStreak === undefined) {
+      user.highestDailyStreak = 0;
+      needsSave = true;
+    }
+    
+    if (user.totalDailyClaims === undefined) {
+      user.totalDailyClaims = 0;
+      needsSave = true;
+    }
+    
     if (user.questProgress === undefined) {
       user.questProgress = {
         dropsCaught: 0,
