@@ -2393,7 +2393,19 @@ client.on('messageCreate', async (message) => {
         const wasFirstChar = data.users[charUser.id].characters.length === 0;
         const pendingToGrant = wasFirstChar ? (data.users[charUser.id].pendingTokens || 0) : 0;
         
-        const grantedMoves = assignMovesToCharacter(foundChar.name, grantedST);
+        let grantedMoves;
+        if (foundChar.isCustom) {
+          // Custom characters already have special move stored
+          grantedMoves = {
+            special: foundChar.specialMove,
+            tierMoves: [
+              { name: foundChar.specialMove.name, damage: Math.floor(foundChar.specialMove.damage * 0.7), energyCost: 25 },
+              { name: foundChar.specialMove.name, damage: Math.floor(foundChar.specialMove.damage * 0.5), energyCost: 15 }
+            ]
+          };
+        } else {
+          grantedMoves = assignMovesToCharacter(foundChar.name, grantedST);
+        }
         const grantedHP = calculateBaseHP(grantedST);
         
         data.users[charUser.id].characters.push({
@@ -5594,23 +5606,27 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        if (args.length < 6) {
+        // Parse using pipe separator
+        const fullInput = message.content.slice(PREFIX.length + 10).trim(); // Remove !submitchar
+        const charParts = fullInput.split('|').map(p => p.trim());
+        
+        if (charParts.length < 6) {
           const submitHelpEmbed = new EmbedBuilder()
             .setColor('#00D9FF')
             .setTitle('📝 Submit a Custom Character')
-            .setDescription(`Create your own character for the game!\n\n**Usage:**\n\`!submitchar <name> <emoji> <special_move_name> <damage> <ability_template> <ability_value> [image_url]\`\n\n**Example:**\n\`!submitchar Shadow 🐺 Shadow Strike 90 damage_boost 15 https://example.com/shadow.png\`\n\n**Parameters:**\n• **name** - Character name (2-15 chars)\n• **emoji** - Character emoji (standard or custom)\n• **special_move_name** - Unique special move\n• **damage** - Move damage (60-120)\n• **ability_template** - From \`!abilities\`\n• **ability_value** - Within template range\n• **image_url** - **REQUIRED** - Attach an image or provide URL\n\n**Obtainable Types:** crate, drop, both (default: crate)\n\n**How to provide image:**\n1. **Attach:** Upload an image, then use \`!submitchar <name> <emoji> ... ability value\`\n2. **Link:** Add image URL at the end\n\nSubmissions are reviewed by admins before going live!`)
+            .setDescription(`Create your own character using pipe separators!\n\n**Usage:**\n\`!submitchar Name | Emoji | Move Name | Damage | Template | Value | [Image URL]\`\n\n**Example:**\n\`!submitchar Shadow | 🐺 | Shadow Strike | 90 | damage_boost | 15 | https://example.com/shadow.png\`\n\n**Parameters:**\n• **Name** - Character name (2-15 chars)\n• **Emoji** - Character emoji\n• **Move Name** - Your special move name\n• **Damage** - Move damage (60-120)\n• **Template** - Ability template ID from \`!abilities\`\n• **Value** - Ability value (within template range)\n• **Image URL** - **REQUIRED** - Attach an image OR provide URL\n\n**Example with attachment:**\nUpload image → \`!submitchar Shadow | 🐺 | Shadow Strike | 90 | damage_boost | 15\`\n\n**Supported formats:** PNG, JPG, GIF, WEBP`)
             .setFooter({ text: 'Your custom character helps build the community!' });
           
           await message.reply({ embeds: [submitHelpEmbed] });
           return;
         }
         
-        const submitCharName = args[0];
-        const submitCharEmoji = args[1];
-        const submitSpecialMoveName = args.slice(2, args.length - 3).join(' ') || args[2];
-        const submitSpecialMoveDamage = parseInt(args[args.length - 3]) || parseInt(args[3]);
-        const submitAbilityTemplate = args[args.length - 2] || args[4];
-        const submitAbilityValue = parseInt(args[args.length - 1]) || parseInt(args[5]);
+        const submitCharName = charParts[0];
+        const submitCharEmoji = charParts[1];
+        const submitSpecialMoveName = charParts[2];
+        const submitSpecialMoveDamage = parseInt(charParts[3]);
+        const submitAbilityTemplate = charParts[4];
+        const submitAbilityValue = parseInt(charParts[5]);
         
         // Check for default image - from attachment or URL
         let submitSkinUrl = null;
@@ -5622,24 +5638,21 @@ client.on('messageCreate', async (message) => {
           }
         }
         
-        // Check for URL in args
-        for (let i = 6; i < args.length; i++) {
-          if (args[i]?.startsWith('http://') || args[i]?.startsWith('https://')) {
-            submitSkinUrl = args[i];
-            break;
+        // Check for URL in charParts
+        if (!submitSkinUrl && charParts.length > 6 && charParts[6]) {
+          if (charParts[6].startsWith('http://') || charParts[6].startsWith('https://')) {
+            submitSkinUrl = charParts[6];
           }
         }
         
         if (!submitSkinUrl) {
-          await message.reply('❌ You must provide a **default image** for your character!\n\n**Options:**\n1. **Attach an image** then use the command\n2. **Add an image URL** at the end: `!submitchar <name> <emoji> ... ability_value https://example.com/image.png`\n\nSupported formats: PNG, JPG, GIF, WEBP');
+          await message.reply('❌ You must provide a **default image** for your character!\n\n**Options:**\n1. **Attach an image** then use the command\n2. **Add image URL** as the 7th parameter: `!submitchar Name | Emoji | ... | Value | https://example.com/image.png`\n\nSupported formats: PNG, JPG, GIF, WEBP');
           return;
         }
         
         let submitObtainType = 'crate';
-        for (let i = 6; i < args.length; i++) {
-          if (OBTAINABLE_TYPES.includes(args[i]?.toLowerCase())) {
-            submitObtainType = args[i].toLowerCase();
-          }
+        if (charParts.length > 7 && OBTAINABLE_TYPES.includes(charParts[7]?.toLowerCase())) {
+          submitObtainType = charParts[7].toLowerCase();
         }
         
         const submitResult = await submitCharacter(userId, message.author.username, {
