@@ -3,6 +3,11 @@ const { getCollection } = require('./mongoManager.js');
 const MAIN_SERVER_ID = '1430516117851340893';
 const SUPER_ADMINS = ['1296110901057032202', '1296109674361520146','1178728978488504400'];
 
+const GAME_MODES = {
+  ZOOBOT: 'zoobot',
+  CUSTOM: 'custom'
+};
+
 let serverConfigs = {};
 
 async function loadServerConfigs() {
@@ -263,6 +268,77 @@ async function setUpdatesChannel(serverId, channelId, setBy, member) {
   return { success: true, message: responseMessage, setupComplete: config.setupComplete };
 }
 
+function getServerGameMode(serverId) {
+  if (isMainServer(serverId)) return GAME_MODES.ZOOBOT;
+  
+  const config = getServerConfig(serverId);
+  return config?.gameMode || GAME_MODES.ZOOBOT;
+}
+
+async function setServerGameMode(serverId, gameMode, setBy, member) {
+  if (isMainServer(serverId)) {
+    return { success: false, message: '❌ Cannot change game mode on the main server!' };
+  }
+  
+  if (!isSuperAdmin(setBy) && !isZooAdmin(member)) {
+    return { success: false, message: '❌ Only users with the **ZooAdmin** role can set the game mode!' };
+  }
+  
+  if (!Object.values(GAME_MODES).includes(gameMode)) {
+    return { success: false, message: `❌ Invalid game mode! Use: ${Object.values(GAME_MODES).join(', ')}` };
+  }
+  
+  const config = getServerConfig(serverId) || { serverId, botAdmins: [] };
+  
+  if (config.gameMode && config.gameMode !== gameMode) {
+    return { 
+      success: false, 
+      message: `❌ This server already has game mode set to "${config.gameMode}". Changing game modes would affect existing players. Contact a super admin if you need to switch.`
+    };
+  }
+  
+  config.gameMode = gameMode;
+  config.gameModeSetAt = Date.now();
+  config.gameModeSetBy = setBy;
+  
+  await saveServerConfig(serverId, config);
+  
+  return { 
+    success: true, 
+    message: gameMode === GAME_MODES.CUSTOM 
+      ? `✅ Game mode set to **Custom**!\n\nNext steps:\n1. Create your custom game with \`!creategame <name>\`\n2. Create characters with \`!createcharacter\`\n3. Set 3 starter characters with \`!setstarters\``
+      : `✅ Game mode set to **ZooBot**!\n\nYour server will use the standard ZooBot characters and systems.`
+  };
+}
+
+function isCustomGameServer(serverId) {
+  return getServerGameMode(serverId) === GAME_MODES.CUSTOM;
+}
+
+function isZooBotServer(serverId) {
+  return getServerGameMode(serverId) === GAME_MODES.ZOOBOT;
+}
+
+async function getGameModeInfo(serverId) {
+  const config = getServerConfig(serverId);
+  const gameMode = getServerGameMode(serverId);
+  
+  return {
+    serverId,
+    gameMode,
+    gameModeSetAt: config?.gameModeSetAt || null,
+    gameModeSetBy: config?.gameModeSetBy || null,
+    customGameId: config?.customGameId || null
+  };
+}
+
+async function linkCustomGame(serverId, customGameId) {
+  const config = getServerConfig(serverId) || { serverId };
+  config.customGameId = customGameId;
+  await saveServerConfig(serverId, config);
+  return { success: true };
+}
+
 module.exports = {
   loadServerConfigs,
   saveServerConfig,
@@ -282,6 +358,13 @@ module.exports = {
   setDropChannel,
   setEventsChannel,
   setUpdatesChannel,
+  getServerGameMode,
+  setServerGameMode,
+  isCustomGameServer,
+  isZooBotServer,
+  getGameModeInfo,
+  linkCustomGame,
   MAIN_SERVER_ID,
-  SUPER_ADMINS
+  SUPER_ADMINS,
+  GAME_MODES
 };

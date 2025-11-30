@@ -76,7 +76,31 @@ const {
 const { getCharacterAbility, getAbilityDescription } = require('./characterAbilities.js');
 const eventSystem = require('./eventSystem.js');
 const { viewKeys, unlockCharacter, openRandomCage } = require('./keySystem.js');
-const { loadServerConfigs, isMainServer, isSuperAdmin, isBotAdmin, isZooAdmin, addBotAdmin, removeBotAdmin, setupServer, isServerSetup, setDropChannel, setEventsChannel, setUpdatesChannel, getUpdatesChannel } = require('./serverConfigManager.js');
+const { loadServerConfigs, isMainServer, isSuperAdmin, isBotAdmin, isZooAdmin, addBotAdmin, removeBotAdmin, setupServer, isServerSetup, setDropChannel, setEventsChannel, setUpdatesChannel, getUpdatesChannel, getServerGameMode, setServerGameMode, isCustomGameServer, GAME_MODES, linkCustomGame } = require('./serverConfigManager.js');
+const { 
+  loadCustomGames, 
+  createCustomGame, 
+  getCustomGame, 
+  createCustomCharacter, 
+  getCustomCharacters, 
+  getCustomCharacter,
+  setStarterCharacters, 
+  getStarterCharacters,
+  deleteCustomGame
+} = require('./customGameService.js');
+const { 
+  getCharactersForServer, 
+  getStartersForServer,
+  assignMovesToCharacterCatalog
+} = require('./characterCatalogService.js');
+const { 
+  getPendingCharacters, 
+  approveCharacter, 
+  rejectCharacter, 
+  getApprovalStats,
+  formatPendingCharacterEmbed,
+  formatApprovedCharacterEmbed
+} = require('./approvalWorkflowService.js');
 const { startPromotionSystem } = require('./promotionSystem.js');
 const { initializeGiveawaySystem, setGiveawayData, enableAutoGiveaway, disableAutoGiveaway } = require('./giveawaySystem.js');
 const { initializeLotterySystem, setLotteryData, enableAutoLottery, disableAutoLottery } = require('./lotterySystem.js');
@@ -245,6 +269,7 @@ client.on('clientReady', async () => {
   console.log(`🎮 Bot is ready to serve ${client.guilds.cache.size} servers!`);
   await initializeBot();
   await loadServerConfigs();
+  await loadCustomGames();
   initializeClanData(data);
   marketSystem.init(client);
   auctionSystem.init(client);
@@ -268,7 +293,7 @@ client.on('guildCreate', async (guild) => {
       const setupEmbed = new EmbedBuilder()
         .setColor('#00D9FF')
         .setTitle('👋 Thanks for adding ZooBot!')
-        .setDescription(`Hi! Before I can start working in this server, I need some setup:\n\n**Important:** Create a role called **"ZooAdmin"** (case insensitive) and assign it to users who should manage the bot.\n\n**Setup Commands (ZooAdmin only):**\n\`!setup\` - Start the setup process\n\`!setdropchannel #channel\` - Set where drops appear\n\`!seteventschannel #channel\` - Set where events are announced\n\`!setupdateschannel #channel\` - Set where bot updates are posted\n\`!paydrops\` - Activate drops (costs 100 gems for 3 hours)\n\n**Customization Commands (ZooAdmin only):**\n\`!setemoji <character> <emoji>\` - Set custom character emojis\n\`!setchestgif <type> <url>\` - Set custom chest opening GIFs\n\n**Note:** Only users with the **ZooAdmin** role can manage server settings and activate drops.`)
+        .setDescription(`Hi! Before I can start working in this server, I need some setup:\n\n**🎮 Choose Your Game Mode:**\n• **ZooBot Mode** - Use the standard ZooBot with all original characters\n• **Custom Mode** - Create your own custom game with unique characters!\n\nUse \`!setgamemode <zoobot|custom>\` to choose.\n\n**Important:** Create a role called **"ZooAdmin"** (case insensitive) and assign it to users who should manage the bot.\n\n**Setup Commands (ZooAdmin only):**\n\`!setup\` - Start the setup process\n\`!setdropchannel #channel\` - Set where drops appear\n\`!seteventschannel #channel\` - Set where events are announced\n\`!setupdateschannel #channel\` - Set where bot updates are posted\n\`!paydrops\` - Activate drops (costs 100 gems for 3 hours)\n\n**Custom Game Commands (ZooAdmin only):**\n\`!creategame <name>\` - Create your custom game\n\`!createcharacter\` - Add custom characters\n\`!setstarters\` - Set 3 starter characters\n\n**Customization Commands (ZooAdmin only):**\n\`!setemoji <character> <emoji>\` - Set custom character emojis\n\`!setchestgif <type> <url>\` - Set custom chest opening GIFs\n\n**Note:** Only users with the **ZooAdmin** role can manage server settings and activate drops.`)
         .setFooter({ text: 'Looking for more features? Check out our main server!' });
       
       await owner.send({ embeds: [setupEmbed] }).catch(() => {
@@ -5495,6 +5520,358 @@ client.on('messageCreate', async (message) => {
           .setFooter({ text: 'Admin view - showing first 15' });
         
         await message.reply({ embeds: [adminAuctionEmbed] });
+        break;
+      
+      case 'gamemode':
+        const currentGameMode = getServerGameMode(serverId);
+        const gameModeEmbed = new EmbedBuilder()
+          .setColor(currentGameMode === 'custom' ? '#9B59B6' : '#3498DB')
+          .setTitle('🎮 Server Game Mode')
+          .setDescription(`This server is running in **${currentGameMode.toUpperCase()}** mode.\n\n${currentGameMode === 'custom' ? '🎮 Custom characters and systems are active.' : '🐾 Standard ZooBot characters are available.'}`)
+          .addFields(
+            { name: '📋 Available Modes', value: '• `zoobot` - Standard ZooBot with all original characters\n• `custom` - Create your own custom game with unique characters', inline: false }
+          )
+          .setFooter({ text: 'Use !setgamemode <mode> to change (ZooAdmin only)' });
+        
+        await message.reply({ embeds: [gameModeEmbed] });
+        break;
+      
+      case 'setgamemode':
+        if (!isZooAdmin(message.member) && !isSuperAdmin(userId)) {
+          await message.reply('❌ Only users with the **ZooAdmin** role can change the game mode!');
+          return;
+        }
+        
+        const newGameMode = args[0]?.toLowerCase();
+        if (!newGameMode) {
+          await message.reply('Usage: `!setgamemode <zoobot|custom>`\n\n• `zoobot` - Standard ZooBot characters\n• `custom` - Create your own custom game');
+          return;
+        }
+        
+        const gameModeResult = await setServerGameMode(serverId, newGameMode, userId, message.member);
+        await message.reply(gameModeResult.message);
+        break;
+      
+      case 'creategame':
+        if (!isZooAdmin(message.member) && !isSuperAdmin(userId)) {
+          await message.reply('❌ Only users with the **ZooAdmin** role can create custom games!');
+          return;
+        }
+        
+        if (getServerGameMode(serverId) !== 'custom') {
+          await message.reply('❌ You need to set the server to custom mode first!\nUse `!setgamemode custom`');
+          return;
+        }
+        
+        const gameName = args.join(' ');
+        if (!gameName) {
+          await message.reply('Usage: `!creategame <Game Name>`\n\nExample: `!creategame Monster Arena`');
+          return;
+        }
+        
+        const createGameResult = await createCustomGame(serverId, gameName, userId);
+        if (createGameResult.success) {
+          await linkCustomGame(serverId, createGameResult.game.gameId);
+        }
+        await message.reply(createGameResult.message);
+        break;
+      
+      case 'mygame':
+        const myGame = await getCustomGame(serverId);
+        if (!myGame) {
+          const myGameMode = getServerGameMode(serverId);
+          if (myGameMode === 'custom') {
+            await message.reply('❌ No custom game found! Use `!creategame <name>` to create one.');
+          } else {
+            await message.reply('ℹ️ This server is running standard ZooBot mode. No custom game available.');
+          }
+          return;
+        }
+        
+        const myGameChars = await getCustomCharacters(myGame.gameId, false);
+        const approvedChars = myGameChars.filter(c => c.approvalStatus === 'approved');
+        const pendingChars = myGameChars.filter(c => c.approvalStatus === 'pending');
+        const starterChars = await getStarterCharacters(serverId);
+        
+        const myGameEmbed = new EmbedBuilder()
+          .setColor('#9B59B6')
+          .setTitle(`🎮 ${myGame.gameName}`)
+          .setDescription(`**Game ID:** \`${myGame.gameId}\`\n**Status:** ${myGame.status}`)
+          .addFields(
+            { name: '📊 Statistics', value: `✅ Approved: ${approvedChars.length}\n⏳ Pending: ${pendingChars.length}\n📦 Total: ${myGameChars.length}`, inline: true },
+            { name: '🌟 Starters', value: starterChars.length > 0 ? starterChars.map(c => `${c.emoji} ${c.name}`).join('\n') : 'Not set yet', inline: true }
+          )
+          .setFooter({ text: `Created by user ${myGame.createdBy}` })
+          .setTimestamp(myGame.createdAt);
+        
+        await message.reply({ embeds: [myGameEmbed] });
+        break;
+      
+      case 'createcharacter':
+        if (!isZooAdmin(message.member) && !isSuperAdmin(userId)) {
+          await message.reply('❌ Only users with the **ZooAdmin** role can create characters!');
+          return;
+        }
+        
+        const charGame = await getCustomGame(serverId);
+        if (!charGame) {
+          await message.reply('❌ No custom game found! Create one first with `!creategame <name>`');
+          return;
+        }
+        
+        const createCharParts = args.join(' ').split('|').map(p => p.trim());
+        if (createCharParts.length < 4) {
+          await message.reply(
+            '**📋 Create Character**\n\n' +
+            'Usage: `!createcharacter Name | Emoji | Description | UniqueMoveName | UniqueMoveDamage | ImageURL`\n\n' +
+            '**Example:**\n' +
+            '`!createcharacter Blaze | 🔥 | A fiery dragon warrior | Fire Breath | 95 | https://example.com/blaze.png`\n\n' +
+            '**Parameters:**\n' +
+            '• **Name** - Character name (required)\n' +
+            '• **Emoji** - Single emoji (required)\n' +
+            '• **Description** - Short description (required)\n' +
+            '• **UniqueMoveName** - Special attack name (required)\n' +
+            '• **UniqueMoveDamage** - Damage value 50-100 (optional, default 85)\n' +
+            '• **ImageURL** - Character image URL (optional)'
+          );
+          return;
+        }
+        
+        const newCharName = createCharParts[0];
+        const newCharEmoji = createCharParts[1];
+        const newCharDesc = createCharParts[2];
+        const newCharMoveName = createCharParts[3];
+        const newCharMoveDamage = parseInt(createCharParts[4]) || 85;
+        const newCharImageUrl = createCharParts[5] || null;
+        
+        if (newCharMoveDamage < 50 || newCharMoveDamage > 100) {
+          await message.reply('❌ Unique move damage must be between 50-100!');
+          return;
+        }
+        
+        const createCharResult = await createCustomCharacter(charGame.gameId, {
+          name: newCharName,
+          emoji: newCharEmoji,
+          description: newCharDesc,
+          uniqueMoveName: newCharMoveName,
+          uniqueMoveDamage: newCharMoveDamage,
+          imageUrl: newCharImageUrl,
+          createdBy: userId
+        });
+        
+        await message.reply(createCharResult.message);
+        break;
+      
+      case 'viewcharacter':
+        const viewCharGame = await getCustomGame(serverId);
+        if (!viewCharGame) {
+          await message.reply('❌ No custom game in this server!');
+          return;
+        }
+        
+        const viewCharName = args.join(' ');
+        if (!viewCharName) {
+          await message.reply('Usage: `!viewcharacter <name>`');
+          return;
+        }
+        
+        const viewChar = await getCustomCharacter(viewCharGame.gameId, viewCharName);
+        if (!viewChar) {
+          await message.reply(`❌ Character "${viewCharName}" not found!`);
+          return;
+        }
+        
+        const statusColors = { pending: '#FFA500', approved: '#00FF00', rejected: '#FF0000' };
+        const statusEmojis = { pending: '⏳', approved: '✅', rejected: '❌' };
+        
+        const viewCharEmbed = new EmbedBuilder()
+          .setColor(statusColors[viewChar.approvalStatus] || '#808080')
+          .setTitle(`${viewChar.emoji} ${viewChar.name}`)
+          .setDescription(viewChar.description || 'No description')
+          .addFields(
+            { name: '📊 Status', value: `${statusEmojis[viewChar.approvalStatus]} ${viewChar.approvalStatus}`, inline: true },
+            { name: '⚔️ Unique Move', value: `${viewChar.uniqueMove.name} (${viewChar.uniqueMove.damage} DMG)`, inline: true },
+            { name: '📦 Obtainable', value: viewChar.obtainable, inline: true },
+            { name: '👤 Creator', value: `<@${viewChar.createdBy}>`, inline: true }
+          )
+          .setFooter({ text: `ID: ${viewChar.characterId}` });
+        
+        if (viewChar.imageUrl) {
+          viewCharEmbed.setThumbnail(viewChar.imageUrl);
+        }
+        
+        if (viewChar.rejectionReason) {
+          viewCharEmbed.addFields({ name: '❌ Rejection Reason', value: viewChar.rejectionReason, inline: false });
+        }
+        
+        await message.reply({ embeds: [viewCharEmbed] });
+        break;
+      
+      case 'listcharacters':
+        const listCharGame = await getCustomGame(serverId);
+        if (!listCharGame) {
+          await message.reply('❌ No custom game in this server!');
+          return;
+        }
+        
+        const listChars = await getCustomCharacters(listCharGame.gameId, false);
+        if (listChars.length === 0) {
+          await message.reply('📭 No characters created yet! Use `!createcharacter` to add one.');
+          return;
+        }
+        
+        const approvedList = listChars.filter(c => c.approvalStatus === 'approved');
+        const pendingList = listChars.filter(c => c.approvalStatus === 'pending');
+        const rejectedList = listChars.filter(c => c.approvalStatus === 'rejected');
+        
+        let listDesc = '';
+        if (approvedList.length > 0) {
+          listDesc += `**✅ Approved (${approvedList.length}):**\n${approvedList.map(c => `${c.emoji} ${c.name}`).join(', ')}\n\n`;
+        }
+        if (pendingList.length > 0) {
+          listDesc += `**⏳ Pending (${pendingList.length}):**\n${pendingList.map(c => `${c.emoji} ${c.name}`).join(', ')}\n\n`;
+        }
+        if (rejectedList.length > 0) {
+          listDesc += `**❌ Rejected (${rejectedList.length}):**\n${rejectedList.map(c => `${c.emoji} ${c.name}`).join(', ')}`;
+        }
+        
+        const listEmbed = new EmbedBuilder()
+          .setColor('#9B59B6')
+          .setTitle(`📋 ${listCharGame.gameName} - Characters`)
+          .setDescription(listDesc)
+          .setFooter({ text: `Total: ${listChars.length} characters` });
+        
+        await message.reply({ embeds: [listEmbed] });
+        break;
+      
+      case 'setstarters':
+        if (!isZooAdmin(message.member) && !isSuperAdmin(userId)) {
+          await message.reply('❌ Only users with the **ZooAdmin** role can set starter characters!');
+          return;
+        }
+        
+        const starterGame = await getCustomGame(serverId);
+        if (!starterGame) {
+          await message.reply('❌ No custom game found!');
+          return;
+        }
+        
+        const starterNames = args.join(' ').split(',').map(n => n.trim()).filter(n => n);
+        if (starterNames.length !== 3) {
+          await message.reply('Usage: `!setstarters Character1, Character2, Character3`\n\nYou must specify exactly 3 approved characters as starters.');
+          return;
+        }
+        
+        const setStarterResult = await setStarterCharacters(serverId, starterNames);
+        await message.reply(setStarterResult.message);
+        break;
+      
+      case 'reviewcharacters':
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId, serverId)) {
+          await message.reply('❌ Only bot admins can review characters!');
+          return;
+        }
+        
+        const pendingCustomChars = await getPendingCharacters(10);
+        if (pendingCustomChars.length === 0) {
+          await message.reply('✅ No characters pending review!');
+          return;
+        }
+        
+        const pendingCharsEmbed = new EmbedBuilder()
+          .setColor('#FFA500')
+          .setTitle('📋 Pending Character Approvals')
+          .setDescription(`**${pendingCustomChars.length}** character(s) awaiting review`)
+          .setFooter({ text: 'Use !approve <id> or !reject <id> <reason>' });
+        
+        for (const pendChar of pendingCustomChars.slice(0, 5)) {
+          const pendCharGameInfo = await getCustomGame(pendChar.serverId) || { gameName: 'Unknown' };
+          pendingCharsEmbed.addFields({
+            name: `${pendChar.emoji} ${pendChar.name}`,
+            value: `**Game:** ${pendCharGameInfo.gameName}\n**Move:** ${pendChar.uniqueMove.name} (${pendChar.uniqueMove.damage} DMG)\n**ID:** \`${pendChar.characterId.slice(0, 12)}\`\n**By:** <@${pendChar.createdBy}>`,
+            inline: true
+          });
+        }
+        
+        await message.reply({ embeds: [pendingCharsEmbed] });
+        break;
+      
+      case 'approve':
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId, serverId)) {
+          await message.reply('❌ Only bot admins can approve characters!');
+          return;
+        }
+        
+        const charApproveId = args[0];
+        if (!charApproveId) {
+          await message.reply('Usage: `!approve <characterId>`');
+          return;
+        }
+        
+        const charApproveResult = await approveCharacter(charApproveId, userId);
+        await message.reply(charApproveResult.message);
+        break;
+      
+      case 'reject':
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId, serverId)) {
+          await message.reply('❌ Only bot admins can reject characters!');
+          return;
+        }
+        
+        const charRejectId = args[0];
+        const charRejectReason = args.slice(1).join(' ') || 'No reason provided';
+        if (!charRejectId) {
+          await message.reply('Usage: `!reject <characterId> <reason>`');
+          return;
+        }
+        
+        const charRejectResult = await rejectCharacter(charRejectId, userId, charRejectReason);
+        await message.reply(charRejectResult.message);
+        break;
+      
+      case 'approvalstats':
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId, serverId)) {
+          await message.reply('❌ Only bot admins can view approval stats!');
+          return;
+        }
+        
+        const charApprovalStats = await getApprovalStats();
+        const charApprovalStatsEmbed = new EmbedBuilder()
+          .setColor('#3498DB')
+          .setTitle('📊 Character Approval Statistics')
+          .addFields(
+            { name: '⏳ Pending', value: `${charApprovalStats.pending}`, inline: true },
+            { name: '✅ Approved', value: `${charApprovalStats.approved}`, inline: true },
+            { name: '❌ Rejected', value: `${charApprovalStats.rejected}`, inline: true },
+            { name: '📦 Total', value: `${charApprovalStats.total}`, inline: true }
+          );
+        
+        await message.reply({ embeds: [charApprovalStatsEmbed] });
+        break;
+      
+      case 'deletegame':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only super admins can delete custom games!');
+          return;
+        }
+        
+        const deleteGame = await getCustomGame(serverId);
+        if (!deleteGame) {
+          await message.reply('❌ No custom game to delete!');
+          return;
+        }
+        
+        const confirmDelete = args[0]?.toLowerCase();
+        if (confirmDelete !== 'confirm') {
+          await message.reply(`⚠️ **Warning:** This will permanently delete the custom game "${deleteGame.gameName}" and all its characters!\n\nType \`!deletegame confirm\` to proceed.`);
+          return;
+        }
+        
+        const deleteResult = await deleteCustomGame(serverId, userId);
+        if (deleteResult.success) {
+          await setServerGameMode(serverId, 'zoobot', userId, message.member);
+        }
+        await message.reply(deleteResult.message);
         break;
         
       default:

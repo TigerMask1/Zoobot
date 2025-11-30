@@ -1,7 +1,9 @@
 const { EmbedBuilder } = require('discord.js');
 const { saveData, saveDataImmediate } = require('./dataManager.js');
 const CHARACTERS = require('./characters.js');
-const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig } = require('./serverConfigManager.js');
+const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerGameMode, GAME_MODES } = require('./serverConfigManager.js');
+const { getCrateCharactersForServer } = require('./characterCatalogService.js');
+const { getCustomGame } = require('./customGameService.js');
 
 let dropIntervals = new Map();
 let activeClient = null;
@@ -265,14 +267,35 @@ async function executeDrop(serverId) {
     // ===== PHASE 2: Create a new drop =====
     const dropTypeRoll = Math.random();
     let selectedDrop, characterName = '';
+    
+    const gameMode = getServerGameMode(serverId);
+    let customGame = null;
+    if (gameMode === GAME_MODES.CUSTOM) {
+      customGame = await getCustomGame(serverId);
+    }
 
     if (dropTypeRoll < 0.02) {
       selectedDrop = { type: 'shards', min: 1, max: 2, emoji: '🔷' };
     } else if (dropTypeRoll < 0.62) {
       const allOwnedChars = new Set();
-      Object.values(activeData.users).forEach(user => {
-        user?.characters?.forEach(char => allOwnedChars.add(char.name));
-      });
+      
+      if (gameMode === GAME_MODES.CUSTOM && customGame) {
+        Object.values(activeData.users).forEach(user => {
+          user?.characters?.forEach(char => {
+            if (char.gameId === customGame.gameId) {
+              allOwnedChars.add(char.name);
+            }
+          });
+        });
+      } else {
+        Object.values(activeData.users).forEach(user => {
+          user?.characters?.forEach(char => {
+            if (!char.isCustom) {
+              allOwnedChars.add(char.name);
+            }
+          });
+        });
+      }
 
       const ownedCharArray = Array.from(allOwnedChars);
       if (ownedCharArray.length > 0) {
