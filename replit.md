@@ -1,114 +1,66 @@
 # Discord Character Collection Bot
 
 ## Overview
-This project is a Discord bot designed to offer a comprehensive character collection experience. It features over 50 unique characters with stats, leveling, and a skin system. The bot integrates a full economy with multiple currencies, a dynamic battle system, interactive elements like crates and random drops, player trading, and competitive daily events. Its primary goal is to enhance community engagement and provide a persistent, engaging virtual world for users.
+This project is a Discord bot focused on character collection, featuring over 50 unique characters with stats, leveling, and a skin system. It includes a comprehensive economy with multiple currencies, a dynamic battle system, interactive elements like crates and random drops, player trading, and competitive daily events. The bot aims to boost community engagement and offer a persistent, captivating virtual world for users. It also incorporates multi-game support, allowing servers to select specific character bundles, and robust anti-cheat and moderation systems for a fair and safe environment.
 
 ## User Preferences
 The agent should prioritize iterative development, frequently asking for feedback and approval before implementing major changes. Communication should be clear and concise, avoiding jargon where possible. For coding, a preference for modular, readable, and well-documented code is essential. The agent should always provide detailed explanations for proposed changes or new features. Do not make changes to the `dataManager.js` or `mongoManager.js` files without explicit instruction, as these are critical for data integrity across environments.
 
 ## System Architecture
-The bot is built on Discord.js v14 and Node.js 20, utilizing a dual-mode data storage system (JSON for testing, MongoDB for production) with a one-command migration script.
+The bot is built on Discord.js v14 and Node.js 20, using a dual-mode data storage system (JSON for testing, MongoDB for production) with a one-command migration script.
 
 **UI/UX Decisions:**
-- **Visuals:** Character skins displayed in embeds, paginated user profiles with progress bars, custom profile picture selection from owned characters, and custom PFP image system.
-- **Progress Bars:** 12-slot colored emoji progress bars (🟩🟦🟨🟧🟥⬜) with percentage display for token collection.
-- **Information Display:** Extensive use of Discord embeds and emoji integration for characters and items.
+- **Visuals:** Character skins in embeds, paginated user profiles with progress bars, custom profile picture selection, and custom PFP image system.
+- **Progress Bars:** 12-slot colored emoji progress bars with percentage display.
+- **Information Display:** Extensive use of Discord embeds and emoji integration.
 
 **Technical Implementations:**
-- **Character System:** 50+ unique characters with tokens, special traits, moves, HP scaling, levels, and owned skins.
-- **Economy & Currency:** Coins, Gems, Trophies, and Character-specific Tokens, with daily login and message-based rewards.
-- **Crate System:** Multi-tiered crates (Gold, Emerald, Legendary, Tyrant, Bronze, Silver) offering characters, tokens, and coins, including a "pending tokens" system and interactive opening with customizable GIFs.
-- **Drop System:** Random token, coin, and gem drops every 20 seconds, claimable by the first user, optimized to reduce API calls by leaving uncaught drops in chat. Includes a paid drop system for non-main servers and smart pausing.
-- **Trading System:** Secure player-to-player trading with dual confirmation.
-- **Battle System:** Turn-based combat with energy management, 51 unique passive abilities, critical hits, status effects, and consumable items. Includes an AI battle system.
+- **Character System:** 50+ unique characters with tokens, traits, moves, HP scaling, levels, and skins. New characters can be dynamically created with default abilities if none are specified.
+- **Economy & Currency:** Coins, Gems, Trophies, and Character-specific Tokens, with various reward mechanisms.
+- **Crate System:** Multi-tiered crates offering characters, tokens, and coins, with interactive opening.
+- **Drop System:** Random token, coin, and gem drops with optimization for reduced API calls and smart pausing.
+- **Trading & Market System:** Secure player-to-player trading, and a universal marketplace for items (ores, wood, crates, keys, resources) with sequential IDs.
+- **Auction System:** Time-based auction system with dual UI (form and text command) supporting all item types and instant MongoDB saves.
+- **Battle System:** Turn-based combat with energy management, passive abilities, critical hits, status effects, consumables, and an AI battle system with dynamic difficulty scaling.
 - **Inventory:** MongoDB-compatible inventory for battle items.
-- **Event System:** Daily rotating competitive events (Trophy Hunt, Crate Master, Drop Catcher) with real-time tracking, automatic reward distribution, and manual/scheduled control. Event announcements broadcast to all servers (main server uses fixed channel, other servers use configured events channel).
-- **Giveaway System:** Daily giveaways with automatic prize distribution. Broadcasts to specific giveaway channel in main server and events channels in other servers.
-- **Lottery System:** Universal lottery system with ticket purchases using gems. Prize pool accumulates and broadcasts results to all servers via updates channels.
-- **Promotion System:** Automated promotional messages for non-main servers, posted to updates channels every 4 hours.
-- **Permission System:** Three-tier role-based access control:
-  - **Super Admin:** Hardcoded bot owners with full access to all commands globally
-  - **ZooAdmin Role:** Discord role (case insensitive) for server customization - allows server admins to configure channels, activate drops, customize emojis/GIFs
-  - **Bot Admin (Legacy):** Database-stored admins for event management (being phased out)
-- **Admin Tools:** Commands for managing resources, characters, skins, custom emojis, chest GIFs, and bot channels, along with server management and bot update broadcasting.
-- **Key & Cage System:** Two-tier character unlock system using character-specific keys and random cage keys obtained from events.
-- **Custom Emojis:** System for bot-wide custom character emojis, stored in MongoDB and applied automatically. Centralized emoji configuration in emojiConfig.js for easy customization.
-- **Profile Picture (PFP) System:** Custom profile image system allowing users to upload and manage multiple profile pictures stored via Discord CDN URLs. Users can switch between character images and custom PFPs for their profile display using !setpfp command. Supports both character selection (!setpfp <character>) and custom PFP selection (!setpfp pfp <number>).
-- **Personalized Task System:** Task system restricted to registered players who have completed !start command.
-- **Trivia System:** Interactive trivia with 3-guess limit, 1-minute timer, 30-second cooldown, and 100 coin rewards. Bot admin-manageable question database.
-- **AI Battle Scaling:** Dynamic AI difficulty scaling for hard mode that adjusts level (1.2× + 3-5 bonus) and ST (minimum 90, up to 115 cap) based on challenger stats, with interpolated scaling for low-ST players and HP multipliers for high-ST players to maintain competitive balance.
-- **Mail System:** Inbox clearing functionality for users.
-- **Help Documentation:** Comprehensive in-bot help and command reference.
-- **Work/Job System (UPDATED):** Engaging work system with 5 job types (Miner, Caretaker, Farmer, Zookeeper, Ranger) on 15-minute cooldown. Jobs reward coins, gems, ores, wood, tokens, crates, keys, and shards. First work is always caretaker to bootstrap new players. **FREE STARTER PACK:** All new workers receive level 1 drill, axe, whistle, binoculars, and caretaker house automatically - no grinding required to start!
-- **Resource Economy:** 5 ore types (🟡 Aurelite, 🔵 Kryonite, 🟣 Zyronite, 🔴 Rubinite, ⚫ Voidinite) and 4 wood types (🟤 Oak, 🟠 Maple, ⚫ Ebony, ✨ Celestial) used for crafting and trading.
-- **Tool Crafting:** 4 tool types (⛏️ Drill, 🪓 Axe, 📢 Whistle, 🔭 Binoculars) with 5 levels each. Tools have durability and are crafted from ores and wood. Higher level tools = better job rewards. Legacy users automatically receive missing starter tools.
-- **Caretaking House:** 5-level upgrade system for caretaker job, requiring coins, gems, and resources. Higher levels provide better rewards when working. Starts at level 1 for free.
-- **Market System (UPDATED):** Universal marketplace supporting all item types (ores, wood, crates, keys, resources). Players can list, buy, and sell items for coins with MongoDB persistence. Uses clean sequential IDs (M001, M002, M003, etc.) for easy reference.
-- **Auction System (UPDATED):** Time-based auction system supporting all item types with bidding mechanics, automatic settlement, and instant MongoDB saves. Uses clean sequential IDs (A001, A002, A003, etc.) for easy reference. **DUAL UI (Nov 27):** Multi-step form with category dropdown → item dropdown → modal with 4 fields (Quantity, Starting Bid, Duration, Currency). Form defaults to coins & 24 hours. Classic text command also available: `!auction create <category> <item> <qty> <bid> [hours] [currency]`. Both support gems currency.
-- **Work Guide System (NEW):** Comprehensive in-bot documentation via !workguide command explaining all jobs, tools, rewards, crafting, market, and strategy tips. Makes the work system accessible to all players.
-- **Work Image System (NEW):** CDN-hosted custom images for each work type (drill, room, axe, whistle, binoculars). Admins can customize with !setworkimage, users can view with !showwork.
-- **Admin Economy Tools (UPDATED):** Super admin commands for resource management (!giveores, !givewood, !givetool), market control (!clearmarket, !viewmarket), auction management (!clearauctions, !viewauctions, !endauction), work assignment (!assignwork), and work image customization (!setworkimage).
-- **UST (Universal Skin Token) System (NEW):** Complete cosmetics economy system where players earn UST through clan wars and spend it on character skins and profile pictures. Features:
-  - **UST Currency:** Earned by top 3 clans in weekly clan wars, distributed proportionally based on contribution
-  - **UST Shop (!ustshop):** Interactive shop with category selection (skins/pfps), shows only skins for characters the user owns, displays rarity and cost
-  - **Cosmetics Catalog:** Dual-persistence system (MongoDB for production, JSON file for development) with 5-minute cache TTL for performance
-  - **Rarity System:** 5 rarity tiers (Common: 10 UST, Rare: 25 UST, Ultra Rare: 50 UST, Epic: 100 UST, Legendary: 200 UST) with custom cost override
-  - **Upload Commands:** !uploadskin and !uploadpfp for super admins to add new cosmetics - supports both image attachments AND direct image links for flexibility
-  - **Purchase System:** Integrated with existing cosmetics system, purchased items immediately available in !setpfp and !setskin
+- **Event System:** Daily rotating competitive events with automatic reward distribution.
+- **Giveaway & Lottery System:** Daily giveaways and a universal lottery with ticket purchases and prize accumulation.
+- **Promotion System:** Automated promotional messages for non-main servers.
+- **Permission System:** Three-tier role-based access control (Super Admin, ZooAdmin Role, Bot Admin).
+- **Admin Tools:** Commands for managing resources, characters, skins, emojis, chest GIFs, bot channels, server settings, and bot updates.
+- **Key & Cage System:** Two-tier character unlock system using character-specific and random cage keys.
+- **Custom Emojis:** Bot-wide custom character emojis stored in MongoDB.
+- **Profile Picture (PFP) System:** Custom profile image system allowing users to upload and manage multiple PFPs.
+- **Personalized Task System:** Tasks restricted to registered players.
+- **Trivia System:** Interactive trivia with admin-manageable question database.
+- **Mail System:** Inbox clearing functionality.
+- **Work/Job System:** 5 job types with a 15-minute cooldown, rewarding various items. Includes a free starter pack for new workers.
+- **Resource Economy:** 5 ore types and 4 wood types for crafting and trading.
+- **Tool Crafting:** 4 tool types with 5 levels each, crafted from ores and wood, improving job rewards.
+- **Caretaking House:** 5-level upgrade system for the caretaker job.
+- **Work Guide System:** In-bot documentation for jobs, tools, crafting, and market.
+- **Work Image System:** CDN-hosted custom images for each work type.
+- **Admin Economy Tools:** Super admin commands for resource, market, and auction management.
+- **Universal Skin Token (UST) System:** Cosmetics economy for earning and spending UST on character skins and profile pictures, earned via clan wars. Features a shop, rarity tiers, and admin upload commands.
+- **Character Info Command (`!info`):** View character details without owning them.
+- **Force Release Command (`!forcerelease`):** Super admin command to release any character.
+- **Q&A System:** Comprehensive Q&A with user submission, admin approval, and MongoDB storage.
+- **Game/Bundle System:** Multi-game support allowing servers to select specific character bundles for drops and crates. Includes admin commands for game and character management.
+- **Character Submission System:** Player-created character submission workflow with admin review, approval/rejection, and auto-creation.
+- **Server Setup Enhanced:** Setup now requires game selection, drop channel, event channel, and update channel configuration, with status checks and validation.
+- **Anti-Cheat System:** Rate limiting, suspicious activity detection, transaction logging, and user snapshots for potential rollback.
+- **Moderation System:** Full moderation toolkit for ZooAdmins including warning, bot ban, mute, message management, and logging.
 
 **System Design Choices:**
-- **Modularity & Scalability:** Core functionalities are separated into dedicated files, designed with MongoDB integration for production.
-- **Data Management:** Automatic data backfilling, environment-based configuration, and a dual-save system (`saveDataImmediate()` for critical operations, batched saves for telemetry) with graceful shutdown handlers.
+- **Modularity & Scalability:** Core functionalities separated into dedicated files, designed for MongoDB integration.
+- **Data Management:** Automatic data backfilling, environment-based configuration, dual-save system, and graceful shutdown.
 - **Error Handling:** Comprehensive error handling with user-friendly messages.
-- **Performance Optimization:** In-memory caching for skins, MongoDB indexes for fast queries, and optimized drop system to minimize Discord API calls.
-- **Security:** Critical economy/admin commands restricted to super-admins. Server customization requires ZooAdmin role for safe delegation of bot management to trusted server members.
-- **Multi-Server Architecture:** Supports deployment across multiple Discord servers, differentiating features like drop rates, clan wars, and promotional messages between a "Main Server" and "Non-Main Servers."
-
-- **Character Info Command (!info):** View any character's information without owning them - see default skin, special ability, and how to obtain them.
-- **Dynamic Character System (Nov 30 Fix):** Dynamically created characters now automatically receive:
-  - Default special move (`<Name>'s Strike`, 90 damage) if none specified
-  - Default passive ability (`<Name>'s Power`, +5 flat damage) if none specified
-  - Full battle data (moves, HP) when granted to users
-- **Force Release Command (!forcerelease):** Super admin command to release any character regardless of level. Usage: `!forcerelease <character>` or `!forcerelease @user <character>`.
-- **Q&A System (UPDATED):** Comprehensive Q&A system with user submissions for approval:
-  - **User Commands:** `!q` (list topics), `!q <keyword>` (get answer), `!submitqa keyword | question | answer` (submit for approval)
-  - **Admin Commands:** `!qadd keyword | message` (add directly), `!qedit keyword | message` (edit), `!qdel keyword` (delete), `!pendingqa` (view pending), `!approveqa <id>` (approve), `!rejectqa <id> <reason>` (reject)
-  - **Submission Workflow:** Users submit Q&A → Pending review → Admin approves/rejects → User gets 10 gems + DM notification on approval
-  - **Storage:** All entries stored in MongoDB for persistence
-- **Game/Bundle System (NEW Nov 30):** Multi-game character collection support:
-  - **Game Selection:** Servers must select a game/bundle during setup with `!setgame <game>` - required before drops work
-  - **Character Filtering:** Only characters from the server's selected game appear in drops and crates
-  - **Bundle Management:** Super admins can create games (`!creategame`), assign characters (`!assigngame`, `!bulkassign`), import between bundles (`!importchars`)
-  - **Game Commands:** `!games` (list all), `!gameinfo <name>` (details), `!bundlechars <game>` (characters in bundle), `!gamestats` (statistics)
-  - **Backfill Support:** `!backfillgames` assigns existing characters to default "ZooBot" game with createdBy metadata
-  - **Storage:** Games stored in MongoDB with characterCount, isActive, isDefault flags
-- **Character Submission System (NEW Nov 30):** Player-created character approval workflow:
-  - **User Commands:** `!submit Name|Emoji|Obtainable|Ability|SpecialMove` (submit character), `!mysubmissions` (view own), `!cancelsub <id>` (cancel pending)
-  - **Admin Commands:** `!submissions` (list pending), `!reviewsub <id>` (details), `!approve <id>` (add to game), `!reject <id> [reason]` (decline)
-  - **Approval Flow:** Player submits → Target game from server selection → Admin reviews → Auto-creates character on approval with game/createdBy tags
-  - **Notifications:** DM notifications to submitters on approval/rejection with details
-  - **Storage:** Submissions in MongoDB with status tracking, review history, and sequential IDs (SUB-00001)
-- **Server Setup Enhanced (Nov 30):** Setup now requires game selection:
-  - **Requirements:** `!setgame`, `!setdropchannel`, `!seteventschannel`, `!setupdateschannel`
-  - **Status Check:** `!setupstatus` shows detailed setup progress with game and channel status
-  - **Validation:** Drops only activate when server has game selected with at least 1 character
-- **Anti-Cheat System (NEW Nov 30):** Comprehensive protection against exploits and abuse:
-  - **Rate Limiting:** 10 commands per 5 seconds with automatic cooldown (10 seconds) for excessive use
-  - **Suspicious Activity Detection:** Automatic flagging for excessive coin/gem gains (1M coins or 10K gems per hour), high trade frequency (50+ trades in 10 minutes), and unusual command patterns
-  - **Transaction Logging:** All economy changes logged with timestamps, sources, and involved parties. Stored in memory and MongoDB for persistence
-  - **User Snapshots:** Create economy snapshots for potential rollback. Super admin commands for managing flags and viewing suspicious users
-  - **Commands:** `!flags @user` (view flags), `!clearflags @user` (clear flags), `!suspicious [threshold]` (list flagged users), `!transactions @user` (view history), `!anticheatstats` (system stats)
-- **Moderation System (NEW Nov 30):** Full moderation toolkit for ZooAdmins:
-  - **Warning System:** `!warn @user [reason]` - Issue warnings with tracking. Auto-recommend ban at 5+ warnings. `!warnings [@user]` - View warnings. `!clearwarnings @user` - Clear all warnings
-  - **Bot Bans:** `!botban @user [reason]` - Ban users from bot commands in server. `!unbotban @user` - Remove ban. Cannot ban Super Admins
-  - **Muting:** `!mute @user [duration] [reason]` - Temporarily mute from bot commands. Supports durations (30s, 10m, 1h, 1d). `!unmute @user` - Remove mute
-  - **Message Management:** `!clear <count> [@user]` - Bulk delete messages (1-100). `!announce <message>` - Send formatted announcements
-  - **Logging:** `!modlogs` - View recent moderation actions. `!modstats` - View moderation statistics. All actions logged with moderator, timestamp, and reason
-  - **Help:** `!modhelp` - View all moderation commands and usage
-  - **Permissions:** All moderation commands require ZooAdmin role or Super Admin status
+- **Performance Optimization:** In-memory caching, MongoDB indexes, and optimized Discord API calls.
+- **Security:** Role-based access control for critical commands and server customization.
+- **Multi-Server Architecture:** Supports deployment across multiple Discord servers with differentiated features.
 
 ## External Dependencies
-- **Discord.js v14**: For all Discord API interactions.
-- **Node.js 20**: The JavaScript runtime environment.
-- **Express**: Used for a lightweight HTTP server, primarily for health checks.
-- **MongoDB**: Utilized for production data persistence and scalability.
+- **Discord.js v14**: Discord API interactions.
+- **Node.js 20**: JavaScript runtime environment.
+- **Express**: Lightweight HTTP server for health checks.
+- **MongoDB**: Production data persistence.
