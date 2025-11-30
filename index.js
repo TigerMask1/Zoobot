@@ -5900,8 +5900,10 @@ async function gracefulShutdown(signal) {
     stopDropSystem();
     console.log('✅ Stopped drop system');
     
-    await saveDataImmediate(data);
-    console.log('✅ Flushed all pending data saves');
+    if (data) {
+      await saveDataImmediate(data);
+      console.log('✅ Flushed all pending data saves');
+    }
     
     if (process.env.USE_MONGODB === 'true') {
       const mongoManager = require('./mongoManager.js');
@@ -5922,11 +5924,15 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-  saveDataImmediate(data).then(() => {
+  if (data) {
+    saveDataImmediate(data).then(() => {
+      process.exit(1);
+    }).catch(() => {
+      process.exit(1);
+    });
+  } else {
     process.exit(1);
-  }).catch(() => {
-    process.exit(1);
-  });
+  }
 });
 
 const token = process.env.DISCORD_BOT_TOKEN;
