@@ -2498,8 +2498,11 @@ client.on('messageCreate', async (message) => {
         const payResult = await payForDrops(serverId, userId, data);
         
         if (payResult.success) {
-          serverConfig.lastActivityTimestamp = Date.now();
-          saveServerConfig(serverId, serverConfig);
+          const currentConfig = getServerConfig(serverId);
+          if (currentConfig) {
+            currentConfig.lastActivityTimestamp = Date.now();
+            await saveServerConfig(serverId, currentConfig);
+          }
           const payEmbed = new EmbedBuilder()
             .setColor('#00FF00')
             .setTitle('💎 Drops Activated!')
@@ -2539,8 +2542,11 @@ client.on('messageCreate', async (message) => {
   const reviveResult = await reviveDrops(serverId);
 
   if (reviveResult.success) {
-    serverConfig.dropTimestamp = Date.now();
-    saveServerConfig(serverId, serverConfig);
+    const currentReviveConfig = getServerConfig(serverId);
+    if (currentReviveConfig) {
+      currentReviveConfig.dropTimestamp = Date.now();
+      await saveServerConfig(serverId, currentReviveConfig);
+    }
     const reviveEmbed = new EmbedBuilder()
       .setColor('#00FF00')
       .setTitle('✅ Drops Revived!')
