@@ -6590,6 +6590,61 @@ client.on('messageCreate', async (message) => {
         await message.reply(backfillResult.message);
         break;
 
+      case 'effecttypes':
+      case 'abilityeffects':
+        const effectsEmbed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle('⚡ Ability Effect Types & Keywords')
+          .setDescription('Use these effect types when submitting characters with `!submit`\n\n**Format:** `AbilityName,Emoji,Description,EffectType,EffectValue`')
+          .addFields(
+            {
+              name: '🔥 **damageBoost**',
+              value: '**Keyword:** `damageBoost`\n**Effect:** Increases damage output\n**Value:** Decimal (e.g., 0.1 = 10% boost)\n**Example:** `FirePower,🔥,Boosts damage by 10%,damageBoost,0.1`',
+              inline: false
+            },
+            {
+              name: '💚 **healPerTurn**',
+              value: '**Keyword:** `healPerTurn`\n**Effect:** Heals a percentage of HP every turn\n**Value:** Decimal (e.g., 0.05 = 5% per turn)\n**Example:** `Moonlight,🌕,Heals 5% HP per turn,healPerTurn,0.05`',
+              inline: false
+            },
+            {
+              name: '🔥 **burnDamage**',
+              value: '**Keyword:** `burnDamage`\n**Effect:** Deals damage over time to opponent\n**Value:** Decimal (e.g., 0.03 = 3% per turn)\n**Example:** `Inferno,🔥,Deals 3% damage per turn,burnDamage,0.03`',
+              inline: false
+            },
+            {
+              name: '🛡️ **reflectDamage**',
+              value: '**Keyword:** `reflectDamage`\n**Effect:** Reflects damage back to attacker\n**Value:** Decimal (e.g., 0.2 = 20% reflection)\n**Example:** `Mirror,🪞,Reflects 20% damage,reflectDamage,0.2`',
+              inline: false
+            },
+            {
+              name: '⚡ **stun**',
+              value: '**Keyword:** `stun`\n**Effect:** Chance to stun opponent (skip their turn)\n**Value:** Decimal (e.g., 0.25 = 25% stun chance)\n**Example:** `Thunder,⚡,25% chance to stun,stun,0.25`',
+              inline: false
+            },
+            {
+              name: '🛡️ **dodge**',
+              value: '**Keyword:** `dodge`\n**Effect:** Chance to dodge incoming attacks\n**Value:** Decimal (e.g., 0.15 = 15% dodge chance)\n**Example:** `Shadow,👤,15% dodge chance,dodge,0.15`',
+              inline: false
+            },
+            {
+              name: '💰 **damageReduce**',
+              value: '**Keyword:** `damageReduce`\n**Effect:** Reduces incoming damage\n**Value:** Decimal (e.g., 0.05 = 5% reduction)\n**Example:** `Frostbite,❄️,Reduces damage by 5%,damageReduce,0.05`',
+              inline: false
+            }
+          )
+          .addFields(
+            {
+              name: '\n📝 **Quick Reference**',
+              value: '```\n!submit Luna|🌙|crate\n!submit Luna|🌙|crate|Moonlight,🌕,Heals 5% HP per turn,healPerTurn,0.05\n!submit Luna|🌙|crate|Moonlight,🌕,Heals 5% HP per turn,healPerTurn,0.05|Moon Beam,90\n```',
+              inline: false
+            }
+          )
+          .setFooter({ text: 'Use !effecttypes to view this list anytime' });
+        
+        await message.reply({ embeds: [effectsEmbed] });
+        break;
+
       case 'submit':
       case 'submitchar':
         if (!data.users[userId].started) {
