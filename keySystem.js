@@ -1,6 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { saveDataImmediate } = require('./dataManager.js');
-const CHARACTERS = require('./characters.js');
+const characterManager = require('./characterManager.js');
 
 function initializeKeys(userData) {
   if (!userData.characterKeys) {
@@ -56,7 +56,7 @@ async function viewKeys(message, data, userId) {
   const characterKeysList = [];
   for (const [charName, keyCount] of Object.entries(userData.characterKeys)) {
     if (keyCount > 0) {
-      const char = CHARACTERS.find(c => c.name === charName);
+      const char = characterManager.getCharacters().find(c => c.name === charName);
       const emoji = char ? char.emoji : '❓';
       const owned = hasCharacter(userData, charName);
       const status = owned ? '✅ Owned' : `${keyCount}/1000`;
@@ -89,7 +89,7 @@ async function unlockCharacter(message, data, userId, characterName) {
     return;
   }
   
-  const char = CHARACTERS.find(c => c.name.toLowerCase() === characterName.toLowerCase());
+  const char = characterManager.getCharacters().find(c => c.name.toLowerCase() === characterName.toLowerCase());
   if (!char) {
     await message.reply('❌ Character not found!');
     return;
@@ -155,7 +155,7 @@ async function openRandomCage(message, data, userId) {
   
   userData.cageKeys -= 250;
   
-  const availableChars = CHARACTERS.filter(c => !hasCharacter(userData, c.name));
+  const availableChars = characterManager.getCharacters().filter(c => !hasCharacter(userData, c.name));
   
   if (availableChars.length === 0) {
     userData.gems = (userData.gems || 0) + 500;

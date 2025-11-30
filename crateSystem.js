@@ -1,4 +1,4 @@
-const CHARACTERS = require('./characters.js');
+const characterManager = require('./characterManager.js');
 const { assignMovesToCharacter, calculateBaseHP } = require('./battleUtils.js');
 const eventSystem = require('./eventSystem.js');
 const { checkTaskProgress, completePersonalizedTask, initializePersonalizedTaskData } = require('./personalizedTaskSystem.js');
@@ -170,7 +170,7 @@ async function openCrate(data, userId, crateType, client = null) {
   const roll = Math.random() * 100;
   
   if (roll < crate.charChance) {
-    const crateChars = CHARACTERS.filter(c => c.obtainable === 'crate');
+    const crateChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate');
     const ownedCharNames = user.characters.map(c => c.name);
     const availableChars = crateChars.filter(c => !ownedCharNames.includes(c.name));
     
@@ -269,7 +269,7 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
     const roll = Math.random() * 100;
     
     if (roll < crate.charChance) {
-      const crateChars = CHARACTERS.filter(c => c.obtainable === 'crate');
+      const crateChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate');
       const ownedCharNames = user.characters.map(c => c.name);
       const availableChars = crateChars.filter(c => !ownedCharNames.includes(c.name));
       

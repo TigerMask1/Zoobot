@@ -1,6 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { saveData, saveDataImmediate } = require('./dataManager.js');
-const CHARACTERS = require('./characters.js');
+const characterManager = require('./characterManager.js');
 const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig } = require('./serverConfigManager.js');
 
 let dropIntervals = new Map();

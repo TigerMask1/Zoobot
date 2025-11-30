@@ -74,6 +74,7 @@ const {
   formatUSTBalance 
 } = require('./ustSystem.js');
 const { getCharacterAbility, getAbilityDescription } = require('./characterAbilities.js');
+const characterManager = require('./characterManager.js');
 const eventSystem = require('./eventSystem.js');
 const { viewKeys, unlockCharacter, openRandomCage } = require('./keySystem.js');
 const { loadServerConfigs, isMainServer, isSuperAdmin, isBotAdmin, isZooAdmin, addBotAdmin, removeBotAdmin, setupServer, isServerSetup, setDropChannel, setEventsChannel, setUpdatesChannel, getUpdatesChannel } = require('./serverConfigManager.js');
@@ -169,6 +170,9 @@ let data;
 async function initializeBot() {
   await initializeEmojiAssets();
   await initializeChestVisuals();
+  
+  await characterManager.initializeCharacterSystem();
+  console.log('✅ Dynamic character system initialized');
   
   data = await loadData();
   console.log('✅ Data loaded successfully');
@@ -281,6 +285,79 @@ client.on('guildCreate', async (guild) => {
 });
 
 client.on('interactionCreate', async (interaction) => {
+  if (interaction.isModalSubmit() && interaction.customId.startsWith('createchar_form_')) {
+    if (!data) return;
+    
+    try {
+      const userId = interaction.user.id;
+      
+      if (!isSuperAdmin(userId)) {
+        await interaction.reply({ content: '❌ Only Super Admins can create characters!', ephemeral: true });
+        return;
+      }
+      
+      const charName = interaction.fields.getTextInputValue('char_name');
+      const charEmoji = interaction.fields.getTextInputValue('char_emoji');
+      const charObtainable = interaction.fields.getTextInputValue('char_obtainable').toLowerCase();
+      const abilityData = interaction.fields.getTextInputValue('char_ability');
+      const moveData = interaction.fields.getTextInputValue('char_move');
+      
+      let ability = null;
+      if (abilityData && abilityData.trim()) {
+        const abilityParts = abilityData.split('|').map(p => p.trim());
+        if (abilityParts.length >= 4) {
+          ability = {
+            name: abilityParts[0],
+            emoji: abilityParts[1],
+            description: abilityParts[2],
+            effectType: abilityParts[3],
+            effectValue: parseFloat(abilityParts[4]) || 0.1
+          };
+        }
+      }
+      
+      let specialMove = null;
+      if (moveData && moveData.trim()) {
+        const moveParts = moveData.split('|').map(p => p.trim());
+        if (moveParts.length >= 2) {
+          specialMove = {
+            name: moveParts[0],
+            damage: parseInt(moveParts[1]) || 90
+          };
+        }
+      }
+      
+      const result = await characterManager.createCharacter(userId, {
+        name: charName,
+        emoji: charEmoji,
+        obtainable: charObtainable,
+        ability: ability,
+        specialMove: specialMove
+      });
+      
+      if (result.success) {
+        const embed = new EmbedBuilder()
+          .setColor('#00FF00')
+          .setTitle('✅ Character Created!')
+          .setDescription(`**${charEmoji} ${charName}** has been added to the game!`)
+          .addFields(
+            { name: 'Obtainable', value: charObtainable, inline: true },
+            { name: 'Ability', value: ability ? `${ability.emoji} ${ability.name}` : 'None set', inline: true },
+            { name: 'Special Move', value: specialMove ? `${specialMove.name} (${specialMove.damage} DMG)` : 'None set', inline: true }
+          )
+          .setFooter({ text: 'Character is now available in drops and crates!' });
+        
+        await interaction.reply({ embeds: [embed] });
+      } else {
+        await interaction.reply({ content: result.message, ephemeral: true });
+      }
+    } catch (error) {
+      console.error('Error creating character:', error);
+      await interaction.reply({ content: '❌ An error occurred while creating the character!', ephemeral: true }).catch(() => {});
+    }
+    return;
+  }
+  
   if (interaction.isModalSubmit() && interaction.customId.startsWith('auction_create_form_')) {
     if (!data) return;
     
@@ -5495,6 +5572,231 @@ client.on('messageCreate', async (message) => {
           .setFooter({ text: 'Admin view - showing first 15' });
         
         await message.reply({ embeds: [adminAuctionEmbed] });
+        break;
+        
+      case 'createchar':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can create characters!');
+          return;
+        }
+        
+        try {
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+          
+          const modal = new ModalBuilder()
+            .setCustomId(`createchar_form_${userId}`)
+            .setTitle('🦁 Create New Character');
+          
+          const nameInput = new TextInputBuilder()
+            .setCustomId('char_name')
+            .setLabel('Character Name')
+            .setPlaceholder('e.g., Luna')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(20);
+          
+          const emojiInput = new TextInputBuilder()
+            .setCustomId('char_emoji')
+            .setLabel('Emoji')
+            .setPlaceholder('e.g., 🦋 or <:custom:123456>')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(50);
+          
+          const obtainableInput = new TextInputBuilder()
+            .setCustomId('char_obtainable')
+            .setLabel('How to Obtain')
+            .setPlaceholder('crate, starter, drop, event, or exclusive')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(20);
+          
+          const abilityInput = new TextInputBuilder()
+            .setCustomId('char_ability')
+            .setLabel('Ability (Name|Emoji|Description|EffectType|Value)')
+            .setPlaceholder('Lunar Glow|🌙|Heal 5% HP per turn|healPerTurn|0.05')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(false)
+            .setMaxLength(200);
+          
+          const moveInput = new TextInputBuilder()
+            .setCustomId('char_move')
+            .setLabel('Special Move (Name|Damage)')
+            .setPlaceholder('Moon Beam|90')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(50);
+          
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(nameInput),
+            new ActionRowBuilder().addComponents(emojiInput),
+            new ActionRowBuilder().addComponents(obtainableInput),
+            new ActionRowBuilder().addComponents(abilityInput),
+            new ActionRowBuilder().addComponents(moveInput)
+          );
+          
+          const dmChannel = await message.author.createDM();
+          
+          const promptEmbed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('🦁 Create Character Form')
+            .setDescription('Click the button below to open the character creation form!')
+            .addFields(
+              { name: 'Ability Format', value: '`Name|Emoji|Description|EffectType|Value`\nExample: `Lunar Glow|🌙|Heal 5% HP per turn|healPerTurn|0.05`' },
+              { name: 'Move Format', value: '`Name|Damage`\nExample: `Moon Beam|90`' },
+              { name: 'Effect Types', value: 'criticalDamageBonus, healPerTurn, damageReduction, dodgeChance, freezeChance, lifesteal, flatDamageBonus, and more!' }
+            );
+          
+          const formButton = new ButtonBuilder()
+            .setCustomId(`open_createchar_modal_${userId}`)
+            .setLabel('Open Character Form')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🦁');
+          
+          const row = new ActionRowBuilder().addComponents(formButton);
+          
+          const promptMsg = await message.reply({ embeds: [promptEmbed], components: [row] });
+          
+          const filter = (i) => i.customId === `open_createchar_modal_${userId}` && i.user.id === userId;
+          const collector = promptMsg.createMessageComponentCollector({ filter, time: 60000 });
+          
+          collector.on('collect', async (i) => {
+            await i.showModal(modal);
+          });
+          
+        } catch (error) {
+          console.error('Error with createchar:', error);
+          await message.reply('❌ An error occurred!');
+        }
+        break;
+        
+      case 'editchar':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can edit characters!');
+          return;
+        }
+        
+        const editCharName = args[0];
+        const editField = args[1]?.toLowerCase();
+        const editValue = args.slice(2).join(' ');
+        
+        if (!editCharName || !editField) {
+          await message.reply('**Usage:** `!editchar <name> <field> <value>`\n\n**Fields:** name, emoji, obtainable\n\n**Example:** `!editchar Luna emoji 🌙`');
+          return;
+        }
+        
+        const editResult = await characterManager.editCharacter(userId, editCharName, { [editField]: editValue });
+        await message.reply(editResult.message);
+        break;
+        
+      case 'removechar':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can remove characters!');
+          return;
+        }
+        
+        const removeCharName = args.join(' ');
+        
+        if (!removeCharName) {
+          await message.reply('**Usage:** `!removechar <character name>`');
+          return;
+        }
+        
+        const charRemoveResult = await characterManager.removeCharacter(userId, removeCharName);
+        await message.reply(charRemoveResult.message);
+        break;
+        
+      case 'listchars':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can view the character database!');
+          return;
+        }
+        
+        const allChars = characterManager.listAllCharacters();
+        const charListPage = parseInt(args[0]) || 1;
+        const charDbPerPage = 10;
+        const charTotalPages = Math.ceil(allChars.length / charDbPerPage);
+        const charStartIdx = (charListPage - 1) * charDbPerPage;
+        const charPageItems = allChars.slice(charStartIdx, charStartIdx + charDbPerPage);
+        
+        const charListText = charPageItems.map((c, i) => {
+          const ability = c.ability ? `${c.ability.emoji} ${c.ability.name}` : 'No ability';
+          const move = c.specialMove ? `${c.specialMove.name} (${c.specialMove.damage})` : 'No move';
+          return `**${charStartIdx + i + 1}. ${c.emoji} ${c.name}**\nObtainable: ${c.obtainable} | Ability: ${ability} | Move: ${move}`;
+        }).join('\n\n');
+        
+        const listEmbed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle(`🦁 Character Database (${allChars.length} total)`)
+          .setDescription(charListText || 'No characters found!')
+          .setFooter({ text: `Page ${charListPage}/${charTotalPages} | Use !listchars <page>` });
+        
+        await message.reply({ embeds: [listEmbed] });
+        break;
+        
+      case 'setability':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can set abilities!');
+          return;
+        }
+        
+        const abilityCharName = args[0];
+        const abilityArgs = args.slice(1).join(' ').split('|').map(p => p.trim());
+        
+        if (!abilityCharName || abilityArgs.length < 5) {
+          await message.reply('**Usage:** `!setability <character> Name|Emoji|Description|EffectType|Value`\n\n**Example:** `!setability Luna Lunar Glow|🌙|Heal 5% HP per turn|healPerTurn|0.05`');
+          return;
+        }
+        
+        const setAbilityResult = await characterManager.editCharacterAbility(userId, abilityCharName, {
+          name: abilityArgs[0],
+          emoji: abilityArgs[1],
+          description: abilityArgs[2],
+          effectType: abilityArgs[3],
+          effectValue: parseFloat(abilityArgs[4]) || 0.1
+        });
+        
+        await message.reply(setAbilityResult.message);
+        break;
+        
+      case 'setmove':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can set special moves!');
+          return;
+        }
+        
+        const moveCharName = args[0];
+        const moveArgs = args.slice(1).join(' ').split('|').map(p => p.trim());
+        
+        if (!moveCharName || moveArgs.length < 2) {
+          await message.reply('**Usage:** `!setmove <character> MoveName|Damage`\n\n**Example:** `!setmove Luna Moon Beam|90`');
+          return;
+        }
+        
+        const setMoveResult = await characterManager.editSpecialMove(userId, moveCharName, {
+          name: moveArgs[0],
+          damage: parseInt(moveArgs[1]) || 90
+        });
+        
+        await message.reply(setMoveResult.message);
+        break;
+        
+      case 'effecttypes':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can view effect types!');
+          return;
+        }
+        
+        const effectTypes = characterManager.getEffectTypes();
+        const effectList = effectTypes.map((e, i) => `${i + 1}. \`${e}\``).join('\n');
+        
+        const effectEmbed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle('⚡ Available Effect Types')
+          .setDescription(effectList)
+          .setFooter({ text: 'Use these in ability creation' });
+        
+        await message.reply({ embeds: [effectEmbed] });
         break;
         
       default:
