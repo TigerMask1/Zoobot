@@ -2436,10 +2436,15 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const foundSkinChar = CHARACTERS.find(c => c.name.toLowerCase() === skinCharName.toLowerCase());
+        let foundSkinChar = CHARACTERS.find(c => c.name.toLowerCase() === skinCharName.toLowerCase());
         if (!foundSkinChar) {
-          await message.reply('❌ Character not found!');
-          return;
+          const customChar = await getApprovedCharacter(skinCharName);
+          if (customChar) {
+            foundSkinChar = customChar;
+          } else {
+            await message.reply('❌ Character not found!');
+            return;
+          }
         }
         
         const { addSkinToCharacter } = require('./skinSystem.js');
@@ -2477,10 +2482,15 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const foundUpdateChar = CHARACTERS.find(c => c.name.toLowerCase() === updateCharName.toLowerCase());
+        let foundUpdateChar = CHARACTERS.find(c => c.name.toLowerCase() === updateCharName.toLowerCase());
         if (!foundUpdateChar) {
-          await message.reply('❌ Character not found!');
-          return;
+          const customChar = await getApprovedCharacter(updateCharName);
+          if (customChar) {
+            foundUpdateChar = customChar;
+          } else {
+            await message.reply('❌ Character not found!');
+            return;
+          }
         }
         
         const { updateSkinImageUrl } = require('./skinSystem.js');
@@ -2620,10 +2630,15 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const foundDeleteChar = CHARACTERS.find(c => c.name.toLowerCase() === deleteCharName.toLowerCase());
+        let foundDeleteChar = CHARACTERS.find(c => c.name.toLowerCase() === deleteCharName.toLowerCase());
         if (!foundDeleteChar) {
-          await message.reply('❌ Character not found!');
-          return;
+          const customChar = await getApprovedCharacter(deleteCharName);
+          if (customChar) {
+            foundDeleteChar = customChar;
+          } else {
+            await message.reply('❌ Character not found!');
+            return;
+          }
         }
         
         const { removeSkinFromCharacter } = require('./skinSystem.js');
@@ -2699,10 +2714,15 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const foundUploadChar = CHARACTERS.find(c => c.name.toLowerCase() === uploadCharName.toLowerCase());
+        let foundUploadChar = CHARACTERS.find(c => c.name.toLowerCase() === uploadCharName.toLowerCase());
         if (!foundUploadChar) {
-          await message.reply('❌ Character not found!');
-          return;
+          const customChar = await getApprovedCharacter(uploadCharName);
+          if (customChar) {
+            foundUploadChar = customChar;
+          } else {
+            await message.reply('❌ Character not found!');
+            return;
+          }
         }
         
         const { addSkinToCatalog, RARITY_EMOJIS } = require('./cosmeticsShopSystem.js');
