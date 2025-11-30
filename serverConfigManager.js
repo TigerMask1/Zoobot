@@ -334,6 +334,10 @@ async function setUpdatesChannel(serverId, channelId, setBy, member) {
   return { success: true, message: responseMessage, setupComplete: config.setupComplete };
 }
 
+function getSuperAdminIds() {
+  return SUPER_ADMINS;
+}
+
 module.exports = {
   loadServerConfigs,
   saveServerConfig,
@@ -357,6 +361,7 @@ module.exports = {
   setDropChannel,
   setEventsChannel,
   setUpdatesChannel,
+  getSuperAdminIds,
   MAIN_SERVER_ID,
   SUPER_ADMINS,
   DEFAULT_GAME

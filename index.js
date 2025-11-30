@@ -169,6 +169,8 @@ const marketSystem = require('./marketSystem.js');
 const auctionSystem = require('./auctionSystem.js');
 const { ITEM_CATEGORIES, getItemInfo, listItemOnMarket, buyFromMarket, cancelListing, getMarketListings, clearMarket, createMarketEmbed, createMarketButtons, createMarketFilterButtons } = marketSystem;
 const { createAuction, placeBid, getActiveAuctions, forceEndAuction, clearAllAuctions, createAuctionEmbed, createAuctionButtons } = auctionSystem;
+const antiCheatSystem = require('./antiCheatSystem.js');
+const moderationSystem = require('./moderationSystem.js');
 
 const PREFIX = '!';
 let data;
@@ -267,6 +269,11 @@ client.on('clientReady', async () => {
   startPromotionSystem(client);
   startPersonalizedTaskSystem(client, data);
   startWeeklyClanWars(client, data);
+  
+  const superAdminIds = require('./serverConfigManager.js').getSuperAdminIds ? require('./serverConfigManager.js').getSuperAdminIds() : [];
+  antiCheatSystem.initAntiCheat(superAdminIds);
+  moderationSystem.initModeration(superAdminIds);
+  await moderationSystem.loadModerationData();
   
   console.log('✅ All systems initialized!');
 });
@@ -1111,6 +1118,28 @@ client.on('messageCreate', async (message) => {
   
   const serverId = message.guild?.id;
   const isAdmin = isSuperAdmin(userId) || isBotAdmin(userId, serverId);
+  
+  antiCheatSystem.trackCommand(userId, command, true, { serverId });
+  
+  const rateCheck = antiCheatSystem.checkRateLimit(userId, command);
+  if (!rateCheck.allowed) {
+    antiCheatSystem.trackCommand(userId, command, false, { serverId, reason: 'rate_limited' });
+    await message.reply(`⏱️ ${rateCheck.message}`);
+    return;
+  }
+  
+  if (serverId && moderationSystem.isUserBanned(serverId, userId)) {
+    const banInfo = moderationSystem.getBanInfo(serverId, userId);
+    await message.reply(`🔨 You are banned from using bot commands in this server.\n**Reason:** ${banInfo?.reason || 'No reason provided'}`);
+    return;
+  }
+  
+  if (serverId && moderationSystem.isUserMuted(serverId, userId)) {
+    const muteInfo = moderationSystem.getMuteInfo(serverId, userId);
+    const remainingMin = Math.ceil(muteInfo.remainingMs / 60000);
+    await message.reply(`🔇 You are muted for ${remainingMin} more minute(s).\n**Reason:** ${muteInfo?.reason || 'No reason provided'}`);
+    return;
+  }
   
   try {
     switch(command) {
@@ -3921,13 +3950,13 @@ client.on('messageCreate', async (message) => {
         break;
         
       case 'clearmail':
-        const clearResult = clearClaimedMail(data.users[userId]);
+        const clearMailResult = clearClaimedMail(data.users[userId]);
         
-        if (clearResult.success) {
+        if (clearMailResult.success) {
           await saveDataImmediate(data);
-          await message.reply(clearResult.message);
+          await message.reply(clearMailResult.message);
         } else {
-          await message.reply(clearResult.message);
+          await message.reply(clearMailResult.message);
         }
         break;
         
@@ -6905,6 +6934,458 @@ client.on('messageCreate', async (message) => {
           .setFooter({ text: `Total games: ${Object.keys(gameStats).length}` });
         
         await message.reply({ embeds: [gameStatsEmbed] });
+        break;
+
+      case 'warn':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmins can warn users!');
+          return;
+        }
+        
+        const warnTarget = message.mentions.users.first();
+        if (!warnTarget) {
+          await message.reply('**Usage:** `!warn @user [reason]`');
+          return;
+        }
+        
+        if (warnTarget.id === userId) {
+          await message.reply('❌ You cannot warn yourself!');
+          return;
+        }
+        
+        if (isSuperAdmin(warnTarget.id)) {
+          await message.reply('❌ Cannot warn a Super Admin!');
+          return;
+        }
+        
+        const warnReason = args.slice(1).join(' ') || 'No reason provided';
+        const warnResult = await moderationSystem.warnUser(serverId, warnTarget.id, userId, warnReason);
+        
+        const warnEmbed = new EmbedBuilder()
+          .setColor(0xFFA500)
+          .setTitle('⚠️ User Warned')
+          .setDescription(`<@${warnTarget.id}> has been warned.`)
+          .addFields(
+            { name: 'Reason', value: warnReason, inline: false },
+            { name: 'Total Warnings', value: warnResult.totalWarnings.toString(), inline: true },
+            { name: 'Warned By', value: `<@${userId}>`, inline: true }
+          )
+          .setTimestamp();
+        
+        if (warnResult.autoAction === 'ban_recommended') {
+          warnEmbed.addFields({ name: '⚠️ Action Recommended', value: 'User has 5+ warnings. Consider using `!botban` to ban them from bot commands.' });
+        }
+        
+        await message.reply({ embeds: [warnEmbed] });
+        break;
+
+      case 'warnings':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        
+        const warningsTarget = message.mentions.users.first() || message.author;
+        const userWarnings = moderationSystem.getWarnings(serverId, warningsTarget.id);
+        const warningsEmbed = moderationSystem.createWarningsEmbed(warningsTarget.id, userWarnings, message.guild.name);
+        
+        await message.reply({ embeds: [warningsEmbed] });
+        break;
+
+      case 'clearwarnings':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmins can clear warnings!');
+          return;
+        }
+        
+        const clearWarnTarget = message.mentions.users.first();
+        if (!clearWarnTarget) {
+          await message.reply('**Usage:** `!clearwarnings @user`');
+          return;
+        }
+        
+        const clearResult = await moderationSystem.clearWarnings(serverId, clearWarnTarget.id, userId);
+        await message.reply(`✅ Cleared **${clearResult.cleared}** warning(s) from <@${clearWarnTarget.id}>.`);
+        break;
+
+      case 'botban':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmins can ban users from bot commands!');
+          return;
+        }
+        
+        const banTarget = message.mentions.users.first();
+        if (!banTarget) {
+          await message.reply('**Usage:** `!botban @user [reason]`\n\nThis bans the user from using bot commands in this server.');
+          return;
+        }
+        
+        if (banTarget.id === userId) {
+          await message.reply('❌ You cannot ban yourself!');
+          return;
+        }
+        
+        if (isSuperAdmin(banTarget.id)) {
+          await message.reply('❌ Cannot ban a Super Admin!');
+          return;
+        }
+        
+        const banReason = args.slice(1).join(' ') || 'No reason provided';
+        await moderationSystem.banUserFromBot(serverId, banTarget.id, userId, banReason, data);
+        
+        const banEmbed = new EmbedBuilder()
+          .setColor(0xFF0000)
+          .setTitle('🔨 User Banned from Bot')
+          .setDescription(`<@${banTarget.id}> has been banned from using bot commands in this server.`)
+          .addFields(
+            { name: 'Reason', value: banReason },
+            { name: 'Banned By', value: `<@${userId}>` }
+          )
+          .setTimestamp();
+        
+        await message.reply({ embeds: [banEmbed] });
+        break;
+
+      case 'unbotban':
+      case 'botunban':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmins can unban users!');
+          return;
+        }
+        
+        const unbanTarget = message.mentions.users.first();
+        if (!unbanTarget) {
+          await message.reply('**Usage:** `!unbotban @user`');
+          return;
+        }
+        
+        const unbanResult = await moderationSystem.unbanUserFromBot(serverId, unbanTarget.id, userId);
+        if (unbanResult.success) {
+          await message.reply(`✅ <@${unbanTarget.id}> has been unbanned from bot commands.`);
+        } else {
+          await message.reply(`❌ ${unbanResult.error}`);
+        }
+        break;
+
+      case 'mute':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmins can mute users!');
+          return;
+        }
+        
+        const muteTarget = message.mentions.users.first();
+        if (!muteTarget) {
+          await message.reply('**Usage:** `!mute @user [duration] [reason]`\n\nDuration examples: 30s, 10m, 1h, 1d (default: 1h)');
+          return;
+        }
+        
+        if (muteTarget.id === userId) {
+          await message.reply('❌ You cannot mute yourself!');
+          return;
+        }
+        
+        if (isSuperAdmin(muteTarget.id)) {
+          await message.reply('❌ Cannot mute a Super Admin!');
+          return;
+        }
+        
+        let muteDuration = 3600000;
+        let muteReason = 'No reason provided';
+        
+        if (args[1]) {
+          const parsedDuration = moderationSystem.formatDuration(args[1]);
+          if (parsedDuration) {
+            muteDuration = parsedDuration;
+            muteReason = args.slice(2).join(' ') || 'No reason provided';
+          } else {
+            muteReason = args.slice(1).join(' ');
+          }
+        }
+        
+        await moderationSystem.muteUser(serverId, muteTarget.id, userId, muteDuration, muteReason);
+        
+        const muteMinutes = Math.ceil(muteDuration / 60000);
+        const muteEmbed = new EmbedBuilder()
+          .setColor(0xFFA500)
+          .setTitle('🔇 User Muted')
+          .setDescription(`<@${muteTarget.id}> has been muted from bot commands.`)
+          .addFields(
+            { name: 'Duration', value: `${muteMinutes} minute(s)`, inline: true },
+            { name: 'Reason', value: muteReason, inline: false },
+            { name: 'Muted By', value: `<@${userId}>`, inline: true }
+          )
+          .setTimestamp();
+        
+        await message.reply({ embeds: [muteEmbed] });
+        break;
+
+      case 'unmute':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmins can unmute users!');
+          return;
+        }
+        
+        const unmuteTarget = message.mentions.users.first();
+        if (!unmuteTarget) {
+          await message.reply('**Usage:** `!unmute @user`');
+          return;
+        }
+        
+        const unmuteResult = await moderationSystem.unmuteUser(serverId, unmuteTarget.id, userId);
+        if (unmuteResult.success) {
+          await message.reply(`✅ <@${unmuteTarget.id}> has been unmuted.`);
+        } else {
+          await message.reply(`❌ ${unmuteResult.error}`);
+        }
+        break;
+
+      case 'clear':
+      case 'purge':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmins can clear messages!');
+          return;
+        }
+        
+        if (!message.channel.permissionsFor(message.guild.members.me).has(PermissionFlagsBits.ManageMessages)) {
+          await message.reply('❌ I need the **Manage Messages** permission to clear messages!');
+          return;
+        }
+        
+        const clearCount = parseInt(args[0]) || 10;
+        if (clearCount < 1 || clearCount > 100) {
+          await message.reply('❌ Please specify a number between 1 and 100.');
+          return;
+        }
+        
+        const filterUser = message.mentions.users.first();
+        const clearResult2 = await moderationSystem.clearMessages(message.channel, clearCount, filterUser?.id);
+        
+        if (clearResult2.success) {
+          const clearMsg = await message.channel.send(`✅ Cleared **${clearResult2.deleted}** message(s)${filterUser ? ` from <@${filterUser.id}>` : ''}.`);
+          setTimeout(() => clearMsg.delete().catch(() => {}), 5000);
+        } else {
+          await message.reply(`❌ Failed to clear messages: ${clearResult2.error}`);
+        }
+        break;
+
+      case 'announce':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmins can make announcements!');
+          return;
+        }
+        
+        const announceContent = args.join(' ');
+        if (!announceContent) {
+          await message.reply('**Usage:** `!announce <message>`\n\nSends a formatted announcement to the current channel.');
+          return;
+        }
+        
+        await moderationSystem.announceToChannel(message.channel, announceContent, {
+          title: '📢 Announcement',
+          color: 0x5865F2,
+          footer: `Announced by ${message.author.username}`
+        });
+        
+        try {
+          await message.delete();
+        } catch (e) {}
+        break;
+
+      case 'modlogs':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmins can view moderation logs!');
+          return;
+        }
+        
+        const modLogs = await moderationSystem.getFullModLogs(serverId, { limit: 20 });
+        const modLogsEmbed = moderationSystem.createModLogEmbed(modLogs, message.guild.name);
+        
+        await message.reply({ embeds: [modLogsEmbed] });
+        break;
+
+      case 'modstats':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmins can view moderation stats!');
+          return;
+        }
+        
+        const modStats = moderationSystem.getModerationStats(serverId);
+        const modStatsEmbed = new EmbedBuilder()
+          .setColor(0x3498DB)
+          .setTitle('📊 Moderation Statistics')
+          .setDescription(`Moderation stats for **${message.guild.name}**`)
+          .addFields(
+            { name: 'Users Warned', value: modStats.usersWarned.toString(), inline: true },
+            { name: 'Total Warnings', value: modStats.totalWarnings.toString(), inline: true },
+            { name: 'Active Bans', value: modStats.activeBans.toString(), inline: true },
+            { name: 'Active Mutes', value: modStats.activeMutes.toString(), inline: true },
+            { name: 'Recent Actions', value: modStats.recentActions.toString(), inline: true }
+          )
+          .setTimestamp();
+        
+        await message.reply({ embeds: [modStatsEmbed] });
+        break;
+
+      case 'flags':
+      case 'userflags':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can view user flags!');
+          return;
+        }
+        
+        const flagsTarget = message.mentions.users.first();
+        if (!flagsTarget) {
+          await message.reply('**Usage:** `!flags @user`\n\nView anti-cheat flags for a user.');
+          return;
+        }
+        
+        const userFlags = antiCheatSystem.getUserFlags(flagsTarget.id);
+        const flagsEmbed = antiCheatSystem.createFlagsEmbed(flagsTarget.id, userFlags);
+        
+        await message.reply({ embeds: [flagsEmbed] });
+        break;
+
+      case 'clearflags':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can clear user flags!');
+          return;
+        }
+        
+        const clearFlagsTarget = message.mentions.users.first();
+        if (!clearFlagsTarget) {
+          await message.reply('**Usage:** `!clearflags @user`');
+          return;
+        }
+        
+        antiCheatSystem.clearUserFlags(clearFlagsTarget.id);
+        await message.reply(`✅ Cleared all flags for <@${clearFlagsTarget.id}>.`);
+        break;
+
+      case 'suspicious':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can view suspicious users!');
+          return;
+        }
+        
+        const threshold = parseInt(args[0]) || 3;
+        const suspiciousUsers = antiCheatSystem.getSuspiciousUsers(threshold);
+        
+        const suspiciousEmbed = new EmbedBuilder()
+          .setColor(0xFF6B6B)
+          .setTitle('⚠️ Suspicious Users Report')
+          .setDescription(`Users with ${threshold}+ flags in the last hour`)
+          .setTimestamp();
+        
+        if (suspiciousUsers.length === 0) {
+          suspiciousEmbed.addFields({ name: 'No Suspicious Users', value: 'No users currently meet the threshold.' });
+        } else {
+          const userList = suspiciousUsers.slice(0, 10).map((u, i) => 
+            `${i + 1}. <@${u.userId}> - **${u.flagCount}** flags`
+          ).join('\n');
+          suspiciousEmbed.addFields({ name: `Found ${suspiciousUsers.length} User(s)`, value: userList });
+        }
+        
+        await message.reply({ embeds: [suspiciousEmbed] });
+        break;
+
+      case 'transactions':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can view transaction history!');
+          return;
+        }
+        
+        const txTarget = message.mentions.users.first();
+        if (!txTarget) {
+          await message.reply('**Usage:** `!transactions @user`\n\nView recent transactions for a user.');
+          return;
+        }
+        
+        const transactions = await antiCheatSystem.getFullTransactionHistory(txTarget.id, { limit: 20 });
+        const txEmbed = antiCheatSystem.createTransactionLogEmbed(transactions, txTarget.id);
+        
+        await message.reply({ embeds: [txEmbed] });
+        break;
+
+      case 'anticheatstats':
+      case 'acstats':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can view anti-cheat stats!');
+          return;
+        }
+        
+        const acStats = antiCheatSystem.getAntiCheatStats();
+        const acStatsEmbed = new EmbedBuilder()
+          .setColor(0x00D9FF)
+          .setTitle('🛡️ Anti-Cheat Statistics')
+          .setDescription('Current anti-cheat system status')
+          .addFields(
+            { name: 'Active Rate Limits', value: acStats.activeRateLimits.toString(), inline: true },
+            { name: 'Tracked Users', value: acStats.trackedUsers.toString(), inline: true },
+            { name: 'Users with Flags', value: acStats.usersWithFlags.toString(), inline: true },
+            { name: 'Total Flags (1h)', value: acStats.totalFlags.toString(), inline: true },
+            { name: 'Transaction Log Size', value: acStats.transactionLogSize.toString(), inline: true }
+          )
+          .setTimestamp();
+        
+        await message.reply({ embeds: [acStatsEmbed] });
+        break;
+
+      case 'modhelp':
+        const modHelpEmbed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('🛡️ Moderation Commands')
+          .setDescription('Commands for managing users and keeping your server safe.')
+          .addFields(
+            { name: '⚠️ Warnings', value: '`!warn @user [reason]` - Warn a user\n`!warnings [@user]` - View warnings\n`!clearwarnings @user` - Clear all warnings' },
+            { name: '🔨 Bans (Bot Commands)', value: '`!botban @user [reason]` - Ban from bot commands\n`!unbotban @user` - Remove bot ban' },
+            { name: '🔇 Mutes', value: '`!mute @user [duration] [reason]` - Mute user\n`!unmute @user` - Unmute user\n\n*Durations: 30s, 10m, 1h, 1d*' },
+            { name: '🧹 Message Management', value: '`!clear <count> [@user]` - Delete messages\n`!announce <message>` - Send announcement' },
+            { name: '📋 Logs & Stats', value: '`!modlogs` - View moderation logs\n`!modstats` - View moderation statistics' },
+            { name: '🛡️ Anti-Cheat (Super Admin)', value: '`!flags @user` - View user flags\n`!clearflags @user` - Clear flags\n`!suspicious [threshold]` - View flagged users\n`!transactions @user` - View transaction history\n`!anticheatstats` - View system stats' }
+          )
+          .setFooter({ text: 'ZooAdmin role required for most commands' });
+        
+        await message.reply({ embeds: [modHelpEmbed] });
         break;
         
       default:

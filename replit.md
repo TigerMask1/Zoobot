@@ -92,6 +92,20 @@ The bot is built on Discord.js v14 and Node.js 20, utilizing a dual-mode data st
   - **Requirements:** `!setgame`, `!setdropchannel`, `!seteventschannel`, `!setupdateschannel`
   - **Status Check:** `!setupstatus` shows detailed setup progress with game and channel status
   - **Validation:** Drops only activate when server has game selected with at least 1 character
+- **Anti-Cheat System (NEW Nov 30):** Comprehensive protection against exploits and abuse:
+  - **Rate Limiting:** 10 commands per 5 seconds with automatic cooldown (10 seconds) for excessive use
+  - **Suspicious Activity Detection:** Automatic flagging for excessive coin/gem gains (1M coins or 10K gems per hour), high trade frequency (50+ trades in 10 minutes), and unusual command patterns
+  - **Transaction Logging:** All economy changes logged with timestamps, sources, and involved parties. Stored in memory and MongoDB for persistence
+  - **User Snapshots:** Create economy snapshots for potential rollback. Super admin commands for managing flags and viewing suspicious users
+  - **Commands:** `!flags @user` (view flags), `!clearflags @user` (clear flags), `!suspicious [threshold]` (list flagged users), `!transactions @user` (view history), `!anticheatstats` (system stats)
+- **Moderation System (NEW Nov 30):** Full moderation toolkit for ZooAdmins:
+  - **Warning System:** `!warn @user [reason]` - Issue warnings with tracking. Auto-recommend ban at 5+ warnings. `!warnings [@user]` - View warnings. `!clearwarnings @user` - Clear all warnings
+  - **Bot Bans:** `!botban @user [reason]` - Ban users from bot commands in server. `!unbotban @user` - Remove ban. Cannot ban Super Admins
+  - **Muting:** `!mute @user [duration] [reason]` - Temporarily mute from bot commands. Supports durations (30s, 10m, 1h, 1d). `!unmute @user` - Remove mute
+  - **Message Management:** `!clear <count> [@user]` - Bulk delete messages (1-100). `!announce <message>` - Send formatted announcements
+  - **Logging:** `!modlogs` - View recent moderation actions. `!modstats` - View moderation statistics. All actions logged with moderator, timestamp, and reason
+  - **Help:** `!modhelp` - View all moderation commands and usage
+  - **Permissions:** All moderation commands require ZooAdmin role or Super Admin status
 
 ## External Dependencies
 - **Discord.js v14**: For all Discord API interactions.
