@@ -5613,7 +5613,7 @@ client.on('messageCreate', async (message) => {
           
           const abilityInput = new TextInputBuilder()
             .setCustomId('char_ability')
-            .setLabel('Ability (Name|Emoji|Description|EffectType|Value)')
+            .setLabel('Ability (Name|Emoji|Desc|Effect|Value)')
             .setPlaceholder('Lunar Glow|🌙|Heal 5% HP per turn|healPerTurn|0.05')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(false)
