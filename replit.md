@@ -71,6 +71,39 @@ The bot is built on Discord.js v14 and Node.js 20, utilizing a dual-mode data st
   - **Submission Workflow:** Users submit Q&A → Pending review → Admin approves/rejects → User gets 10 gems + DM notification on approval
   - **Storage:** All entries stored in MongoDB for persistence
 
+## Custom Game Mode Feature (NEW - November 30, 2025)
+
+The bot now supports **Custom Game Mode** alongside the standard ZooBot mode. Server owners can create custom-themed games with unique characters while maintaining global compatibility.
+
+**Key Features:**
+- **Game Mode Selection:** Servers can choose between ZooBot (standard) or Custom game mode
+- **Custom Characters:** Create unique characters with custom special moves for each game
+- **Character Approval Workflow:** Custom characters require bot admin review before becoming obtainable
+- **Server-Specific Availability:** Custom characters are only obtainable in their source server
+- **Global Economies:** Coins and gems remain shared globally across all servers and game modes
+- **Character Classes:** Custom characters support the same traits system as ZooBot (ST, skins, moves)
+
+**New Commands:**
+- `!setgamemode <zoobot|custom>` - Choose game mode (ZooAdmin only)
+- `!creategame <name>` - Create a custom game instance (ZooAdmin only)
+- `!createcharacter Name | Emoji | Description | UniqueMoveName | UniqueMoveDamage | ImageURL` - Add custom characters
+- `!setstarters` - Set 3 starter characters for custom games
+- `!reviewcharacters` - View pending character approvals (Super Admin only)
+- `!approve <characterId>` - Approve a custom character
+- `!reject <characterId> <reason>` - Reject a custom character
+- `!approvalstats` - View character approval statistics
+
+**Service Architecture:**
+- **customGameService.js:** Core service for managing custom games, starters, and character data
+- **characterCatalogService.js:** Unified character resolution for both ZooBot and custom games
+- **approvalWorkflowService.js:** Handle character submissions and bot admin reviews
+- **serverConfigManager.js (enhanced):** Added gameMode support and custom game references
+
+**Data Integrity:**
+- Characters are stored with approval status (pending/approved/rejected)
+- Server-specific character pools prevent cross-server contamination
+- Global economies (coins/gems) remain unaffected by game mode selection
+
 ## External Dependencies
 - **Discord.js v14**: For all Discord API interactions.
 - **Node.js 20**: The JavaScript runtime environment.
