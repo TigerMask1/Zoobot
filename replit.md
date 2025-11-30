@@ -65,6 +65,11 @@ The bot is built on Discord.js v14 and Node.js 20, utilizing a dual-mode data st
 - **Multi-Server Architecture:** Supports deployment across multiple Discord servers, differentiating features like drop rates, clan wars, and promotional messages between a "Main Server" and "Non-Main Servers."
 
 - **Character Info Command (!info):** View any character's information without owning them - see default skin, special ability, and how to obtain them.
+- **Dynamic Character System (Nov 30 Fix):** Dynamically created characters now automatically receive:
+  - Default special move (`<Name>'s Strike`, 90 damage) if none specified
+  - Default passive ability (`<Name>'s Power`, +5 flat damage) if none specified
+  - Full battle data (moves, HP) when granted to users
+- **Force Release Command (!forcerelease):** Super admin command to release any character regardless of level. Usage: `!forcerelease <character>` or `!forcerelease @user <character>`.
 - **Q&A System (UPDATED):** Comprehensive Q&A system with user submissions for approval:
   - **User Commands:** `!q` (list topics), `!q <keyword>` (get answer), `!submitqa keyword | question | answer` (submit for approval)
   - **Admin Commands:** `!qadd keyword | message` (add directly), `!qedit keyword | message` (edit), `!qdel keyword` (delete), `!pendingqa` (view pending), `!approveqa <id>` (approve), `!rejectqa <id> <reason>` (reject)
