@@ -2384,6 +2384,58 @@ client.on('messageCreate', async (message) => {
         await message.reply({ embeds: [releaseEmbed] });
         break;
         
+      case 'forcerelease':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ This command is restricted to Super Admins only!');
+          return;
+        }
+        
+        const forceReleaseTarget = message.mentions.users.first();
+        const forceCharName = forceReleaseTarget 
+          ? args.filter(arg => !arg.startsWith('<@')).join(' ').toLowerCase()
+          : args.join(' ').toLowerCase();
+        
+        const targetUserId = forceReleaseTarget ? forceReleaseTarget.id : userId;
+        
+        if (!forceCharName) {
+          await message.reply('Usage: `!forcerelease <character name>` or `!forcerelease @user <character name>`');
+          return;
+        }
+        
+        if (!data.users[targetUserId]) {
+          await message.reply('❌ That user hasn\'t started yet!');
+          return;
+        }
+        
+        const forceCharIndex = data.users[targetUserId].characters.findIndex(c => 
+          c.name.toLowerCase() === forceCharName
+        );
+        
+        if (forceCharIndex === -1) {
+          await message.reply(`❌ ${forceReleaseTarget ? 'That user doesn\'t' : 'You don\'t'} own this character!`);
+          return;
+        }
+        
+        const forceCharToRelease = data.users[targetUserId].characters[forceCharIndex];
+        
+        data.users[targetUserId].characters.splice(forceCharIndex, 1);
+        
+        if (data.users[targetUserId].selectedCharacter === forceCharToRelease.name) {
+          data.users[targetUserId].selectedCharacter = data.users[targetUserId].characters.length > 0 
+            ? data.users[targetUserId].characters[0].name 
+            : null;
+        }
+        
+        saveData(data);
+        
+        const forceReleaseEmbed = new EmbedBuilder()
+          .setColor('#FF4444')
+          .setTitle('🔓 Character Force Released')
+          .setDescription(`${forceReleaseTarget ? `<@${targetUserId}>'s` : 'Your'} **${forceCharToRelease.name} ${forceCharToRelease.emoji}** was force released by <@${userId}>!\n\nLevel: ${forceCharToRelease.level}\nST: ${forceCharToRelease.st}%\nTokens: ${forceCharToRelease.tokens}`);
+        
+        await message.reply({ embeds: [forceReleaseEmbed] });
+        break;
+        
       case 'setdrop':
         if (!isAdmin) {
           await message.reply('❌ You need Administrator permission!');

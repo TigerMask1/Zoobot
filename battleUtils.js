@@ -1,4 +1,5 @@
 const { LOW_ST_MOVES, MID_ST_MOVES, HIGH_ST_MOVES, SPECIAL_MOVES, getMovesForST } = require('./moves.js');
+const characterManager = require('./characterManager.js');
 
 function calculateBaseHP(st) {
   const minHP = 250;
@@ -67,11 +68,18 @@ function calculateCriticalHit(baseDamage, critChance = 0.15) {
 }
 
 function assignMovesToCharacter(characterName, st) {
-  const specialMove = SPECIAL_MOVES[characterName];
+  let specialMove = SPECIAL_MOVES[characterName];
   
   if (!specialMove) {
-    console.error(`No special move found for character: ${characterName}`);
-    return null;
+    const dynamicMove = characterManager.getSpecialMove(characterName);
+    if (dynamicMove) {
+      specialMove = dynamicMove;
+    }
+  }
+  
+  if (!specialMove) {
+    console.log(`⚠️ No special move found for ${characterName}, creating default`);
+    specialMove = { name: `${characterName}'s Strike`, damage: 90 };
   }
   
   const tierMoves = getMovesForST(st);

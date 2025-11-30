@@ -183,6 +183,14 @@ async function createCharacter(userId, charData) {
       type: 'passive',
       effect: effect
     };
+  } else {
+    CHARACTER_ABILITIES[name] = {
+      name: `${name}'s Power`,
+      emoji: '⭐',
+      description: `${name} gains a small damage bonus on all attacks.`,
+      type: 'passive',
+      effect: { flatDamageBonus: 5 }
+    };
   }
   
   if (specialMove) {
@@ -193,6 +201,11 @@ async function createCharacter(userId, charData) {
     SPECIAL_MOVES[name] = {
       name: specialMove.name,
       damage: parseInt(specialMove.damage)
+    };
+  } else {
+    SPECIAL_MOVES[name] = {
+      name: `${name}'s Strike`,
+      damage: 90
     };
   }
   
