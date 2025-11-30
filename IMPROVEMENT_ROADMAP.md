@@ -489,10 +489,10 @@ Actions:
 | **Trading** | ✅ | ✅ (Yes) | ✅ (Yes) | ❌ | **Tied** |
 | **Game Bundles** | ✅ (Unique!) | ❌ | ❌ | ❌ | **ZooBot** |
 | **Web Dashboard** | ❌ | ✅ | ✅ | ✅ | **Competitors** |
-| **Global Leaderboards** | ❌ | ✅ | ✅ | ✅ | **Competitors** |
+| **Global Leaderboards** | ✅ DONE | ✅ | ✅ | ✅ | **ZooBot** |
 | **Premium Tier** | ❌ | ✅ | ✅ | ✅ | **Competitors** |
 | **Moderation Features** | ❌ | ⚠️ (Limited) | ❌ | ✅ (Full) | **MEE6** |
-| **Daily Streaks** | ❌ | ✅ | ✅ | ❌ | **Competitors** |
+| **Daily Streaks** | ✅ DONE | ✅ | ✅ | ❌ | **ZooBot** |
 | **Seasonal Events** | ✅ (Daily rotation) | ⚠️ (Limited) | ✅ (Good) | ❌ | **Dank Memer** |
 | **Community Features** | ✅ (Clans, Q&A, Market) | ⚠️ (Limited) | ✅ (Good) | ⚠️ (Limited) | **ZooBot** |
 | **Support & Docs** | ❌ | ✅ | ✅ | ✅ | **Competitors** |
@@ -526,11 +526,11 @@ Actions:
 **Goal:** Feel like a "real project"
 
 **Priority:**
-1. ✅ Daily login streaks (2-3 hours)
-2. ✅ Achievement badges (2-3 hours)
-3. ✅ Global leaderboards (4-5 hours)
-4. ✅ Server analytics command (3-4 hours)
-5. ✅ Privacy policy & support server (3 hours)
+1. ✅ Daily login streaks (2-3 hours) - COMPLETED
+2. ✅ Achievement badges (2-3 hours) - COMPLETED
+3. ✅ Global leaderboards (4-5 hours) - COMPLETED
+4. ✅ Server analytics command (3-4 hours) - COMPLETED
+5. ✅ Weekly challenges system (4-5 hours) - COMPLETED
 6. ✅ GitHub repo (make code public)
 7. ✅ Roadmap document (1 hour)
 
@@ -609,32 +609,37 @@ Actions:
 
 These can be done in parallel, ~20-25 hours total:
 
-1. **Daily Login Streak** (2-3 hours)
+1. **Daily Login Streak** (2-3 hours) - ✅ COMPLETED
    - Command: `!daily`
    - Shows streak count
    - Bonus on day 7
 
-2. **Achievement Badges** (2-3 hours)
+2. **Achievement Badges** (2-3 hours) - ✅ COMPLETED
    - Earn badges for milestones
    - Display on profile
    - Leaderboard showing badge count
 
-3. **Global Leaderboard** (4-5 hours)
+3. **Global Leaderboard** (4-5 hours) - ✅ COMPLETED
    - Top 100 players across all servers
    - Multiple categories (richest, collectors, battlers)
    - Update every 10 minutes
 
-4. **Server Analytics** (3-4 hours)
+4. **Server Analytics** (3-4 hours) - ✅ COMPLETED
    - Command: `!serverstats`
    - Shows server health metrics
    - Track trends
 
-5. **Support Infrastructure** (2-3 hours)
+5. **Weekly Challenges** (4-5 hours) - ✅ COMPLETED
+   - Rotating weekly goals (wins, trades, crates)
+   - Progress tracking and rewards
+   - Monday UTC resets
+
+6. **Support Infrastructure** (2-3 hours)
    - Official support server
    - FAQ channel
    - Bug report system
 
-6. **Transparent Communication** (1-2 hours)
+7. **Transparent Communication** (1-2 hours)
    - Publish roadmap (Trello)
    - Write changelog
    - Monthly updates
