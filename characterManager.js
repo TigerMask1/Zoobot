@@ -5,6 +5,9 @@ let CHARACTERS = [];
 let CHARACTER_ABILITIES = {};
 let SPECIAL_MOVES = {};
 
+const DEFAULT_GAME = 'ZooBot';
+const DEFAULT_CREATOR = 'ZooBot';
+
 const VALID_EFFECT_TYPES = [
   'criticalDamageBonus', 'energyCostReduction', 'startingShield', 'firstAttackBonus',
   'healPerTurn', 'healingBonus', 'damageReduction', 'dodgeChance', 'startingEnergyBonus',
@@ -72,17 +75,54 @@ async function migrateHardcodedCharacters() {
     const hardcodedAbilities = require('./characterAbilities.js').CHARACTER_ABILITIES;
     const hardcodedMoves = require('./moves.js').SPECIAL_MOVES;
     
-    CHARACTERS = [...hardcodedChars];
+    CHARACTERS = hardcodedChars.map(c => ({
+      ...c,
+      game: DEFAULT_GAME,
+      createdBy: DEFAULT_CREATOR
+    }));
     CHARACTER_ABILITIES = { ...hardcodedAbilities };
     SPECIAL_MOVES = { ...hardcodedMoves };
     
     await saveCharactersToDB();
-    console.log(`✅ Migrated ${CHARACTERS.length} hardcoded characters to MongoDB`);
+    console.log(`✅ Migrated ${CHARACTERS.length} hardcoded characters to MongoDB with game/createdBy fields`);
     return true;
   } catch (error) {
     console.error('Error migrating hardcoded characters:', error);
     return false;
   }
+}
+
+async function backfillGameAndCreator() {
+  let updated = 0;
+  
+  for (let i = 0; i < CHARACTERS.length; i++) {
+    let changed = false;
+    
+    if (!CHARACTERS[i].game) {
+      CHARACTERS[i].game = DEFAULT_GAME;
+      changed = true;
+    }
+    
+    if (!CHARACTERS[i].createdBy) {
+      CHARACTERS[i].createdBy = DEFAULT_CREATOR;
+      changed = true;
+    }
+    
+    if (changed) {
+      updated++;
+    }
+  }
+  
+  if (updated > 0) {
+    await saveCharactersToDB();
+    console.log(`✅ Backfilled ${updated} characters with game/createdBy fields`);
+  }
+  
+  return { 
+    success: true, 
+    message: `✅ Backfilled ${updated} characters with game/createdBy fields`,
+    updated 
+  };
 }
 
 async function initializeCharacterSystem() {
@@ -91,6 +131,8 @@ async function initializeCharacterSystem() {
   if (!loaded) {
     console.log('📦 No characters in MongoDB, migrating from hardcoded files...');
     await migrateHardcodedCharacters();
+  } else {
+    await backfillGameAndCreator();
   }
   
   return {
@@ -102,6 +144,26 @@ async function initializeCharacterSystem() {
 
 function getCharacters() {
   return CHARACTERS;
+}
+
+function getCharactersByGame(gameName) {
+  if (!gameName) return CHARACTERS;
+  return CHARACTERS.filter(c => c.game === gameName);
+}
+
+function getCharactersForServer(serverId, serverConfigManager, gameSystem) {
+  const serverGame = gameSystem.getServerGame(serverId);
+  if (!serverGame) {
+    return CHARACTERS.filter(c => c.game === DEFAULT_GAME);
+  }
+  return CHARACTERS.filter(c => c.game === serverGame);
+}
+
+function getObtainableCharactersByGame(gameName, obtainableType) {
+  return CHARACTERS.filter(c => 
+    c.game === gameName && 
+    c.obtainable === obtainableType
+  );
 }
 
 function getCharacterAbilities() {
@@ -135,7 +197,7 @@ async function createCharacter(userId, charData) {
     return { success: false, message: '❌ Only Super Admins can create characters!' };
   }
   
-  const { name, emoji, obtainable, ability, specialMove } = charData;
+  const { name, emoji, obtainable, ability, specialMove, game } = charData;
   
   if (!name || !emoji || !obtainable) {
     return { success: false, message: '❌ Missing required fields: name, emoji, obtainable' };
@@ -154,8 +216,9 @@ async function createCharacter(userId, charData) {
     emoji: emoji,
     obtainable: obtainable,
     customEmojiId: charData.customEmojiId || null,
-    createdAt: new Date().toISOString(),
-    createdBy: userId
+    game: game || DEFAULT_GAME,
+    createdBy: charData.createdBy || userId,
+    createdAt: new Date().toISOString()
   };
   
   CHARACTERS.push(newChar);
@@ -213,7 +276,73 @@ async function createCharacter(userId, charData) {
   
   return { 
     success: true, 
-    message: `✅ Character **${emoji} ${name}** created successfully!`,
+    message: `✅ Character **${emoji} ${name}** created successfully!\n🎮 Game: **${newChar.game}**`,
+    character: newChar
+  };
+}
+
+async function createCharacterFromSubmission(charData) {
+  const { name, emoji, obtainable, ability, specialMove, game, createdBy } = charData;
+  
+  if (!name || !emoji) {
+    return { success: false, message: '❌ Missing required fields: name, emoji' };
+  }
+  
+  if (getCharacterByName(name)) {
+    return { success: false, message: `❌ Character "${name}" already exists!` };
+  }
+  
+  const newChar = {
+    name: name,
+    emoji: emoji,
+    obtainable: obtainable || 'crate',
+    customEmojiId: charData.customEmojiId || null,
+    game: game || DEFAULT_GAME,
+    createdBy: createdBy || DEFAULT_CREATOR,
+    createdAt: new Date().toISOString(),
+    fromSubmission: true
+  };
+  
+  CHARACTERS.push(newChar);
+  
+  if (ability && ability.name && ability.effectType) {
+    const effect = {};
+    effect[ability.effectType] = ability.effectValue || 0.1;
+    
+    CHARACTER_ABILITIES[name] = {
+      name: ability.name,
+      emoji: ability.emoji || '⭐',
+      description: ability.description || `${name}'s special ability`,
+      type: 'passive',
+      effect: effect
+    };
+  } else {
+    CHARACTER_ABILITIES[name] = {
+      name: `${name}'s Power`,
+      emoji: '⭐',
+      description: `${name} gains a small damage bonus on all attacks.`,
+      type: 'passive',
+      effect: { flatDamageBonus: 5 }
+    };
+  }
+  
+  if (specialMove && specialMove.name) {
+    SPECIAL_MOVES[name] = {
+      name: specialMove.name,
+      damage: parseInt(specialMove.damage) || 90
+    };
+  } else {
+    SPECIAL_MOVES[name] = {
+      name: `${name}'s Strike`,
+      damage: 90
+    };
+  }
+  
+  await saveCharactersToDB();
+  
+  return { 
+    success: true, 
+    message: `✅ Character **${emoji} ${name}** created from submission!`,
     character: newChar
   };
 }
@@ -241,6 +370,8 @@ async function editCharacter(userId, charName, updates) {
     char.obtainable = updates.obtainable;
   }
   if (updates.customEmojiId !== undefined) char.customEmojiId = updates.customEmojiId;
+  if (updates.game !== undefined) char.game = updates.game;
+  if (updates.createdBy !== undefined) char.createdBy = updates.createdBy;
   
   char.updatedAt = new Date().toISOString();
   char.updatedBy = userId;
@@ -264,6 +395,129 @@ async function editCharacter(userId, charName, updates) {
     success: true, 
     message: `✅ Character **${char.emoji} ${char.name}** updated!`,
     character: char
+  };
+}
+
+async function setCharacterGame(userId, charName, gameName) {
+  if (!isSuperAdmin(userId)) {
+    return { success: false, message: '❌ Only Super Admins can change character games!' };
+  }
+  
+  const charIndex = CHARACTERS.findIndex(c => c.name.toLowerCase() === charName.toLowerCase());
+  
+  if (charIndex === -1) {
+    return { success: false, message: `❌ Character "${charName}" not found!` };
+  }
+  
+  const oldGame = CHARACTERS[charIndex].game;
+  CHARACTERS[charIndex].game = gameName;
+  CHARACTERS[charIndex].updatedAt = new Date().toISOString();
+  CHARACTERS[charIndex].updatedBy = userId;
+  
+  await saveCharactersToDB();
+  
+  return { 
+    success: true, 
+    message: `✅ Character **${CHARACTERS[charIndex].emoji} ${CHARACTERS[charIndex].name}** moved from **${oldGame}** to **${gameName}**!`,
+    character: CHARACTERS[charIndex]
+  };
+}
+
+async function bulkSetCharacterGame(userId, charNames, gameName) {
+  if (!isSuperAdmin(userId)) {
+    return { success: false, message: '❌ Only Super Admins can change character games!' };
+  }
+  
+  let updated = 0;
+  const errors = [];
+  
+  for (const charName of charNames) {
+    const charIndex = CHARACTERS.findIndex(c => c.name.toLowerCase() === charName.toLowerCase());
+    
+    if (charIndex === -1) {
+      errors.push(`"${charName}" not found`);
+      continue;
+    }
+    
+    CHARACTERS[charIndex].game = gameName;
+    CHARACTERS[charIndex].updatedAt = new Date().toISOString();
+    CHARACTERS[charIndex].updatedBy = userId;
+    updated++;
+  }
+  
+  if (updated > 0) {
+    await saveCharactersToDB();
+  }
+  
+  let message = `✅ Moved ${updated} character(s) to **${gameName}**!`;
+  if (errors.length > 0) {
+    message += `\n⚠️ Errors: ${errors.join(', ')}`;
+  }
+  
+  return { success: true, message, updated, errors };
+}
+
+async function importCharactersToGame(userId, sourceGame, targetGame, charNames = null) {
+  if (!isSuperAdmin(userId)) {
+    return { success: false, message: '❌ Only Super Admins can import characters!' };
+  }
+  
+  const sourceChars = CHARACTERS.filter(c => c.game === sourceGame);
+  
+  if (sourceChars.length === 0) {
+    return { success: false, message: `❌ No characters found in game "${sourceGame}"!` };
+  }
+  
+  let charsToImport = sourceChars;
+  if (charNames && charNames.length > 0) {
+    const lowerNames = charNames.map(n => n.toLowerCase());
+    charsToImport = sourceChars.filter(c => lowerNames.includes(c.name.toLowerCase()));
+  }
+  
+  if (charsToImport.length === 0) {
+    return { success: false, message: '❌ No matching characters to import!' };
+  }
+  
+  let imported = 0;
+  for (const char of charsToImport) {
+    const existsInTarget = CHARACTERS.some(
+      c => c.name.toLowerCase() === char.name.toLowerCase() && c.game === targetGame
+    );
+    
+    if (!existsInTarget) {
+      const newChar = {
+        ...char,
+        game: targetGame,
+        importedFrom: sourceGame,
+        importedAt: new Date().toISOString(),
+        importedBy: userId
+      };
+      
+      const newName = `${char.name}_${targetGame}`;
+      if (getCharacterByName(char.name)) {
+        newChar.name = newName;
+        
+        if (CHARACTER_ABILITIES[char.name]) {
+          CHARACTER_ABILITIES[newName] = { ...CHARACTER_ABILITIES[char.name] };
+        }
+        if (SPECIAL_MOVES[char.name]) {
+          SPECIAL_MOVES[newName] = { ...SPECIAL_MOVES[char.name] };
+        }
+      }
+      
+      CHARACTERS.push(newChar);
+      imported++;
+    }
+  }
+  
+  if (imported > 0) {
+    await saveCharactersToDB();
+  }
+  
+  return { 
+    success: true, 
+    message: `✅ Imported ${imported} character(s) from **${sourceGame}** to **${targetGame}**!`,
+    imported
   };
 }
 
@@ -372,8 +626,43 @@ function listAllCharacters() {
   });
 }
 
+function listCharactersByGame(gameName) {
+  return CHARACTERS
+    .filter(c => c.game === gameName)
+    .map(c => {
+      const ability = CHARACTER_ABILITIES[c.name];
+      const move = SPECIAL_MOVES[c.name];
+      return {
+        ...c,
+        ability: ability || null,
+        specialMove: move || null
+      };
+    });
+}
+
 function getCharacterCount() {
   return CHARACTERS.length;
+}
+
+function getCharacterCountByGame(gameName) {
+  return CHARACTERS.filter(c => c.game === gameName).length;
+}
+
+function getGameStats() {
+  const stats = {};
+  
+  for (const char of CHARACTERS) {
+    const game = char.game || DEFAULT_GAME;
+    if (!stats[game]) {
+      stats[game] = { total: 0, byObtainable: {} };
+    }
+    stats[game].total++;
+    
+    const obt = char.obtainable || 'unknown';
+    stats[game].byObtainable[obt] = (stats[game].byObtainable[obt] || 0) + 1;
+  }
+  
+  return stats;
 }
 
 function getEffectTypes() {
@@ -387,6 +676,9 @@ function getObtainableTypes() {
 module.exports = {
   initializeCharacterSystem,
   getCharacters,
+  getCharactersByGame,
+  getCharactersForServer,
+  getObtainableCharactersByGame,
   getCharacterAbilities,
   getSpecialMoves,
   getCharacterByName,
@@ -394,16 +686,26 @@ module.exports = {
   getAbilityDescription,
   getSpecialMove,
   createCharacter,
+  createCharacterFromSubmission,
   editCharacter,
+  setCharacterGame,
+  bulkSetCharacterGame,
+  importCharactersToGame,
   editCharacterAbility,
   editSpecialMove,
   removeCharacter,
   listAllCharacters,
+  listCharactersByGame,
   getCharacterCount,
+  getCharacterCountByGame,
+  getGameStats,
   getEffectTypes,
   getObtainableTypes,
   saveCharactersToDB,
   loadCharactersFromDB,
+  backfillGameAndCreator,
   VALID_EFFECT_TYPES,
-  OBTAINABLE_TYPES
+  OBTAINABLE_TYPES,
+  DEFAULT_GAME,
+  DEFAULT_CREATOR
 };

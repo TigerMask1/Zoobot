@@ -3,6 +3,7 @@ const { assignMovesToCharacter, calculateBaseHP } = require('./battleUtils.js');
 const eventSystem = require('./eventSystem.js');
 const { checkTaskProgress, completePersonalizedTask, initializePersonalizedTaskData } = require('./personalizedTaskSystem.js');
 const { getEmojiForCharacter } = require('./emojiAssetManager.js');
+const { getServerGame, DEFAULT_GAME } = require('./serverConfigManager.js');
 
 const CRATE_TYPES = {
   bronze: {
@@ -100,7 +101,7 @@ async function buyCrate(data, userId, crateType) {
   };
 }
 
-async function openCrate(data, userId, crateType, client = null) {
+async function openCrate(data, userId, crateType, client = null, serverId = null) {
   const crate = CRATE_TYPES[crateType];
   const user = data.users[userId];
   
@@ -170,7 +171,8 @@ async function openCrate(data, userId, crateType, client = null) {
   const roll = Math.random() * 100;
   
   if (roll < crate.charChance) {
-    const crateChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate');
+    const serverGame = serverId ? (getServerGame(serverId) || DEFAULT_GAME) : DEFAULT_GAME;
+    const crateChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
     const ownedCharNames = user.characters.map(c => c.name);
     const availableChars = crateChars.filter(c => !ownedCharNames.includes(c.name));
     
@@ -219,7 +221,7 @@ async function openCrate(data, userId, crateType, client = null) {
   };
 }
 
-async function openCratesInBulk(data, userId, crateType, quantity, client = null) {
+async function openCratesInBulk(data, userId, crateType, quantity, client = null, serverId = null) {
   const crate = CRATE_TYPES[crateType];
   const user = data.users[userId];
   
@@ -252,6 +254,8 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
   let charactersGained = [];
   let totalGems = 0;
   
+  const serverGame = serverId ? (getServerGame(serverId) || DEFAULT_GAME) : DEFAULT_GAME;
+  
   user[crateKey] -= quantity;
   
   for (let i = 0; i < quantity; i++) {
@@ -269,7 +273,7 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
     const roll = Math.random() * 100;
     
     if (roll < crate.charChance) {
-      const crateChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate');
+      const crateChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
       const ownedCharNames = user.characters.map(c => c.name);
       const availableChars = crateChars.filter(c => !ownedCharNames.includes(c.name));
       

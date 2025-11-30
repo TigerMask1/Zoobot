@@ -76,7 +76,9 @@ const { getCharacterAbility, getAbilityDescription } = require('./characterAbili
 const characterManager = require('./characterManager.js');
 const eventSystem = require('./eventSystem.js');
 const { viewKeys, unlockCharacter, openRandomCage } = require('./keySystem.js');
-const { loadServerConfigs, isMainServer, isSuperAdmin, isBotAdmin, isZooAdmin, addBotAdmin, removeBotAdmin, setupServer, isServerSetup, setDropChannel, setEventsChannel, setUpdatesChannel, getUpdatesChannel } = require('./serverConfigManager.js');
+const { loadServerConfigs, isMainServer, isSuperAdmin, isBotAdmin, isZooAdmin, addBotAdmin, removeBotAdmin, setupServer, isServerSetup, isServerFullySetup, hasSelectedGame, getServerGame, getSetupStatus, setDropChannel, setEventsChannel, setUpdatesChannel, getUpdatesChannel, DEFAULT_GAME } = require('./serverConfigManager.js');
+const gameSystem = require('./gameSystem.js');
+const charSubmissionSystem = require('./characterSubmissionSystem.js');
 const { startPromotionSystem } = require('./promotionSystem.js');
 const { initializeGiveawaySystem, setGiveawayData, enableAutoGiveaway, disableAutoGiveaway } = require('./giveawaySystem.js');
 const { initializeLotterySystem, setLotteryData, enableAutoLottery, disableAutoLottery } = require('./lotterySystem.js');
@@ -248,6 +250,8 @@ client.on('clientReady', async () => {
   console.log(`🎮 Bot is ready to serve ${client.guilds.cache.size} servers!`);
   await initializeBot();
   await loadServerConfigs();
+  await gameSystem.loadGames();
+  await charSubmissionSystem.loadSubmissions();
   initializeClanData(data);
   marketSystem.init(client);
   auctionSystem.init(client);
@@ -1112,11 +1116,17 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
+        const setupStatusInfo = getSetupStatus(serverId);
+        const availableGamesList = gameSystem.getUsableGames(characterManager);
+        const gamesForSetup = availableGamesList.length > 0 
+          ? availableGamesList.map(g => `• ${g.name} (${g.characterCount} chars)`).join('\n')
+          : '• ZooBot (default)';
+        
         const setupEmbed = new EmbedBuilder()
           .setColor('#00D9FF')
           .setTitle('🛠️ Server Setup')
-          .setDescription(`Welcome! Let's set up ZooBot for your server.\n\n**Role Requirement:** You need the **ZooAdmin** role to manage this bot.\n\n**Required Steps:**\n1. Set drop channel: \`!setdropchannel #channel\`\n2. Set events channel: \`!seteventschannel #channel\`\n3. Set updates channel: \`!setupdateschannel #channel\`\n\n**Current Status:**\n${isServerSetup(serverId) ? '✅ Setup complete!' : '⚠️ Setup incomplete'}\n\n**Note:** Drops appear every 30 seconds on non-main servers and require payment (100 gems for 3 hours by ZooAdmins).\nOnly users with the **ZooAdmin** role can activate drops and customize server settings.\n\nFor unlimited drops and exclusive features, join our main server!`)
-          .setFooter({ text: 'Use the commands above to complete setup' });
+          .setDescription(`Welcome! Let's set up ZooBot for your server.\n\n**Role Requirement:** You need the **ZooAdmin** role to manage this bot.\n\n**Required Steps:**\n1. 🎮 **Select a Game:** \`!setgame <name>\`\n2. 📣 Set drop channel: \`!setdropchannel #channel\`\n3. 🎉 Set events channel: \`!seteventschannel #channel\`\n4. 📢 Set updates channel: \`!setupdateschannel #channel\`\n\n**Available Games:**\n${gamesForSetup}\n\n**Current Status:**\n🎮 Game: ${setupStatusInfo.selectedGame || '❌ Not set'}\n📣 Drop Channel: ${setupStatusInfo.hasDropChannel ? '✅' : '❌'}\n🎉 Events Channel: ${setupStatusInfo.hasEventsChannel ? '✅' : '❌'}\n📢 Updates Channel: ${setupStatusInfo.hasUpdatesChannel ? '✅' : '❌'}\n\n⚠️ **Important:** You must select a game before drops will work! Only characters from your selected game will appear.\n\n**Want to create your own game?**\nUse \`!creategame <name> [description]\` to create a custom bundle, then submit characters with \`!submit\`!`)
+          .setFooter({ text: 'Use !setupstatus to check your progress' });
         
         await message.reply({ embeds: [setupEmbed] });
         break;
@@ -6366,6 +6376,427 @@ client.on('messageCreate', async (message) => {
           .setFooter({ text: 'Use these in ability creation' });
         
         await message.reply({ embeds: [effectEmbed] });
+        break;
+
+      case 'games':
+      case 'bundles':
+        const gameListItems = gameSystem.formatGameList(characterManager, false);
+        const gamesEmbed = new EmbedBuilder()
+          .setColor('#00D9FF')
+          .setTitle('🎮 Available Games/Bundles')
+          .setDescription(gameListItems.length > 0 ? gameListItems.join('\n') : 'No games available')
+          .addFields(
+            { name: '🟢 Status', value: 'Active', inline: true },
+            { name: '✅/⚠️ Usable', value: 'Has characters / Empty', inline: true }
+          )
+          .setFooter({ text: 'Use !setgame <name> to select a game for your server' });
+        
+        await message.reply({ embeds: [gamesEmbed] });
+        break;
+
+      case 'creategame':
+      case 'createbundle':
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only Super Admins or ZooAdmins can create games/bundles!');
+          return;
+        }
+        
+        const newGameName = args[0];
+        const newGameDesc = args.slice(1).join(' ') || null;
+        
+        if (!newGameName) {
+          await message.reply('**Usage:** `!creategame <name> [description]`\n\n**Example:** `!creategame MyZoo A custom zoo game`');
+          return;
+        }
+        
+        const createGameResult = await gameSystem.createGame(userId, newGameName, newGameDesc, message.member);
+        await message.reply(createGameResult.message);
+        break;
+
+      case 'deletegame':
+      case 'deletebundle':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can delete games/bundles!');
+          return;
+        }
+        
+        const deleteGameName = args[0];
+        if (!deleteGameName) {
+          await message.reply('**Usage:** `!deletegame <name>`');
+          return;
+        }
+        
+        const deleteGameResult = await gameSystem.deleteGame(userId, deleteGameName);
+        await message.reply(deleteGameResult.message);
+        break;
+
+      case 'setgame':
+      case 'selectgame':
+        if (!serverId || isMainServer(serverId)) {
+          await message.reply('❌ This command is only for non-main servers!');
+          return;
+        }
+        
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only Super Admins or ZooAdmins can set the server game!');
+          return;
+        }
+        
+        const selectGameName = args[0];
+        if (!selectGameName) {
+          const availableGames = gameSystem.getUsableGames(characterManager);
+          let gamesList = availableGames.map(g => `• **${g.name}** (${g.characterCount} chars)`).join('\n');
+          if (!gamesList) gamesList = 'No usable games available yet.';
+          
+          await message.reply(`**Usage:** `+ '`!setgame <name>`' + `\n\n**Available Games:**\n${gamesList}\n\n⚠️ A game needs at least 1 character to be selectable.`);
+          return;
+        }
+        
+        const setGameResult = await gameSystem.setServerGame(serverId, selectGameName, userId, message.member, characterManager);
+        await message.reply(setGameResult.message);
+        break;
+
+      case 'gameinfo':
+      case 'bundleinfo':
+        const infoGameName = args[0] || (serverId ? getServerGame(serverId) : null);
+        
+        if (!infoGameName) {
+          await message.reply('**Usage:** `!gameinfo <name>`\n\nOr run in a server with a selected game to see its info.');
+          return;
+        }
+        
+        const gameInfo = gameSystem.getGame(infoGameName);
+        if (!gameInfo) {
+          await message.reply(`❌ Game/bundle "${infoGameName}" not found!`);
+          return;
+        }
+        
+        const gameChars = characterManager.getCharactersByGame(gameInfo.name);
+        const charsByType = {};
+        for (const c of gameChars) {
+          charsByType[c.obtainable] = (charsByType[c.obtainable] || 0) + 1;
+        }
+        
+        const gameInfoEmbed = new EmbedBuilder()
+          .setColor(gameInfo.isActive ? '#00FF00' : '#FF0000')
+          .setTitle(`🎮 ${gameInfo.name}`)
+          .setDescription(gameInfo.description || 'No description')
+          .addFields(
+            { name: 'Status', value: gameInfo.isActive ? '🟢 Active' : '🔴 Inactive', inline: true },
+            { name: 'Total Characters', value: gameChars.length.toString(), inline: true },
+            { name: 'Default', value: gameInfo.isDefault ? 'Yes' : 'No', inline: true },
+            { name: 'Characters by Type', value: Object.entries(charsByType).map(([k, v]) => `${k}: ${v}`).join(', ') || 'None', inline: false },
+            { name: 'Created By', value: gameInfo.createdBy || 'Unknown', inline: true }
+          )
+          .setFooter({ text: `Created: ${gameInfo.createdAt ? new Date(gameInfo.createdAt).toLocaleDateString() : 'Unknown'}` });
+        
+        await message.reply({ embeds: [gameInfoEmbed] });
+        break;
+
+      case 'bundlechars':
+      case 'gamechars':
+        const listGameName = args[0] || (serverId ? getServerGame(serverId) : null);
+        
+        if (!listGameName) {
+          await message.reply('**Usage:** `!bundlechars <game>`');
+          return;
+        }
+        
+        const bundleChars = characterManager.listCharactersByGame(listGameName);
+        if (bundleChars.length === 0) {
+          await message.reply(`❌ No characters in game/bundle "${listGameName}"`);
+          return;
+        }
+        
+        const charListStr = bundleChars.slice(0, 50).map(c => `${c.emoji} ${c.name} (${c.obtainable})`).join('\n');
+        const bundleCharsEmbed = new EmbedBuilder()
+          .setColor('#00D9FF')
+          .setTitle(`📦 Characters in ${listGameName}`)
+          .setDescription(charListStr + (bundleChars.length > 50 ? `\n... and ${bundleChars.length - 50} more` : ''))
+          .setFooter({ text: `Total: ${bundleChars.length} characters` });
+        
+        await message.reply({ embeds: [bundleCharsEmbed] });
+        break;
+
+      case 'assigngame':
+      case 'assignbundle':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can assign characters to games!');
+          return;
+        }
+        
+        const assignCharName = args[0];
+        const assignGameName = args[1];
+        
+        if (!assignCharName || !assignGameName) {
+          await message.reply('**Usage:** `!assigngame <character> <game>`\n\n**Example:** `!assigngame Luna MyZoo`');
+          return;
+        }
+        
+        const assignResult = await characterManager.setCharacterGame(userId, assignCharName, assignGameName);
+        await message.reply(assignResult.message);
+        break;
+
+      case 'bulkassign':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can bulk assign characters!');
+          return;
+        }
+        
+        const bulkAssignGameName = args[0];
+        const bulkAssignCharNames = args.slice(1);
+        
+        if (!bulkAssignGameName || bulkAssignCharNames.length === 0) {
+          await message.reply('**Usage:** `!bulkassign <game> <char1> <char2> ...`\n\n**Example:** `!bulkassign MyZoo Luna Max Bella`');
+          return;
+        }
+        
+        const bulkAssignResult = await characterManager.bulkSetCharacterGame(userId, bulkAssignCharNames, bulkAssignGameName);
+        await message.reply(bulkAssignResult.message);
+        break;
+
+      case 'importchars':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can import characters between games!');
+          return;
+        }
+        
+        const sourceGame = args[0];
+        const targetGame = args[1];
+        const importCharNames = args.slice(2);
+        
+        if (!sourceGame || !targetGame) {
+          await message.reply('**Usage:** `!importchars <source_game> <target_game> [char1 char2 ...]`\n\nLeave character names empty to import all.');
+          return;
+        }
+        
+        const importResult = await characterManager.importCharactersToGame(userId, sourceGame, targetGame, importCharNames.length > 0 ? importCharNames : null);
+        await message.reply(importResult.message);
+        break;
+
+      case 'backfillgames':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can run backfill!');
+          return;
+        }
+        
+        const backfillResult = await characterManager.backfillGameAndCreator();
+        await message.reply(backfillResult.message);
+        break;
+
+      case 'submit':
+      case 'submitchar':
+        if (!data.users[userId].started) {
+          await message.reply('❌ You need to start playing first! Use `!start`');
+          return;
+        }
+        
+        const submitParts = args.join(' ').split('|').map(p => p.trim());
+        
+        if (submitParts.length < 2) {
+          await message.reply('**Usage:** `!submit Name|Emoji|Obtainable|AbilityName,AbilityEmoji,AbilityDesc,EffectType,EffectValue|MoveName,MoveDamage`\n\n**Simple Example:** `!submit Luna|🌙|crate`\n**Full Example:** `!submit Luna|🌙|crate|Moonlight,🌕,Heals 5% HP per turn,healPerTurn,0.05|Moon Beam,90`');
+          return;
+        }
+        
+        const submitData = {
+          name: submitParts[0],
+          emoji: submitParts[1],
+          obtainable: submitParts[2] || 'crate'
+        };
+        
+        if (submitParts[3]) {
+          const abilityParts = submitParts[3].split(',').map(p => p.trim());
+          if (abilityParts.length >= 4) {
+            submitData.ability = {
+              name: abilityParts[0],
+              emoji: abilityParts[1],
+              description: abilityParts[2],
+              effectType: abilityParts[3],
+              effectValue: parseFloat(abilityParts[4]) || 0.1
+            };
+          }
+        }
+        
+        if (submitParts[4]) {
+          const moveParts = submitParts[4].split(',').map(p => p.trim());
+          if (moveParts.length >= 2) {
+            submitData.specialMove = {
+              name: moveParts[0],
+              damage: parseInt(moveParts[1]) || 90
+            };
+          }
+        }
+        
+        const submitResult = await charSubmissionSystem.submitCharacter(userId, message.author.username, serverId, submitData);
+        await message.reply(submitResult.message);
+        break;
+
+      case 'mysubmissions':
+        const userSubs = charSubmissionSystem.getUserSubmissions(userId);
+        
+        if (userSubs.length === 0) {
+          await message.reply('📋 You have no character submissions.');
+          return;
+        }
+        
+        const userSubsList = userSubs.slice(0, 10).map(s => {
+          const statusEmoji = s.status === 'pending' ? '⏳' : s.status === 'approved' ? '✅' : '❌';
+          return `${statusEmoji} \`${s.id}\` ${s.emoji} **${s.name}** → ${s.targetGame}`;
+        }).join('\n');
+        
+        const mySubsEmbed = new EmbedBuilder()
+          .setColor('#00D9FF')
+          .setTitle('📋 Your Submissions')
+          .setDescription(userSubsList)
+          .setFooter({ text: `Total: ${userSubs.length} submissions` });
+        
+        await message.reply({ embeds: [mySubsEmbed] });
+        break;
+
+      case 'submissions':
+      case 'pendingsubs':
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId, serverId)) {
+          await message.reply('❌ Only Bot Admins can view pending submissions!');
+          return;
+        }
+        
+        const pendingList = charSubmissionSystem.formatPendingList();
+        await message.reply(pendingList);
+        break;
+
+      case 'reviewsub':
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId, serverId)) {
+          await message.reply('❌ Only Bot Admins can review submissions!');
+          return;
+        }
+        
+        const reviewSubId = args[0];
+        if (!reviewSubId) {
+          await message.reply('**Usage:** `!reviewsub <submission_id>`');
+          return;
+        }
+        
+        const subToReview = charSubmissionSystem.getSubmission(reviewSubId.toUpperCase());
+        if (!subToReview) {
+          await message.reply(`❌ Submission "${reviewSubId}" not found!`);
+          return;
+        }
+        
+        const reviewEmbed = charSubmissionSystem.formatSubmissionEmbed(subToReview);
+        await message.reply({ embeds: [reviewEmbed] });
+        break;
+
+      case 'approve':
+      case 'approvechar':
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId, serverId)) {
+          await message.reply('❌ Only Bot Admins can approve submissions!');
+          return;
+        }
+        
+        const charApproveSubId = args[0];
+        if (!charApproveSubId) {
+          await message.reply('**Usage:** `!approve <submission_id>`');
+          return;
+        }
+        
+        const charApproveResult = await charSubmissionSystem.approveSubmission(charApproveSubId.toUpperCase(), userId, characterManager, client);
+        await message.reply(charApproveResult.message);
+        break;
+
+      case 'reject':
+      case 'rejectchar':
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId, serverId)) {
+          await message.reply('❌ Only Bot Admins can reject submissions!');
+          return;
+        }
+        
+        const charRejectSubId = args[0];
+        const charRejectReason = args.slice(1).join(' ') || null;
+        
+        if (!charRejectSubId) {
+          await message.reply('**Usage:** `!reject <submission_id> [reason]`');
+          return;
+        }
+        
+        const charRejectResult = await charSubmissionSystem.rejectSubmission(charRejectSubId.toUpperCase(), userId, charRejectReason, client);
+        await message.reply(charRejectResult.message);
+        break;
+
+      case 'cancelsub':
+        const cancelSubId = args[0];
+        if (!cancelSubId) {
+          await message.reply('**Usage:** `!cancelsub <submission_id>`');
+          return;
+        }
+        
+        const cancelResult = await charSubmissionSystem.cancelSubmission(cancelSubId.toUpperCase(), userId);
+        await message.reply(cancelResult.message);
+        break;
+
+      case 'serverstatus':
+      case 'setupstatus':
+        const serverStatusId = serverId;
+        if (!serverStatusId) {
+          await message.reply('❌ This command must be used in a server!');
+          return;
+        }
+        
+        const currentSetupStatus = getSetupStatus(serverStatusId);
+        const currentServerGame = getServerGame(serverStatusId);
+        
+        const serverStatusEmbed = new EmbedBuilder()
+          .setColor(currentSetupStatus.isComplete ? '#00FF00' : '#FFA500')
+          .setTitle('📊 Server Setup Status')
+          .addFields(
+            { name: '🎮 Selected Game', value: currentServerGame || '❌ Not set', inline: true },
+            { name: '📣 Drop Channel', value: currentSetupStatus.hasDropChannel ? '✅ Set' : '❌ Not set', inline: true },
+            { name: '🎉 Events Channel', value: currentSetupStatus.hasEventsChannel ? '✅ Set' : '❌ Not set', inline: true },
+            { name: '📢 Updates Channel', value: currentSetupStatus.hasUpdatesChannel ? '✅ Set' : '❌ Not set', inline: true },
+            { name: 'Overall Status', value: currentSetupStatus.isComplete ? '✅ Fully Setup' : `⚠️ Missing: ${currentSetupStatus.missing.join(', ')}`, inline: false }
+          )
+          .setFooter({ text: 'Use !setup to see setup instructions' });
+        
+        await message.reply({ embeds: [serverStatusEmbed] });
+        break;
+
+      case 'togglegame':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can toggle game status!');
+          return;
+        }
+        
+        const toggleGameName = args[0];
+        if (!toggleGameName) {
+          await message.reply('**Usage:** `!togglegame <name>`');
+          return;
+        }
+        
+        const toggleResult = await gameSystem.toggleGameStatus(userId, toggleGameName);
+        await message.reply(toggleResult.message);
+        break;
+
+      case 'gamestats':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can view game stats!');
+          return;
+        }
+        
+        const gameStats = characterManager.getGameStats();
+        let statsStr = '';
+        
+        for (const [gameName, stats] of Object.entries(gameStats)) {
+          statsStr += `**${gameName}**: ${stats.total} chars\n`;
+          const obtTypes = Object.entries(stats.byObtainable).map(([k, v]) => `${k}: ${v}`).join(', ');
+          if (obtTypes) statsStr += `  └ ${obtTypes}\n`;
+        }
+        
+        const gameStatsEmbed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle('📊 Game Statistics')
+          .setDescription(statsStr || 'No statistics available')
+          .setFooter({ text: `Total games: ${Object.keys(gameStats).length}` });
+        
+        await message.reply({ embeds: [gameStatsEmbed] });
         break;
         
       default:

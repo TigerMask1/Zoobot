@@ -2,6 +2,7 @@ const { getCollection } = require('./mongoManager.js');
 
 const MAIN_SERVER_ID = '1430516117851340893';
 const SUPER_ADMINS = ['1296110901057032202', '1296109674361520146','1178728978488504400'];
+const DEFAULT_GAME = 'ZooBot';
 
 let serverConfigs = {};
 
@@ -135,6 +136,76 @@ function isServerSetup(serverId) {
   
   const config = getServerConfig(serverId);
   return config && config.setupComplete === true;
+}
+
+function isServerFullySetup(serverId) {
+  if (isMainServer(serverId)) return true;
+  
+  const config = getServerConfig(serverId);
+  if (!config) return false;
+  
+  return config.setupComplete === true && 
+         config.selectedGame && 
+         config.dropChannelId && 
+         config.eventsChannelId && 
+         config.updatesChannelId;
+}
+
+function hasSelectedGame(serverId) {
+  if (isMainServer(serverId)) return true;
+  
+  const config = getServerConfig(serverId);
+  return config && config.selectedGame;
+}
+
+function getServerGame(serverId) {
+  if (isMainServer(serverId)) return DEFAULT_GAME;
+  
+  const config = getServerConfig(serverId);
+  return config ? config.selectedGame : null;
+}
+
+function getSetupStatus(serverId) {
+  if (isMainServer(serverId)) {
+    return {
+      isComplete: true,
+      hasGame: true,
+      hasDropChannel: true,
+      hasEventsChannel: true,
+      hasUpdatesChannel: true,
+      selectedGame: DEFAULT_GAME,
+      missing: []
+    };
+  }
+  
+  const config = getServerConfig(serverId);
+  if (!config) {
+    return {
+      isComplete: false,
+      hasGame: false,
+      hasDropChannel: false,
+      hasEventsChannel: false,
+      hasUpdatesChannel: false,
+      selectedGame: null,
+      missing: ['game', 'drop channel', 'events channel', 'updates channel']
+    };
+  }
+  
+  const missing = [];
+  if (!config.selectedGame) missing.push('game');
+  if (!config.dropChannelId) missing.push('drop channel');
+  if (!config.eventsChannelId) missing.push('events channel');
+  if (!config.updatesChannelId) missing.push('updates channel');
+  
+  return {
+    isComplete: missing.length === 0,
+    hasGame: !!config.selectedGame,
+    hasDropChannel: !!config.dropChannelId,
+    hasEventsChannel: !!config.eventsChannelId,
+    hasUpdatesChannel: !!config.updatesChannelId,
+    selectedGame: config.selectedGame || null,
+    missing
+  };
 }
 
 function getDropInterval(serverId) {
@@ -275,6 +346,10 @@ module.exports = {
   removeBotAdmin,
   setupServer,
   isServerSetup,
+  isServerFullySetup,
+  hasSelectedGame,
+  getServerGame,
+  getSetupStatus,
   getDropInterval,
   getDropChannel,
   getEventsChannel,
@@ -283,5 +358,6 @@ module.exports = {
   setEventsChannel,
   setUpdatesChannel,
   MAIN_SERVER_ID,
-  SUPER_ADMINS
+  SUPER_ADMINS,
+  DEFAULT_GAME
 };

@@ -75,6 +75,23 @@ The bot is built on Discord.js v14 and Node.js 20, utilizing a dual-mode data st
   - **Admin Commands:** `!qadd keyword | message` (add directly), `!qedit keyword | message` (edit), `!qdel keyword` (delete), `!pendingqa` (view pending), `!approveqa <id>` (approve), `!rejectqa <id> <reason>` (reject)
   - **Submission Workflow:** Users submit Q&A → Pending review → Admin approves/rejects → User gets 10 gems + DM notification on approval
   - **Storage:** All entries stored in MongoDB for persistence
+- **Game/Bundle System (NEW Nov 30):** Multi-game character collection support:
+  - **Game Selection:** Servers must select a game/bundle during setup with `!setgame <game>` - required before drops work
+  - **Character Filtering:** Only characters from the server's selected game appear in drops and crates
+  - **Bundle Management:** Super admins can create games (`!creategame`), assign characters (`!assigngame`, `!bulkassign`), import between bundles (`!importchars`)
+  - **Game Commands:** `!games` (list all), `!gameinfo <name>` (details), `!bundlechars <game>` (characters in bundle), `!gamestats` (statistics)
+  - **Backfill Support:** `!backfillgames` assigns existing characters to default "ZooBot" game with createdBy metadata
+  - **Storage:** Games stored in MongoDB with characterCount, isActive, isDefault flags
+- **Character Submission System (NEW Nov 30):** Player-created character approval workflow:
+  - **User Commands:** `!submit Name|Emoji|Obtainable|Ability|SpecialMove` (submit character), `!mysubmissions` (view own), `!cancelsub <id>` (cancel pending)
+  - **Admin Commands:** `!submissions` (list pending), `!reviewsub <id>` (details), `!approve <id>` (add to game), `!reject <id> [reason]` (decline)
+  - **Approval Flow:** Player submits → Target game from server selection → Admin reviews → Auto-creates character on approval with game/createdBy tags
+  - **Notifications:** DM notifications to submitters on approval/rejection with details
+  - **Storage:** Submissions in MongoDB with status tracking, review history, and sequential IDs (SUB-00001)
+- **Server Setup Enhanced (Nov 30):** Setup now requires game selection:
+  - **Requirements:** `!setgame`, `!setdropchannel`, `!seteventschannel`, `!setupdateschannel`
+  - **Status Check:** `!setupstatus` shows detailed setup progress with game and channel status
+  - **Validation:** Drops only activate when server has game selected with at least 1 character
 
 ## External Dependencies
 - **Discord.js v14**: For all Discord API interactions.

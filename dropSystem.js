@@ -1,7 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { saveData, saveDataImmediate } = require('./dataManager.js');
 const characterManager = require('./characterManager.js');
-const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig } = require('./serverConfigManager.js');
+const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerGame, hasSelectedGame, DEFAULT_GAME } = require('./serverConfigManager.js');
 
 let dropIntervals = new Map();
 let activeClient = null;
@@ -36,9 +36,12 @@ async function payForDrops(serverId, userId, data) {
     return { success: false, message: '❌ Main server has unlimited drops - no payment needed!' };
   }
   
-  // Check if server is properly set up before accepting payment
   if (!isServerSetup(serverId)) {
     return { success: false, message: '❌ Server not set up yet! Complete setup with `!setup` before activating drops.' };
+  }
+  
+  if (!hasSelectedGame(serverId)) {
+    return { success: false, message: '❌ No game selected! Use `!setgame <game>` to select a game/bundle before activating drops.' };
   }
   
   const config = getServerConfig(serverId);
@@ -119,7 +122,11 @@ async function startDropsForServer(serverId, sendResumeNotification = false) {
     return;
   }
 
-  // Check if drops are actually active before starting
+  if (!isMainServer(serverId) && !hasSelectedGame(serverId)) {
+    console.log(`⚠️ Server ${serverId}: No game selected, skipping drops`);
+    return;
+  }
+
   if (!isMainServer(serverId) && !areDropsActive(serverId)) {
     console.log(`⚠️ Server ${serverId}: Drops not active (not paid or expired)`);
     return;
@@ -269,9 +276,17 @@ async function executeDrop(serverId) {
     if (dropTypeRoll < 0.02) {
       selectedDrop = { type: 'shards', min: 1, max: 2, emoji: '🔷' };
     } else if (dropTypeRoll < 0.62) {
+      const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+      const gameChars = characterManager.getCharactersByGame(serverGame);
+      const gameCharNames = new Set(gameChars.map(c => c.name));
+      
       const allOwnedChars = new Set();
       Object.values(activeData.users).forEach(user => {
-        user?.characters?.forEach(char => allOwnedChars.add(char.name));
+        user?.characters?.forEach(char => {
+          if (gameCharNames.has(char.name)) {
+            allOwnedChars.add(char.name);
+          }
+        });
       });
 
       const ownedCharArray = Array.from(allOwnedChars);
