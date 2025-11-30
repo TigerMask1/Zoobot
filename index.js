@@ -1035,6 +1035,7 @@ client.on('messageCreate', async (message) => {
         
         const starterMoves = assignMovesToCharacter(starterChar.name, starterST);
         const starterHP = calculateBaseHP(starterST);
+        const starterAbility = await getCharacterAbilityAsync(starterChar.name);
         
         data.users[userId].selectedCharacter = starterChar.name;
         data.users[userId].started = true;
@@ -1047,7 +1048,8 @@ client.on('messageCreate', async (message) => {
           moves: starterMoves,
           baseHp: starterHP,
           currentSkin: 'default',
-          ownedSkins: ['default']
+          ownedSkins: ['default'],
+          ability: starterAbility || undefined
         });
         data.users[userId].coins = 100;
         data.users[userId].gems = 10;
@@ -2410,8 +2412,12 @@ client.on('messageCreate', async (message) => {
         }
         const grantedHP = calculateBaseHP(grantedST);
         
-        // Ensure ability is properly stored for custom characters
-        const charAbility = foundChar.isCustom && foundChar.ability ? JSON.parse(JSON.stringify(foundChar.ability)) : undefined;
+        let charAbility = null;
+        if (foundChar.isCustom && foundChar.ability) {
+          charAbility = JSON.parse(JSON.stringify(foundChar.ability));
+        } else {
+          charAbility = await getCharacterAbilityAsync(foundChar.name);
+        }
         
         data.users[charUser.id].characters.push({
           name: foundChar.name,
@@ -2423,8 +2429,9 @@ client.on('messageCreate', async (message) => {
           baseHp: grantedHP,
           currentSkin: 'default',
           ownedSkins: ['default'],
-          // Store ability for custom characters - deep copy to ensure persistence
-          ability: charAbility
+          ability: charAbility || undefined,
+          isCustom: foundChar.isCustom || false,
+          characterId: foundChar.characterId || null
         });
         
         if (wasFirstChar && pendingToGrant > 0) {
@@ -3144,16 +3151,19 @@ client.on('messageCreate', async (message) => {
           ].join('\n');
           
           const infoSkinUrl = await getSkinUrl(userInfoChar.name, userInfoChar.currentSkin || 'default');
-          // Get ability - custom chars store it directly, others use getAbilityDescription
-          let abilityDesc = getAbilityDescription(userInfoChar.name);
           
-          // If not found in built-in characters, check custom ability
-          if (!abilityDesc && userInfoChar.ability) {
+          let abilityDesc = null;
+          
+          if (userInfoChar.ability) {
             const ab = userInfoChar.ability;
             abilityDesc = `${ab.emoji || '⭐'} **${ab.name || 'Unnamed Ability'}**\n${ab.description || 'No description'}`;
+          } else {
+            const lookupAbility = await getCharacterAbilityAsync(userInfoChar.name);
+            if (lookupAbility) {
+              abilityDesc = `${lookupAbility.emoji || '⭐'} **${lookupAbility.name || 'Unnamed Ability'}**\n${lookupAbility.description || 'No description'}`;
+            }
           }
           
-          // Final fallback
           if (!abilityDesc) {
             abilityDesc = '❌ Ability data not found';
           }
@@ -5959,26 +5969,34 @@ client.on('messageCreate', async (message) => {
         
         let backfillCount = 0;
         let customCharCount = 0;
+        let builtInCharCount = 0;
         const allCustomChars = await getAllApprovedCharacters();
         
-        // Backfill abilities to existing character owners
         for (const userEntry of Object.values(data.users)) {
           if (!userEntry.characters) continue;
           for (const ownedChar of userEntry.characters) {
-            const mongoChar = allCustomChars.find(c => c.name === ownedChar.name && c.isCustom);
-            if (mongoChar) {
-              customCharCount++;
-              // Update if missing ability
-              if (!ownedChar.ability && mongoChar.ability) {
+            if (!ownedChar.ability) {
+              const mongoChar = allCustomChars.find(c => c.name === ownedChar.name);
+              if (mongoChar && mongoChar.ability) {
                 ownedChar.ability = mongoChar.ability;
+                ownedChar.isCustom = true;
+                ownedChar.characterId = mongoChar.characterId;
+                customCharCount++;
                 backfillCount++;
+              } else {
+                const builtInAbility = await getCharacterAbilityAsync(ownedChar.name);
+                if (builtInAbility) {
+                  ownedChar.ability = builtInAbility;
+                  builtInCharCount++;
+                  backfillCount++;
+                }
               }
             }
           }
         }
         
         await saveDataImmediate(data);
-        await message.reply(`✅ Backfill complete!\n**Custom chars found:** ${customCharCount}\n**Updated with ability data:** ${backfillCount}`);
+        await message.reply(`✅ Backfill complete!\n**Custom chars updated:** ${customCharCount}\n**Built-in chars updated:** ${builtInCharCount}\n**Total updated:** ${backfillCount}`);
         break;
         
       default:
