@@ -1,6 +1,15 @@
 // Character Abilities System
 // Each character has a unique ability that provides strategic advantages in battle
 
+let characterManager = null;
+
+function getCharacterManager() {
+  if (!characterManager) {
+    characterManager = require('./characterManager.js');
+  }
+  return characterManager;
+}
+
 const CHARACTER_ABILITIES = {
   'Bali': {
     name: 'Fierce Claws',
@@ -362,7 +371,17 @@ const CHARACTER_ABILITIES = {
 };
 
 function getCharacterAbility(characterName) {
-  return CHARACTER_ABILITIES[characterName] || null;
+  if (CHARACTER_ABILITIES[characterName]) {
+    return CHARACTER_ABILITIES[characterName];
+  }
+  
+  const cm = getCharacterManager();
+  const dynamicAbility = cm.getCharacterAbility(characterName);
+  if (dynamicAbility) {
+    return dynamicAbility;
+  }
+  
+  return null;
 }
 
 function getAbilityDescription(characterName) {

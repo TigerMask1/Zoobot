@@ -1,5 +1,13 @@
 const { LOW_ST_MOVES, MID_ST_MOVES, HIGH_ST_MOVES, SPECIAL_MOVES, getMovesForST } = require('./moves.js');
-const characterManager = require('./characterManager.js');
+
+let characterManager = null;
+
+function getCharacterManager() {
+  if (!characterManager) {
+    characterManager = require('./characterManager.js');
+  }
+  return characterManager;
+}
 
 function calculateBaseHP(st) {
   const minHP = 250;
@@ -71,7 +79,8 @@ function assignMovesToCharacter(characterName, st) {
   let specialMove = SPECIAL_MOVES[characterName];
   
   if (!specialMove) {
-    const dynamicMove = characterManager.getSpecialMove(characterName);
+    const cm = getCharacterManager();
+    const dynamicMove = cm.getSpecialMove(characterName);
     if (dynamicMove) {
       specialMove = dynamicMove;
     }
