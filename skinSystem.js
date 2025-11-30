@@ -83,7 +83,19 @@ async function getSkinUrl(characterName, skinName = 'default') {
     return skins[characterName][skinName];
   }
   
-  // Check cosmetics catalog for UST shop skins
+  try {
+    const { getCustomCharacterSkin, isCustomCharacter } = require('./customCharacterManager.js');
+    const isCustom = await isCustomCharacter(characterName);
+    if (isCustom) {
+      const customSkinUrl = await getCustomCharacterSkin(characterName, skinName);
+      if (customSkinUrl) {
+        return customSkinUrl;
+      }
+    }
+  } catch (error) {
+    console.error('Error checking custom character skin:', error);
+  }
+  
   if (skinName !== 'default') {
     try {
       const { getUSTSkinUrl } = require('./cosmeticsShopSystem.js');
@@ -104,6 +116,17 @@ async function getAvailableSkins(characterName) {
   if (skins[characterName]) {
     return Object.keys(skins[characterName]);
   }
+  
+  try {
+    const { getCustomCharacterAvailableSkins, isCustomCharacter } = require('./customCharacterManager.js');
+    const isCustom = await isCustomCharacter(characterName);
+    if (isCustom) {
+      return await getCustomCharacterAvailableSkins(characterName);
+    }
+  } catch (error) {
+    console.error('Error getting custom character skins:', error);
+  }
+  
   return ['default'];
 }
 

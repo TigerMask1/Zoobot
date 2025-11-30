@@ -365,14 +365,133 @@ function getCharacterAbility(characterName) {
   return CHARACTER_ABILITIES[characterName] || null;
 }
 
+async function getCharacterAbilityAsync(characterName) {
+  if (CHARACTER_ABILITIES[characterName]) {
+    return CHARACTER_ABILITIES[characterName];
+  }
+  
+  try {
+    const { getCustomCharacterAbility } = require('./customCharacterManager.js');
+    const customAbility = await getCustomCharacterAbility(characterName);
+    if (customAbility) {
+      return customAbility;
+    }
+  } catch (error) {
+    console.error('Error getting custom character ability:', error);
+  }
+  
+  return null;
+}
+
 function getAbilityDescription(characterName) {
   const ability = getCharacterAbility(characterName);
   if (!ability) return 'No ability';
   return `${ability.emoji} **${ability.name}**: ${ability.description}`;
 }
 
+async function getAbilityDescriptionAsync(characterName) {
+  const ability = await getCharacterAbilityAsync(characterName);
+  if (!ability) return 'No ability';
+  return `${ability.emoji} **${ability.name}**: ${ability.description}`;
+}
+
+function applyAbilityEffect(characterName, battleState, isCustom = false) {
+  const ability = CHARACTER_ABILITIES[characterName];
+  if (!ability) return battleState;
+  return applyEffectToState(ability.effect, battleState);
+}
+
+async function applyAbilityEffectAsync(characterName, battleState) {
+  const ability = await getCharacterAbilityAsync(characterName);
+  if (!ability || !ability.effect) return battleState;
+  return applyEffectToState(ability.effect, battleState);
+}
+
+function applyEffectToState(effect, battleState) {
+  const newState = { ...battleState };
+  
+  if (effect.damageBonus) {
+    newState.damageMultiplier = (newState.damageMultiplier || 1) + effect.damageBonus / 100;
+  }
+  if (effect.criticalChanceBonus) {
+    newState.criticalChance = (newState.criticalChance || 0.15) + effect.criticalChanceBonus;
+  }
+  if (effect.criticalDamageBonus) {
+    newState.criticalDamageMultiplier = (newState.criticalDamageMultiplier || 1.5) + effect.criticalDamageBonus;
+  }
+  if (effect.damageReduction) {
+    newState.damageReduction = (newState.damageReduction || 0) + effect.damageReduction;
+  }
+  if (effect.startingShield) {
+    newState.shield = Math.round((newState.maxHp || 300) * effect.startingShield);
+  }
+  if (effect.healPerTurn) {
+    newState.healPerTurn = Math.round((newState.maxHp || 300) * effect.healPerTurn);
+  }
+  if (effect.energyRegenPerTurn) {
+    newState.energyRegenPerTurn = (newState.energyRegenPerTurn || 10) + effect.energyRegenPerTurn;
+  }
+  if (effect.startingEnergyBonus) {
+    newState.energy = (newState.energy || 50) + effect.startingEnergyBonus;
+  }
+  if (effect.energyCostReduction) {
+    newState.energyCostMultiplier = (newState.energyCostMultiplier || 1) - effect.energyCostReduction;
+  }
+  if (effect.dodgeChance) {
+    newState.dodgeChance = (newState.dodgeChance || 0) + effect.dodgeChance;
+  }
+  if (effect.firstAttackBonus) {
+    newState.firstAttackBonus = effect.firstAttackBonus;
+  }
+  if (effect.healingBonus) {
+    newState.healingBonus = (newState.healingBonus || 0) + effect.healingBonus;
+  }
+  if (effect.burnChance) {
+    newState.burnChance = (newState.burnChance || 0) + effect.burnChance;
+  }
+  if (effect.freezeChance) {
+    newState.freezeChance = (newState.freezeChance || 0) + effect.freezeChance;
+  }
+  if (effect.paralyzeChance) {
+    newState.paralyzeChance = (newState.paralyzeChance || 0) + effect.paralyzeChance;
+  }
+  if (effect.energySteal) {
+    newState.energySteal = (newState.energySteal || 0) + effect.energySteal;
+  }
+  if (effect.specialDamageBonus) {
+    newState.specialDamageBonus = (newState.specialDamageBonus || 0) + effect.specialDamageBonus;
+  }
+  if (effect.lowHpSelfDamageBonus) {
+    newState.lowHpSelfDamageBonus = effect.lowHpSelfDamageBonus;
+    newState.selfHpThreshold = effect.selfHpThreshold || 0.3;
+  }
+  if (effect.highHpDamageBonus) {
+    newState.highHpDamageBonus = effect.highHpDamageBonus;
+    newState.hpThreshold = effect.hpThreshold || 0.7;
+  }
+  if (effect.firstHitReduction) {
+    newState.firstHitReduction = effect.firstHitReduction;
+  }
+  if (effect.hpRegenPerTurn) {
+    newState.hpRegenPerTurn = (newState.hpRegenPerTurn || 0) + effect.hpRegenPerTurn;
+  }
+  if (effect.specialEnergyRefund) {
+    newState.specialEnergyRefund = (newState.specialEnergyRefund || 0) + effect.specialEnergyRefund;
+  }
+  if (effect.lifesteal) {
+    newState.lifesteal = (newState.lifesteal || 0) + effect.lifesteal;
+  }
+  
+  return newState;
+}
+
 module.exports = {
   CHARACTER_ABILITIES,
   getCharacterAbility,
-  getAbilityDescription
+  getCharacterAbilityAsync,
+  getAbilityDescription,
+  getAbilityDescriptionAsync,
+  applyAbilityEffect,
+  applyAbilityEffectAsync,
+  applyEffectToState
 };

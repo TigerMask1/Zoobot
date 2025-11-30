@@ -71,6 +71,25 @@ The bot is built on Discord.js v14 and Node.js 20, utilizing a dual-mode data st
   - **Submission Workflow:** Users submit Q&A → Pending review → Admin approves/rejects → User gets 10 gems + DM notification on approval
   - **Storage:** All entries stored in MongoDB for persistence
 
+- **Custom Character Submission System (NEW):** Complete system for players to create and submit custom characters:
+  - **Ability Templates:** 22+ pre-built passive ability templates with customizable values (damage boost, critical chance, regeneration, status effects, etc.)
+  - **User Commands:** 
+    - `!abilities` - View all available ability templates
+    - `!submitchar <name> <emoji> <move_name> <damage> <template> <value>` - Submit a custom character
+    - `!mysubmissions` - View status of your submitted characters
+    - `!customchars` - View all approved custom characters
+    - `!viewcustomchar <name>` - View details of a custom character
+  - **Admin Commands:**
+    - `!pendingchars` / `!reviewsubmissions` - View pending submissions
+    - `!approvechar <id>` - Approve a character submission
+    - `!rejectchar <id> <reason>` - Reject a submission with feedback
+    - `!deletecustomchar <id>` - Remove a custom character (Super Admin only)
+    - `!submissionstats` - View submission statistics
+    - `!addcustomskin <id> <name> <url>` - Add skins to custom characters
+  - **Integration:** Approved characters automatically appear in crates, drops, battles with full functionality
+  - **Validation:** Character names (2-15 chars), emojis (standard/custom), special move damage (60-120), ability values within template ranges
+  - **Storage:** MongoDB collections for submissions (`character_submissions`) and approved characters (`custom_characters`)
+
 ## External Dependencies
 - **Discord.js v14**: For all Discord API interactions.
 - **Node.js 20**: The JavaScript runtime environment.

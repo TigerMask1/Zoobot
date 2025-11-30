@@ -3,6 +3,8 @@ const { assignMovesToCharacter, calculateBaseHP } = require('./battleUtils.js');
 const eventSystem = require('./eventSystem.js');
 const { checkTaskProgress, completePersonalizedTask, initializePersonalizedTaskData } = require('./personalizedTaskSystem.js');
 const { getEmojiForCharacter } = require('./emojiAssetManager.js');
+const { getCrateEligibleCharacters, isCustomCharacter, recordCustomCharacterObtained } = require('./customCharacterManager.js');
+const { getSpecialMoveForCharacter } = require('./moves.js');
 
 const CRATE_TYPES = {
   bronze: {
@@ -170,7 +172,7 @@ async function openCrate(data, userId, crateType, client = null) {
   const roll = Math.random() * 100;
   
   if (roll < crate.charChance) {
-    const crateChars = CHARACTERS.filter(c => c.obtainable === 'crate');
+    const crateChars = await getCrateEligibleCharacters();
     const ownedCharNames = user.characters.map(c => c.name);
     const availableChars = crateChars.filter(c => !ownedCharNames.includes(c.name));
     
@@ -184,26 +186,33 @@ async function openCrate(data, userId, crateType, client = null) {
         user.pendingTokens = 0;
       }
       
-      const newMoves = assignMovesToCharacter(randomChar.name, newST);
+      const newMoves = await assignMovesToCharacterAsync(randomChar.name, newST);
       const newHP = calculateBaseHP(newST);
       
       const newCharacter = {
         name: randomChar.name,
-        emoji: getEmojiForCharacter(randomChar.name),
+        emoji: randomChar.emoji || getEmojiForCharacter(randomChar.name),
         level: 1,
         tokens: startingTokens,
         st: newST,
         moves: newMoves,
         baseHp: newHP,
         currentSkin: 'default',
-        ownedSkins: ['default']
+        ownedSkins: ['default'],
+        isCustom: randomChar.isCustom || false,
+        characterId: randomChar.characterId || null
       };
       
       user.characters.push(newCharacter);
       
       user.questProgress.charsFromCrates = (user.questProgress.charsFromCrates || 0) + 1;
       
-      rewards += `\n\n🎉 **NEW CHARACTER!** ${randomChar.emoji} ${randomChar.name}\n**ST:** ${newST}%`;
+      if (randomChar.isCustom) {
+        await recordCustomCharacterObtained(randomChar.name);
+      }
+      
+      const customTag = randomChar.isCustom ? ' ⭐' : '';
+      rewards += `\n\n🎉 **NEW CHARACTER!** ${randomChar.emoji} ${randomChar.name}${customTag}\n**ST:** ${newST}%`;
       if (startingTokens > 0) {
         rewards += `\n🎁 Received ${startingTokens} pending tokens!`;
       }
@@ -216,6 +225,20 @@ async function openCrate(data, userId, crateType, client = null) {
   return {
     success: true,
     message: rewards
+  };
+}
+
+async function assignMovesToCharacterAsync(characterName, st) {
+  const specialMove = await getSpecialMoveForCharacter(characterName);
+  const { getMovesForST } = require('./moves.js');
+  const tierMoves = getMovesForST(st);
+  
+  const shuffled = [...tierMoves].sort(() => Math.random() - 0.5);
+  const selectedMoves = shuffled.slice(0, 2);
+  
+  return {
+    special: specialMove,
+    tierMoves: selectedMoves
   };
 }
 
@@ -269,7 +292,7 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
     const roll = Math.random() * 100;
     
     if (roll < crate.charChance) {
-      const crateChars = CHARACTERS.filter(c => c.obtainable === 'crate');
+      const crateChars = await getCrateEligibleCharacters();
       const ownedCharNames = user.characters.map(c => c.name);
       const availableChars = crateChars.filter(c => !ownedCharNames.includes(c.name));
       
@@ -283,23 +306,35 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
           user.pendingTokens = 0;
         }
         
-        const newMoves = assignMovesToCharacter(randomChar.name, newST);
+        const newMoves = await assignMovesToCharacterAsync(randomChar.name, newST);
         const newHP = calculateBaseHP(newST);
         
         const newCharacter = {
           name: randomChar.name,
-          emoji: getEmojiForCharacter(randomChar.name),
+          emoji: randomChar.emoji || getEmojiForCharacter(randomChar.name),
           level: 1,
           tokens: startingTokens,
           st: newST,
           moves: newMoves,
           baseHp: newHP,
           currentSkin: 'default',
-          ownedSkins: ['default']
+          ownedSkins: ['default'],
+          isCustom: randomChar.isCustom || false,
+          characterId: randomChar.characterId || null
         };
         
         user.characters.push(newCharacter);
-        charactersGained.push({ name: randomChar.name, emoji: randomChar.emoji, st: newST, startingTokens });
+        charactersGained.push({ 
+          name: randomChar.name, 
+          emoji: randomChar.emoji, 
+          st: newST, 
+          startingTokens,
+          isCustom: randomChar.isCustom || false
+        });
+        
+        if (randomChar.isCustom) {
+          await recordCustomCharacterObtained(randomChar.name);
+        }
         
         if (!user.questProgress) user.questProgress = {};
         user.questProgress.charsFromCrates = (user.questProgress.charsFromCrates || 0) + 1;
@@ -351,7 +386,8 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
   if (charactersGained.length > 0) {
     summary += `\n🎉 **New Characters Obtained:**\n`;
     charactersGained.forEach((char, i) => {
-      summary += `${i + 1}. ${char.emoji} ${char.name} (ST: ${char.st}%)`;
+      const customTag = char.isCustom ? ' ⭐' : '';
+      summary += `${i + 1}. ${char.emoji} ${char.name}${customTag} (ST: ${char.st}%)`;
       if (char.startingTokens > 0) {
         summary += ` +${char.startingTokens} pending tokens`;
       }

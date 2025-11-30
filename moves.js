@@ -101,10 +101,34 @@ function getMovesForST(st) {
   }
 }
 
+async function getSpecialMoveForCharacter(characterName) {
+  if (SPECIAL_MOVES[characterName]) {
+    return SPECIAL_MOVES[characterName];
+  }
+  
+  try {
+    const { getCustomCharacterSpecialMove } = require('./customCharacterManager.js');
+    const customMove = await getCustomCharacterSpecialMove(characterName);
+    if (customMove) {
+      return customMove;
+    }
+  } catch (error) {
+    console.error('Error getting custom character special move:', error);
+  }
+  
+  return { name: 'Basic Attack', damage: 85 };
+}
+
+function getSpecialMoveSync(characterName) {
+  return SPECIAL_MOVES[characterName] || null;
+}
+
 module.exports = {
   LOW_ST_MOVES,
   MID_ST_MOVES,
   HIGH_ST_MOVES,
   SPECIAL_MOVES,
-  getMovesForST
+  getMovesForST,
+  getSpecialMoveForCharacter,
+  getSpecialMoveSync
 };

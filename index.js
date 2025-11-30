@@ -73,7 +73,34 @@ const {
   getUSTRates, 
   formatUSTBalance 
 } = require('./ustSystem.js');
-const { getCharacterAbility, getAbilityDescription } = require('./characterAbilities.js');
+const { getCharacterAbility, getAbilityDescription, getCharacterAbilityAsync, getAbilityDescriptionAsync } = require('./characterAbilities.js');
+const {
+  submitCharacter,
+  getSubmission,
+  getPendingSubmissions: getPendingCharSubmissions,
+  getUserSubmissions,
+  approveSubmission,
+  rejectSubmission,
+  getAllApprovedCharacters,
+  getApprovedCharacter,
+  deleteCustomCharacter,
+  editCustomCharacter,
+  addSkinToCustomCharacter,
+  getAbilityTemplates,
+  formatAbilityTemplatesList,
+  getSubmissionStats,
+  ABILITY_TEMPLATES,
+  OBTAINABLE_TYPES
+} = require('./characterSubmissionSystem.js');
+const { 
+  getCustomCharacters, 
+  invalidateCache: invalidateCustomCharCache,
+  getAllCharactersWithCustom,
+  getCharacterByName,
+  getCustomCharactersList,
+  isCustomCharacter,
+  getCharacterDisplayInfo
+} = require('./customCharacterManager.js');
 const eventSystem = require('./eventSystem.js');
 const { viewKeys, unlockCharacter, openRandomCage } = require('./keySystem.js');
 const { loadServerConfigs, isMainServer, isSuperAdmin, isBotAdmin, isZooAdmin, addBotAdmin, removeBotAdmin, setupServer, isServerSetup, setDropChannel, setEventsChannel, setUpdatesChannel, getUpdatesChannel } = require('./serverConfigManager.js');
@@ -5495,6 +5522,339 @@ client.on('messageCreate', async (message) => {
           .setFooter({ text: 'Admin view - showing first 15' });
         
         await message.reply({ embeds: [adminAuctionEmbed] });
+        break;
+      
+      case 'abilitytemplates':
+      case 'abilities':
+        const abilityTemplates = getAbilityTemplates();
+        const templatesList = Object.entries(abilityTemplates).slice(0, 12).map(([id, t]) => 
+          `${t.emoji} **${t.name}** (\`${id}\`)\n   ${t.description.replace('{value}', `${t.minValue}-${t.maxValue}`)}`
+        ).join('\n\n');
+        
+        const abilitiesEmbed = new EmbedBuilder()
+          .setColor('#9B59B6')
+          .setTitle('⚡ Available Ability Templates')
+          .setDescription(`Choose an ability template when submitting a character:\n\n${templatesList}\n\n*Use \`!abilities 2\` for more templates*`)
+          .setFooter({ text: 'Use template ID when submitting: !submitchar' });
+        
+        const abilityPage = parseInt(args[0]) || 1;
+        if (abilityPage === 2) {
+          const templatesList2 = Object.entries(abilityTemplates).slice(12).map(([id, t]) => 
+            `${t.emoji} **${t.name}** (\`${id}\`)\n   ${t.description.replace('{value}', `${t.minValue}-${t.maxValue}`)}`
+          ).join('\n\n');
+          abilitiesEmbed.setDescription(`Choose an ability template when submitting a character:\n\n${templatesList2}`);
+        }
+        
+        await message.reply({ embeds: [abilitiesEmbed] });
+        break;
+      
+      case 'submitchar':
+      case 'submitcharacter':
+        if (!data.users[userId] || !data.users[userId].started) {
+          await message.reply('❌ You need to start the game first with `!start`!');
+          return;
+        }
+        
+        if (args.length < 6) {
+          const submitHelpEmbed = new EmbedBuilder()
+            .setColor('#00D9FF')
+            .setTitle('📝 Submit a Custom Character')
+            .setDescription(`Create your own character for the game!\n\n**Usage:**\n\`!submitchar <name> <emoji> <special_move_name> <damage> <ability_template> <ability_value> [skin_url]\`\n\n**Example:**\n\`!submitchar Shadow 🐺 Shadow Strike 90 damage_boost 15\`\n\n**Parameters:**\n• **name** - Character name (2-15 chars)\n• **emoji** - Character emoji (standard or custom)\n• **special_move_name** - Unique special move\n• **damage** - Move damage (60-120)\n• **ability_template** - From \`!abilities\`\n• **ability_value** - Within template range\n• **skin_url** - Optional default skin image\n\n**Obtainable Types:** crate, drop, both (default: crate)\nUse \`!submitchar ... crate\` or \`!submitchar ... drop\``)
+            .setFooter({ text: 'Submissions are reviewed by admins before going live!' });
+          
+          await message.reply({ embeds: [submitHelpEmbed] });
+          return;
+        }
+        
+        const submitCharName = args[0];
+        const submitCharEmoji = args[1];
+        const submitSpecialMoveName = args.slice(2, args.length - 3).join(' ') || args[2];
+        const submitSpecialMoveDamage = parseInt(args[args.length - 3]) || parseInt(args[3]);
+        const submitAbilityTemplate = args[args.length - 2] || args[4];
+        const submitAbilityValue = parseInt(args[args.length - 1]) || parseInt(args[5]);
+        
+        let submitObtainType = 'crate';
+        let submitSkinUrl = null;
+        
+        for (let i = 6; i < args.length; i++) {
+          if (OBTAINABLE_TYPES.includes(args[i]?.toLowerCase())) {
+            submitObtainType = args[i].toLowerCase();
+          } else if (args[i]?.startsWith('http')) {
+            submitSkinUrl = args[i];
+          }
+        }
+        
+        const submitResult = await submitCharacter(userId, message.author.username, {
+          name: submitCharName,
+          emoji: submitCharEmoji,
+          specialMoveName: submitSpecialMoveName,
+          specialMoveDamage: submitSpecialMoveDamage,
+          abilityTemplate: submitAbilityTemplate,
+          abilityValue: submitAbilityValue,
+          obtainableType: submitObtainType,
+          defaultSkinUrl: submitSkinUrl
+        });
+        
+        if (!submitResult.success) {
+          await message.reply(`❌ ${submitResult.error}`);
+          return;
+        }
+        
+        const submitEmbed = new EmbedBuilder()
+          .setColor('#00FF00')
+          .setTitle('✅ Character Submitted!')
+          .setDescription(`Your character **${submitResult.character.name}** ${submitResult.character.emoji} has been submitted for review!\n\n**Submission ID:** \`${submitResult.submissionId}\`\n\nAn admin will review your submission soon. You'll receive a notification when it's approved or rejected.`)
+          .setFooter({ text: 'Check your submissions with !mysubmissions' });
+        
+        await message.reply({ embeds: [submitEmbed] });
+        break;
+      
+      case 'mysubmissions':
+        const userSubmissions = await getUserSubmissions(userId);
+        
+        if (userSubmissions.length === 0) {
+          await message.reply('📭 You haven\'t submitted any characters yet! Use `!submitchar` to submit one.');
+          return;
+        }
+        
+        const submissionList = userSubmissions.slice(0, 10).map(sub => {
+          let statusEmoji = '⏳';
+          if (sub.status === 'approved') statusEmoji = '✅';
+          else if (sub.status === 'rejected') statusEmoji = '❌';
+          
+          return `${statusEmoji} **${sub.character.name}** ${sub.character.emoji}\n   ID: \`${sub.submissionId}\` | Status: ${sub.status}${sub.reviewNote ? `\n   Note: ${sub.reviewNote}` : ''}`;
+        }).join('\n\n');
+        
+        const mySubsEmbed = new EmbedBuilder()
+          .setColor('#9B59B6')
+          .setTitle('📋 Your Character Submissions')
+          .setDescription(submissionList)
+          .setFooter({ text: `Total: ${userSubmissions.length} submissions` });
+        
+        await message.reply({ embeds: [mySubsEmbed] });
+        break;
+      
+      case 'reviewsubmissions':
+      case 'pendingchars':
+        if (!isSuperAdmin(userId) && !isBotAdmin(serverId, userId)) {
+          await message.reply('❌ Only admins can review submissions!');
+          return;
+        }
+        
+        const pendingSubs = await getPendingCharSubmissions();
+        
+        if (pendingSubs.length === 0) {
+          await message.reply('📭 No pending character submissions!');
+          return;
+        }
+        
+        const pendingList = pendingSubs.slice(0, 10).map(sub => {
+          const template = ABILITY_TEMPLATES[sub.ability.templateId];
+          return `**${sub.character.name}** ${sub.character.emoji}\n` +
+            `ID: \`${sub.submissionId}\`\n` +
+            `By: ${sub.submitterName}\n` +
+            `Special Move: ${sub.specialMove.name} (${sub.specialMove.damage} DMG)\n` +
+            `Ability: ${sub.ability.name} - ${sub.ability.description}\n` +
+            `Obtainable: ${sub.character.obtainable}`;
+        }).join('\n\n');
+        
+        const reviewEmbed = new EmbedBuilder()
+          .setColor('#FFA500')
+          .setTitle('📝 Pending Character Submissions')
+          .setDescription(`${pendingList}\n\n**Commands:**\n\`!approvechar <id>\` - Approve\n\`!rejectchar <id> <reason>\` - Reject`)
+          .setFooter({ text: `${pendingSubs.length} pending submissions` });
+        
+        await message.reply({ embeds: [reviewEmbed] });
+        break;
+      
+      case 'approvechar':
+      case 'approvecharacter':
+        if (!isSuperAdmin(userId) && !isBotAdmin(serverId, userId)) {
+          await message.reply('❌ Only admins can approve submissions!');
+          return;
+        }
+        
+        const charApproveId = args[0];
+        if (!charApproveId) {
+          await message.reply('❌ Please provide a submission ID! Usage: `!approvechar CS00001`');
+          return;
+        }
+        
+        const charApproveNote = args.slice(1).join(' ') || null;
+        const charApproveResult = await approveSubmission(charApproveId.toUpperCase(), userId, message.author.username, charApproveNote);
+        
+        if (!charApproveResult.success) {
+          await message.reply(`❌ ${charApproveResult.error}`);
+          return;
+        }
+        
+        invalidateCustomCharCache();
+        
+        const approvedCharEmbed = new EmbedBuilder()
+          .setColor('#00FF00')
+          .setTitle('✅ Character Approved!')
+          .setDescription(`**${charApproveResult.character.name}** ${charApproveResult.character.emoji} is now available in the game!\n\nPlayers can now obtain this character from ${charApproveResult.character.obtainable === 'both' ? 'crates and drops' : charApproveResult.character.obtainable + 's'}!`)
+          .addFields(
+            { name: 'Special Move', value: `${charApproveResult.character.specialMove.name} (${charApproveResult.character.specialMove.damage} DMG)`, inline: true },
+            { name: 'Ability', value: `${charApproveResult.character.ability.name}`, inline: true },
+            { name: 'Created By', value: charApproveResult.character.createdByName, inline: true }
+          )
+          .setFooter({ text: 'Custom character is now live!' });
+        
+        await message.reply({ embeds: [approvedCharEmbed] });
+        break;
+      
+      case 'rejectchar':
+      case 'rejectcharacter':
+        if (!isSuperAdmin(userId) && !isBotAdmin(serverId, userId)) {
+          await message.reply('❌ Only admins can reject submissions!');
+          return;
+        }
+        
+        const charRejectId = args[0];
+        if (!charRejectId) {
+          await message.reply('❌ Please provide a submission ID! Usage: `!rejectchar CS00001 <reason>`');
+          return;
+        }
+        
+        const charRejectReason = args.slice(1).join(' ') || 'No reason provided';
+        const charRejectResult = await rejectSubmission(charRejectId.toUpperCase(), userId, message.author.username, charRejectReason);
+        
+        if (!charRejectResult.success) {
+          await message.reply(`❌ ${charRejectResult.error}`);
+          return;
+        }
+        
+        await message.reply(`✅ Submission \`${charRejectId.toUpperCase()}\` rejected. Reason: ${charRejectReason}`);
+        break;
+      
+      case 'customchars':
+      case 'customcharacters':
+        const customChars = await getCustomCharactersList();
+        
+        if (customChars.length === 0) {
+          await message.reply('📭 No custom characters have been added yet!');
+          return;
+        }
+        
+        const customList = customChars.map(c => 
+          `${c.emoji} **${c.name}** ⭐\n   Created by: ${c.createdBy}\n   Obtainable: ${c.obtainable}\n   Times obtained: ${c.stats?.timesObtained || 0}`
+        ).join('\n\n');
+        
+        const customCharsEmbed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle('⭐ Custom Characters')
+          .setDescription(customList)
+          .setFooter({ text: `${customChars.length} custom characters in the game` });
+        
+        await message.reply({ embeds: [customCharsEmbed] });
+        break;
+      
+      case 'viewcustomchar':
+      case 'customcharinfo':
+        const viewCharName = args.join(' ');
+        if (!viewCharName) {
+          await message.reply('❌ Please provide a character name! Usage: `!viewcustomchar Shadow`');
+          return;
+        }
+        
+        const charInfo = await getCharacterDisplayInfo(viewCharName);
+        if (!charInfo || !charInfo.isCustom) {
+          await message.reply('❌ Custom character not found!');
+          return;
+        }
+        
+        const charInfoEmbed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle(`${charInfo.emoji} ${charInfo.name} ⭐`)
+          .setDescription('Custom Character')
+          .addFields(
+            { name: 'Created By', value: charInfo.createdBy || 'Unknown', inline: true },
+            { name: 'Special Move', value: `${charInfo.specialMove?.name || 'Unknown'} (${charInfo.specialMove?.damage || 0} DMG)`, inline: true },
+            { name: 'Ability', value: `${charInfo.ability?.emoji || ''} ${charInfo.ability?.name || 'Unknown'}\n${charInfo.ability?.description || ''}`, inline: false }
+          );
+        
+        if (charInfo.stats) {
+          charInfoEmbed.addFields(
+            { name: 'Times Obtained', value: `${charInfo.stats.timesObtained || 0}`, inline: true },
+            { name: 'Battle W/L', value: `${charInfo.stats.battleWins || 0}/${charInfo.stats.battleLosses || 0}`, inline: true }
+          );
+        }
+        
+        await message.reply({ embeds: [charInfoEmbed] });
+        break;
+      
+      case 'deletecustomchar':
+      case 'removecustomchar':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can delete custom characters!');
+          return;
+        }
+        
+        const deleteCharId = args[0];
+        if (!deleteCharId) {
+          await message.reply('❌ Please provide a character ID! Usage: `!deletecustomchar CS00001`');
+          return;
+        }
+        
+        const deleteResult = await deleteCustomCharacter(deleteCharId.toUpperCase(), userId, message.author.username);
+        
+        if (!deleteResult.success) {
+          await message.reply(`❌ ${deleteResult.error}`);
+          return;
+        }
+        
+        invalidateCustomCharCache();
+        
+        await message.reply(`✅ Custom character **${deleteResult.characterName}** has been deleted and removed from the game.`);
+        break;
+      
+      case 'submissionstats':
+        if (!isSuperAdmin(userId) && !isBotAdmin(serverId, userId)) {
+          await message.reply('❌ Only admins can view submission stats!');
+          return;
+        }
+        
+        const charSubStats = await getSubmissionStats();
+        
+        const subStatsEmbed = new EmbedBuilder()
+          .setColor('#00D9FF')
+          .setTitle('📊 Character Submission Statistics')
+          .addFields(
+            { name: '⏳ Pending', value: `${charSubStats.pending}`, inline: true },
+            { name: '✅ Approved', value: `${charSubStats.approved}`, inline: true },
+            { name: '❌ Rejected', value: `${charSubStats.rejected}`, inline: true },
+            { name: '📝 Total Submissions', value: `${charSubStats.totalSubmissions}`, inline: true },
+            { name: '⭐ Active Custom Chars', value: `${charSubStats.activeCustomCharacters}`, inline: true }
+          )
+          .setFooter({ text: 'Character submission system stats' });
+        
+        await message.reply({ embeds: [subStatsEmbed] });
+        break;
+      
+      case 'addcustomskin':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can add skins to custom characters!');
+          return;
+        }
+        
+        const customSkinCharId = args[0];
+        const customSkinName = args[1];
+        const customSkinUrlArg = args[2];
+        
+        if (!customSkinCharId || !customSkinName || !customSkinUrlArg) {
+          await message.reply('❌ Usage: `!addcustomskin <characterId> <skinName> <imageUrl>`');
+          return;
+        }
+        
+        const customSkinResult = await addSkinToCustomCharacter(customSkinCharId.toUpperCase(), customSkinName, customSkinUrlArg);
+        
+        if (!customSkinResult.success) {
+          await message.reply(`❌ ${customSkinResult.error || 'Failed to add skin'}`);
+          return;
+        }
+        
+        await message.reply(`✅ Added skin **${customSkinName}** to custom character \`${customSkinCharId.toUpperCase()}\`!`);
         break;
         
       default:
