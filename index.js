@@ -5877,13 +5877,13 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const deleteCharId = args[0];
+        const deleteCharId = args.join(' ');
         if (!deleteCharId) {
-          await message.reply('❌ Please provide a character ID! Usage: `!deletecustomchar CS00001`');
+          await message.reply('❌ Usage: `!deletecustomchar <character_id_or_name>`\n**Examples:**\n• By ID: `!deletecustomchar CS00001`\n• By name: `!deletecustomchar Shadow`');
           return;
         }
         
-        const deleteResult = await deleteCustomCharacter(deleteCharId.toUpperCase(), userId, message.author.username);
+        const deleteResult = await deleteCustomCharacter(deleteCharId, userId, message.author.username);
         
         if (!deleteResult.success) {
           await message.reply(`❌ ${deleteResult.error}`);

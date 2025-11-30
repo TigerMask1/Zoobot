@@ -626,16 +626,24 @@ async function findApprovedCharacterByName(name) {
   });
 }
 
-async function deleteCustomCharacter(characterId, deletedById, deletedByName) {
+async function deleteCustomCharacter(characterIdOrName, deletedById, deletedByName) {
   const collection = await getApprovedCharactersCollection();
-  const character = await collection.findOne({ characterId: characterId });
+  
+  // Try to find by characterId first, then by name
+  let character = await collection.findOne({ characterId: characterIdOrName.toUpperCase() });
   
   if (!character) {
-    return { success: false, error: 'Custom character not found' };
+    character = await collection.findOne({ 
+      name: { $regex: new RegExp(`^${characterIdOrName}$`, 'i') }
+    });
+  }
+  
+  if (!character) {
+    return { success: false, error: `Custom character **${characterIdOrName}** not found. Use character ID (e.g., CS00001) or character name (e.g., Shadow)` };
   }
   
   await collection.updateOne(
-    { characterId: characterId },
+    { characterId: character.characterId },
     { 
       $set: { 
         active: false,
