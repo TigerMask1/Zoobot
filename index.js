@@ -2417,7 +2417,9 @@ client.on('messageCreate', async (message) => {
           moves: grantedMoves,
           baseHp: grantedHP,
           currentSkin: 'default',
-          ownedSkins: ['default']
+          ownedSkins: ['default'],
+          // Store ability for custom characters
+          ability: foundChar.isCustom ? foundChar.ability : undefined
         });
         
         if (wasFirstChar && pendingToGrant > 0) {
@@ -3137,7 +3139,11 @@ client.on('messageCreate', async (message) => {
           ].join('\n');
           
           const infoSkinUrl = await getSkinUrl(userInfoChar.name, userInfoChar.currentSkin || 'default');
-          const abilityDesc = getAbilityDescription(userInfoChar.name);
+          // Get ability - custom chars store it directly, others use getAbilityDescription
+          let abilityDesc = getAbilityDescription(userInfoChar.name);
+          if (!abilityDesc && userInfoChar.ability) {
+            abilityDesc = `${userInfoChar.ability.emoji} ${userInfoChar.ability.name}\n${userInfoChar.ability.description}`;
+          }
           
           const infoEmbed = new EmbedBuilder()
             .setColor('#9B59B6')
@@ -5926,6 +5932,30 @@ client.on('messageCreate', async (message) => {
         }
         
         await message.reply(`✅ Added skin **${customSkinName}** to custom character \`${customSkinCharId.toUpperCase()}\`!`);
+        break;
+      
+      case 'backfillabilities':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can use this command!');
+          return;
+        }
+        
+        let updatedCount = 0;
+        const allCustomChars = await getAllApprovedCharacters();
+        
+        for (const user of Object.values(data.users)) {
+          if (!user.characters) continue;
+          for (const char of user.characters) {
+            const customChar = allCustomChars.find(c => c.name === char.name && c.isCustom);
+            if (customChar && !char.ability && customChar.ability) {
+              char.ability = customChar.ability;
+              updatedCount++;
+            }
+          }
+        }
+        
+        await saveDataImmediate(data);
+        await message.reply(`✅ Backfill complete! Updated **${updatedCount}** characters with ability data.`);
         break;
         
       default:
