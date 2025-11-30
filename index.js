@@ -5597,8 +5597,8 @@ client.on('messageCreate', async (message) => {
           const submitHelpEmbed = new EmbedBuilder()
             .setColor('#00D9FF')
             .setTitle('📝 Submit a Custom Character')
-            .setDescription(`Create your own character for the game!\n\n**Usage:**\n\`!submitchar <name> <emoji> <special_move_name> <damage> <ability_template> <ability_value> [skin_url]\`\n\n**Example:**\n\`!submitchar Shadow 🐺 Shadow Strike 90 damage_boost 15\`\n\n**Parameters:**\n• **name** - Character name (2-15 chars)\n• **emoji** - Character emoji (standard or custom)\n• **special_move_name** - Unique special move\n• **damage** - Move damage (60-120)\n• **ability_template** - From \`!abilities\`\n• **ability_value** - Within template range\n• **skin_url** - Optional default skin image\n\n**Obtainable Types:** crate, drop, both (default: crate)\nUse \`!submitchar ... crate\` or \`!submitchar ... drop\``)
-            .setFooter({ text: 'Submissions are reviewed by admins before going live!' });
+            .setDescription(`Create your own character for the game!\n\n**Usage:**\n\`!submitchar <name> <emoji> <special_move_name> <damage> <ability_template> <ability_value> [image_url]\`\n\n**Example:**\n\`!submitchar Shadow 🐺 Shadow Strike 90 damage_boost 15 https://example.com/shadow.png\`\n\n**Parameters:**\n• **name** - Character name (2-15 chars)\n• **emoji** - Character emoji (standard or custom)\n• **special_move_name** - Unique special move\n• **damage** - Move damage (60-120)\n• **ability_template** - From \`!abilities\`\n• **ability_value** - Within template range\n• **image_url** - **REQUIRED** - Attach an image or provide URL\n\n**Obtainable Types:** crate, drop, both (default: crate)\n\n**How to provide image:**\n1. **Attach:** Upload an image, then use \`!submitchar <name> <emoji> ... ability value\`\n2. **Link:** Add image URL at the end\n\nSubmissions are reviewed by admins before going live!`)
+            .setFooter({ text: 'Your custom character helps build the community!' });
           
           await message.reply({ embeds: [submitHelpEmbed] });
           return;
@@ -5611,14 +5611,33 @@ client.on('messageCreate', async (message) => {
         const submitAbilityTemplate = args[args.length - 2] || args[4];
         const submitAbilityValue = parseInt(args[args.length - 1]) || parseInt(args[5]);
         
-        let submitObtainType = 'crate';
+        // Check for default image - from attachment or URL
         let submitSkinUrl = null;
+        if (message.attachments.size > 0) {
+          const attachment = message.attachments.first();
+          const isImage = attachment.contentType?.startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(attachment.name);
+          if (isImage) {
+            submitSkinUrl = attachment.url;
+          }
+        }
         
+        // Check for URL in args
+        for (let i = 6; i < args.length; i++) {
+          if (args[i]?.startsWith('http://') || args[i]?.startsWith('https://')) {
+            submitSkinUrl = args[i];
+            break;
+          }
+        }
+        
+        if (!submitSkinUrl) {
+          await message.reply('❌ You must provide a **default image** for your character!\n\n**Options:**\n1. **Attach an image** then use the command\n2. **Add an image URL** at the end: `!submitchar <name> <emoji> ... ability_value https://example.com/image.png`\n\nSupported formats: PNG, JPG, GIF, WEBP');
+          return;
+        }
+        
+        let submitObtainType = 'crate';
         for (let i = 6; i < args.length; i++) {
           if (OBTAINABLE_TYPES.includes(args[i]?.toLowerCase())) {
             submitObtainType = args[i].toLowerCase();
-          } else if (args[i]?.startsWith('http')) {
-            submitSkinUrl = args[i];
           }
         }
         
