@@ -1,0 +1,16 @@
+{
+  "1437114785958203605": {
+    "serverId": "1437114785958203605",
+    "botAdmins": [],
+    "dropChannelId": "1444339361259716723",
+    "dropInterval": 30000,
+    "eventsChannelId": "1444339403517460573",
+    "updatesChannelId": "1437114786642002094",
+    "setupComplete": true,
+    "setupDate": "2025-11-30T05:21:40.622Z",
+    "gameMode": "custom",
+    "gameModeSetAt": 1764480342385,
+    "gameModeSetBy": "1296110901057032202",
+    "customGameId": "custom_1437114785958203605_1764480330865"
+  }
+}
