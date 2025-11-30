@@ -10,6 +10,12 @@ const GAME_MODES = {
 
 async function loadCustomGames() {
   try {
+    // Skip loading if not using MongoDB
+    if (process.env.USE_MONGODB !== 'true') {
+      console.log('✅ Custom games ready (MongoDB not enabled)');
+      return;
+    }
+
     const gamesCollection = await getCollection('customGames');
     const charsCollection = await getCollection('customCharacters');
     

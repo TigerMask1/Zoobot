@@ -264,7 +264,7 @@ function startPersonalizedTaskSystem(client, data) {
   console.log('✅ Personalized Task System started!');
 }
 
-client.on('clientReady', async () => {
+client.on('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}!`);
   console.log(`🎮 Bot is ready to serve ${client.guilds.cache.size} servers!`);
   await initializeBot();
