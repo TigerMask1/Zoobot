@@ -6941,8 +6941,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
-          await message.reply('❌ Only ZooAdmins can warn users!');
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
+          await message.reply('❌ Only Bot Admins can warn users!');
           return;
         }
         
@@ -7001,8 +7001,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
-          await message.reply('❌ Only ZooAdmins can clear warnings!');
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
+          await message.reply('❌ Only Bot Admins can clear warnings!');
           return;
         }
         
@@ -7021,8 +7021,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
-          await message.reply('❌ Only ZooAdmins can ban users from bot commands!');
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
+          await message.reply('❌ Only Bot Admins can ban users from bot commands!');
           return;
         }
         
@@ -7064,8 +7064,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
-          await message.reply('❌ Only ZooAdmins can unban users!');
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
+          await message.reply('❌ Only Bot Admins can unban users!');
           return;
         }
         
@@ -7088,8 +7088,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
-          await message.reply('❌ Only ZooAdmins can mute users!');
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
+          await message.reply('❌ Only Bot Admins can mute users!');
           return;
         }
         
@@ -7144,8 +7144,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
-          await message.reply('❌ Only ZooAdmins can unmute users!');
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
+          await message.reply('❌ Only Bot Admins can unmute users!');
           return;
         }
         
@@ -7169,8 +7169,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
-          await message.reply('❌ Only ZooAdmins can clear messages!');
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
+          await message.reply('❌ Only Bot Admins can clear messages!');
           return;
         }
         
@@ -7201,8 +7201,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
-          await message.reply('❌ Only ZooAdmins can make announcements!');
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
+          await message.reply('❌ Only Bot Admins can make announcements!');
           return;
         }
         
@@ -7228,8 +7228,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
-          await message.reply('❌ Only ZooAdmins can view moderation logs!');
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
+          await message.reply('❌ Only Bot Admins can view moderation logs!');
           return;
         }
         
@@ -7244,8 +7244,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
-          await message.reply('❌ Only ZooAdmins can view moderation stats!');
+        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
+          await message.reply('❌ Only Bot Admins can view moderation stats!');
           return;
         }
         
