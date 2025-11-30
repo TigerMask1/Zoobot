@@ -12,6 +12,37 @@ const {
   GAME_MODES 
 } = require('./serverConfigManager.js');
 
+const characterCache = new Map();
+const CACHE_TTL = 60000;
+
+function getCacheKey(serverId, options = {}) {
+  return `${serverId}:${options.approvedOnly || true}:${options.obtainableType || 'all'}`;
+}
+
+function getCachedCharacters(serverId, options = {}) {
+  const key = getCacheKey(serverId, options);
+  const cached = characterCache.get(key);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  
+  return null;
+}
+
+function setCachedCharacters(serverId, options, data) {
+  const key = getCacheKey(serverId, options);
+  characterCache.set(key, { data, timestamp: Date.now() });
+}
+
+function invalidateServerCache(serverId) {
+  for (const key of characterCache.keys()) {
+    if (key.startsWith(serverId + ':')) {
+      characterCache.delete(key);
+    }
+  }
+}
+
 async function getCharactersForServer(serverId, options = {}) {
   const { approvedOnly = true, obtainableType = null } = options;
   
@@ -210,5 +241,6 @@ module.exports = {
   characterExistsInServer,
   getCharacterCount,
   formatCharacterForDisplay,
-  getCharacterSources
+  getCharacterSources,
+  invalidateServerCache
 };

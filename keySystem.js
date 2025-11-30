@@ -1,6 +1,8 @@
 const { EmbedBuilder } = require('discord.js');
 const { saveDataImmediate } = require('./dataManager.js');
 const CHARACTERS = require('./characters.js');
+const { getCharactersForServer, resolveCharacter } = require('./characterCatalogService.js');
+const { getServerGameMode, GAME_MODES } = require('./serverConfigManager.js');
 
 function initializeKeys(userData) {
   if (!userData.characterKeys) {
@@ -45,6 +47,7 @@ function convertKeysToGems(userData, characterName) {
 
 async function viewKeys(message, data, userId) {
   const userData = data.users[userId];
+  const serverId = message.guild?.id;
   
   if (!userData || !userData.started) {
     await message.reply('❌ You need to use `!start` first!');
@@ -53,10 +56,12 @@ async function viewKeys(message, data, userId) {
   
   initializeKeys(userData);
   
+  const serverChars = await getCharactersForServer(serverId);
   const characterKeysList = [];
+  
   for (const [charName, keyCount] of Object.entries(userData.characterKeys)) {
     if (keyCount > 0) {
-      const char = CHARACTERS.find(c => c.name === charName);
+      const char = serverChars.find(c => c.name === charName) || CHARACTERS.find(c => c.name === charName);
       const emoji = char ? char.emoji : '❓';
       const owned = hasCharacter(userData, charName);
       const status = owned ? '✅ Owned' : `${keyCount}/1000`;
@@ -78,6 +83,7 @@ async function viewKeys(message, data, userId) {
 
 async function unlockCharacter(message, data, userId, characterName) {
   const userData = data.users[userId];
+  const serverId = message.guild?.id;
   
   if (!userData || !userData.started) {
     await message.reply('❌ You need to use `!start` first!');
@@ -89,9 +95,9 @@ async function unlockCharacter(message, data, userId, characterName) {
     return;
   }
   
-  const char = CHARACTERS.find(c => c.name.toLowerCase() === characterName.toLowerCase());
+  const char = await resolveCharacter(characterName, serverId);
   if (!char) {
-    await message.reply('❌ Character not found!');
+    await message.reply('❌ Character not found in this server\'s game!');
     return;
   }
   
@@ -140,6 +146,7 @@ async function unlockCharacter(message, data, userId, characterName) {
 
 async function openRandomCage(message, data, userId) {
   const userData = data.users[userId];
+  const serverId = message.guild?.id;
   
   if (!userData || !userData.started) {
     await message.reply('❌ You need to use `!start` first!');
@@ -155,7 +162,8 @@ async function openRandomCage(message, data, userId) {
   
   userData.cageKeys -= 250;
   
-  const availableChars = CHARACTERS.filter(c => !hasCharacter(userData, c.name));
+  const serverChars = await getCharactersForServer(serverId);
+  const availableChars = serverChars.filter(c => !hasCharacter(userData, c.name));
   
   if (availableChars.length === 0) {
     userData.gems = (userData.gems || 0) + 500;
@@ -167,9 +175,11 @@ async function openRandomCage(message, data, userId) {
   
   const randomChar = availableChars[Math.floor(Math.random() * availableChars.length)];
   
-  const { assignMovesToCharacter, calculateBaseHP } = require('./battleUtils.js');
+  const { assignMovesToCharacter, assignMovesToCustomCharacter, calculateBaseHP } = require('./battleUtils.js');
   const st = parseFloat((Math.random() * 100).toFixed(2));
-  const moves = assignMovesToCharacter(randomChar.name, st);
+  const moves = randomChar.isCustom 
+    ? assignMovesToCustomCharacter(randomChar, st) 
+    : assignMovesToCharacter(randomChar.name, st);
   const baseHp = calculateBaseHP(st);
   
   userData.characters.push({
@@ -181,7 +191,10 @@ async function openRandomCage(message, data, userId) {
     moves: moves,
     baseHp: baseHp,
     currentSkin: 'default',
-    ownedSkins: ['default']
+    ownedSkins: ['default'],
+    gameId: randomChar.gameId || 'zoobot',
+    isCustom: randomChar.isCustom || false,
+    characterId: randomChar.characterId || null
   });
   
   await saveDataImmediate(data);

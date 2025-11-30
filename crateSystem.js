@@ -181,14 +181,13 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
     let gameId = 'zoobot';
     let customCharData = null;
     
+    crateChars = await getCrateCharactersForServer(serverId);
+    
     if (serverId && getServerGameMode(serverId) === GAME_MODES.CUSTOM) {
-      crateChars = await getCrateCharactersForServer(serverId);
       const customGame = await getCustomGame(serverId);
       if (customGame) {
         gameId = customGame.gameId;
       }
-    } else {
-      crateChars = CHARACTERS.filter(c => c.obtainable === 'crate');
     }
     
     const ownedCharNames = user.characters.map(c => c.name);
@@ -285,14 +284,13 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
   let crateChars;
   let gameId = 'zoobot';
   
+  crateChars = await getCrateCharactersForServer(serverId);
+  
   if (serverId && getServerGameMode(serverId) === GAME_MODES.CUSTOM) {
-    crateChars = await getCrateCharactersForServer(serverId);
     const customGame = await getCustomGame(serverId);
     if (customGame) {
       gameId = customGame.gameId;
     }
-  } else {
-    crateChars = CHARACTERS.filter(c => c.obtainable === 'crate');
   }
   
   user[crateKey] -= quantity;

@@ -76,7 +76,7 @@ const {
 const { getCharacterAbility, getAbilityDescription } = require('./characterAbilities.js');
 const eventSystem = require('./eventSystem.js');
 const { viewKeys, unlockCharacter, openRandomCage } = require('./keySystem.js');
-const { loadServerConfigs, isMainServer, isSuperAdmin, isBotAdmin, isZooAdmin, addBotAdmin, removeBotAdmin, setupServer, isServerSetup, setDropChannel, setEventsChannel, setUpdatesChannel, getUpdatesChannel, getServerGameMode, setServerGameMode, isCustomGameServer, GAME_MODES, linkCustomGame } = require('./serverConfigManager.js');
+const { loadServerConfigs, isMainServer, isSuperAdmin, isBotAdmin, isZooAdmin, addBotAdmin, removeBotAdmin, setupServer, isServerSetup, setDropChannel, setEventsChannel, setUpdatesChannel, getUpdatesChannel, getServerGameMode, setServerGameMode, isGameModeSet, requiresGameModeCheck, isCustomGameServer, GAME_MODES, linkCustomGame } = require('./serverConfigManager.js');
 const { 
   loadCustomGames, 
   createCustomGame, 
@@ -86,7 +86,11 @@ const {
   getCustomCharacter,
   setStarterCharacters, 
   getStarterCharacters,
-  deleteCustomGame
+  deleteCustomGame,
+  exportCustomGame,
+  importCustomGame,
+  listAvailableGames,
+  cloneGameToServer
 } = require('./customGameService.js');
 const { 
   getCharactersForServer, 
@@ -682,6 +686,21 @@ client.on('messageCreate', async (message) => {
   const serverId = message.guild?.id;
   const isAdmin = isSuperAdmin(userId) || isBotAdmin(userId, serverId);
   
+  if (serverId && requiresGameModeCheck(serverId, command)) {
+    const setupPromptEmbed = new EmbedBuilder()
+      .setColor('#FF6B6B')
+      .setTitle('⚠️ Server Setup Required')
+      .setDescription('This server has not been set up yet!\n\nA server admin needs to run `!setup` to choose a game mode before any commands will work.')
+      .addFields(
+        { name: '📋 How to Set Up', value: '1. Run `!setup` to start\n2. Choose a game mode (ZooBot or Custom)\n3. Configure your channels\n4. Start playing!', inline: false },
+        { name: '🎮 Game Modes', value: '**ZooBot** - Use our 51 default characters\n**Custom** - Create your own game with custom characters', inline: false }
+      )
+      .setFooter({ text: 'Only users with ZooAdmin role can run setup' });
+    
+    await message.reply({ embeds: [setupPromptEmbed] });
+    return;
+  }
+  
   try {
     switch(command) {
       case 'setup':
@@ -695,11 +714,60 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
+        const setupGameMode = getServerGameMode(serverId);
+        const setupGameModeIsSet = isGameModeSet(serverId);
+        
+        if (!setupGameModeIsSet) {
+          const gameModeEmbed = new EmbedBuilder()
+            .setColor('#00D9FF')
+            .setTitle('🎮 Choose Your Game Mode')
+            .setDescription('**Welcome!** Before you can use the bot, you must choose a game mode.\n\n**This choice determines what characters and systems your server will use.**')
+            .addFields(
+              { 
+                name: '🦁 ZooBot Mode', 
+                value: '• **51 pre-made characters** with unique abilities\n• All standard systems (battles, trades, tokens, skins)\n• Established gameplay mechanics\n• Use `!setgamemode zoobot` to select', 
+                inline: false 
+              },
+              { 
+                name: '🎨 Custom Mode', 
+                value: '• **Create your own characters** from scratch\n• Design unique moves, traits, and abilities\n• Full control over your game\'s theme\n• Characters have full feature parity (tokens, skins, ST, levels)\n• Use `!setgamemode custom` to select', 
+                inline: false 
+              },
+              {
+                name: '📋 Next Steps After Choosing',
+                value: '1. Set your drop channel: `!setdropchannel #channel`\n2. Set events channel: `!seteventschannel #channel`\n3. Set updates channel: `!setupdateschannel #channel`',
+                inline: false
+              }
+            )
+            .setFooter({ text: '⚠️ Game mode must be set before any other commands will work' });
+          
+          await message.reply({ embeds: [gameModeEmbed] });
+          return;
+        }
+        
         const setupEmbed = new EmbedBuilder()
           .setColor('#00D9FF')
           .setTitle('🛠️ Server Setup')
-          .setDescription(`Welcome! Let's set up ZooBot for your server.\n\n**Role Requirement:** You need the **ZooAdmin** role to manage this bot.\n\n**Required Steps:**\n1. Set drop channel: \`!setdropchannel #channel\`\n2. Set events channel: \`!seteventschannel #channel\`\n3. Set updates channel: \`!setupdateschannel #channel\`\n\n**Current Status:**\n${isServerSetup(serverId) ? '✅ Setup complete!' : '⚠️ Setup incomplete'}\n\n**Note:** Drops appear every 30 seconds on non-main servers and require payment (100 gems for 3 hours by ZooAdmins).\nOnly users with the **ZooAdmin** role can activate drops and customize server settings.\n\nFor unlimited drops and exclusive features, join our main server!`)
-          .setFooter({ text: 'Use the commands above to complete setup' });
+          .setDescription(`Welcome! Let's finish setting up the bot for your server.`)
+          .addFields(
+            { name: '🎮 Game Mode', value: setupGameMode === 'custom' ? '🎨 Custom Mode' : '🦁 ZooBot Mode', inline: true },
+            { name: '📊 Status', value: isServerSetup(serverId) ? '✅ Channels configured!' : '⚠️ Need to set channels', inline: true },
+            { name: '\u200B', value: '\u200B', inline: true },
+            { 
+              name: '📋 Channel Setup', 
+              value: '1. `!setdropchannel #channel` - Where drops appear\n2. `!seteventschannel #channel` - Event announcements\n3. `!setupdateschannel #channel` - Bot updates', 
+              inline: false 
+            }
+          )
+          .setFooter({ text: 'Only users with the ZooAdmin role can manage setup' });
+        
+        if (setupGameMode === 'custom') {
+          setupEmbed.addFields({
+            name: '🎨 Custom Game Setup',
+            value: '1. `!creategame <name>` - Create your custom game\n2. `!createcharacter` - Add characters\n3. `!setstarters Char1, Char2, Char3` - Set starter characters',
+            inline: false
+          });
+        }
         
         await message.reply({ embeds: [setupEmbed] });
         break;
@@ -5872,6 +5940,132 @@ client.on('messageCreate', async (message) => {
           await setServerGameMode(serverId, 'zoobot', userId, message.member);
         }
         await message.reply(deleteResult.message);
+        break;
+      
+      case 'exportgame':
+        if (!isZooAdmin(message.member) && !isSuperAdmin(userId)) {
+          await message.reply('❌ Only users with the **ZooAdmin** role can export games!');
+          return;
+        }
+        
+        const exportGame = await getCustomGame(serverId);
+        if (!exportGame) {
+          await message.reply('❌ No custom game found on this server!');
+          return;
+        }
+        
+        const exportResult = await exportCustomGame(exportGame.gameId);
+        if (exportResult.success) {
+          const exportEmbed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle('📦 Game Exported Successfully!')
+            .setDescription(`Your custom game **${exportGame.gameName}** has been exported.`)
+            .addFields(
+              { name: '📋 Characters', value: `${exportResult.exportData.metadata.characterCount} approved`, inline: true },
+              { name: '🌟 Starters', value: `${exportResult.exportData.metadata.starterCount}`, inline: true },
+              { name: '\u200B', value: '\u200B', inline: true }
+            )
+            .setFooter({ text: 'Share this code with other servers to let them load your game!' });
+          
+          await message.reply({ embeds: [exportEmbed] });
+          
+          try {
+            await message.author.send(`📦 **Export Code for "${exportGame.gameName}":**\n\n\`\`\`\n${exportResult.exportCode}\n\`\`\`\n\n*Use \`!loadgame <code>\` on another server to import this game!*`);
+            await message.reply('✅ Export code has been sent to your DMs!');
+          } catch (dmError) {
+            await message.reply(`⚠️ Could not send DM. Here's a shortened preview of your export code:\n\`${exportResult.exportCode.substring(0, 100)}...\`\n\nPlease enable DMs to receive the full code.`);
+          }
+        } else {
+          await message.reply(exportResult.message);
+        }
+        break;
+      
+      case 'loadgame':
+        if (!isZooAdmin(message.member) && !isSuperAdmin(userId)) {
+          await message.reply('❌ Only users with the **ZooAdmin** role can load games!');
+          return;
+        }
+        
+        const loadGameMode = getServerGameMode(serverId);
+        if (loadGameMode !== 'custom') {
+          await message.reply('❌ Set your server to custom mode first with `!setgamemode custom`');
+          return;
+        }
+        
+        const loadCode = args.join(' ');
+        if (!loadCode) {
+          await message.reply('Usage: `!loadgame <export_code>`\n\nPaste the export code from another server to load their custom game here.');
+          return;
+        }
+        
+        const importResult = await importCustomGame(serverId, loadCode, userId);
+        if (importResult.success) {
+          await linkCustomGame(serverId, importResult.game.gameId);
+          
+          const importEmbed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle('🎮 Game Loaded Successfully!')
+            .setDescription(importResult.message)
+            .setFooter({ text: 'All characters have been imported and approved!' });
+          
+          await message.reply({ embeds: [importEmbed] });
+        } else {
+          await message.reply(importResult.message);
+        }
+        break;
+      
+      case 'listgames':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only super admins can list all games!');
+          return;
+        }
+        
+        const allGames = await listAvailableGames();
+        if (allGames.length === 0) {
+          await message.reply('📋 No active custom games found.');
+          return;
+        }
+        
+        const gamesListEmbed = new EmbedBuilder()
+          .setColor('#3498DB')
+          .setTitle('🎮 Available Custom Games')
+          .setDescription(`Found **${allGames.length}** active custom games:`);
+        
+        for (const game of allGames.slice(0, 10)) {
+          gamesListEmbed.addFields({
+            name: `🎮 ${game.gameName}`,
+            value: `**ID:** \`${game.gameId.substring(0, 20)}...\`\n**Characters:** ${game.characterCount} | **Starters:** ${game.starterCount}`,
+            inline: true
+          });
+        }
+        
+        await message.reply({ embeds: [gamesListEmbed] });
+        break;
+      
+      case 'gameinfo':
+        const infoGame = await getCustomGame(serverId);
+        const infoGameMode = getServerGameMode(serverId);
+        
+        const infoEmbed = new EmbedBuilder()
+          .setColor('#3498DB')
+          .setTitle('🎮 Server Game Information')
+          .addFields(
+            { name: '📊 Game Mode', value: infoGameMode ? (infoGameMode === 'custom' ? '🎨 Custom' : '🦁 ZooBot') : '❌ Not Set', inline: true },
+            { name: '⚙️ Setup Status', value: isGameModeSet(serverId) ? '✅ Complete' : '⚠️ Pending', inline: true }
+          );
+        
+        if (infoGame) {
+          const infoChars = await getCustomCharacters(infoGame.gameId, true);
+          infoEmbed.addFields(
+            { name: '\u200B', value: '**Custom Game Details:**', inline: false },
+            { name: '🎮 Game Name', value: infoGame.gameName, inline: true },
+            { name: '📋 Characters', value: `${infoChars.length} approved`, inline: true },
+            { name: '🌟 Starters', value: `${infoGame.starterCharacterIds?.length || 0}`, inline: true },
+            { name: '📊 Status', value: infoGame.status === 'active' ? '✅ Active' : '⚠️ Setup', inline: true }
+          );
+        }
+        
+        await message.reply({ embeds: [infoEmbed] });
         break;
         
       default:

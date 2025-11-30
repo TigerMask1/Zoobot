@@ -14,8 +14,15 @@ const SUPER_ADMINS = ['1296110901057032202', '1296109674361520146','117872897848
 
 const GAME_MODES = {
   ZOOBOT: 'zoobot',
-  CUSTOM: 'custom'
+  CUSTOM: 'custom',
+  NONE: null
 };
+
+const SETUP_EXEMPT_COMMANDS = [
+  'setup', 'help', 'setgamemode', 'creategame', 'loadgame',
+  'setdropchannel', 'seteventschannel', 'setupdateschannel',
+  'addadmin', 'removeadmin', 'ping'
+];
 
 let serverConfigs = {};
 
@@ -316,7 +323,24 @@ function getServerGameMode(serverId) {
   if (isMainServer(serverId)) return GAME_MODES.ZOOBOT;
   
   const config = getServerConfig(serverId);
-  return config?.gameMode || GAME_MODES.ZOOBOT;
+  return config?.gameMode || null;
+}
+
+function isGameModeSet(serverId) {
+  if (isMainServer(serverId)) return true;
+  
+  const config = getServerConfig(serverId);
+  return config?.gameMode && (config.gameMode === GAME_MODES.ZOOBOT || config.gameMode === GAME_MODES.CUSTOM);
+}
+
+function isSetupExemptCommand(command) {
+  return SETUP_EXEMPT_COMMANDS.includes(command.toLowerCase());
+}
+
+function requiresGameModeCheck(serverId, command) {
+  if (isMainServer(serverId)) return false;
+  if (isSetupExemptCommand(command)) return false;
+  return !isGameModeSet(serverId);
 }
 
 async function setServerGameMode(serverId, gameMode, setBy, member) {
@@ -404,11 +428,15 @@ module.exports = {
   setUpdatesChannel,
   getServerGameMode,
   setServerGameMode,
+  isGameModeSet,
+  isSetupExemptCommand,
+  requiresGameModeCheck,
   isCustomGameServer,
   isZooBotServer,
   getGameModeInfo,
   linkCustomGame,
   MAIN_SERVER_ID,
   SUPER_ADMINS,
-  GAME_MODES
+  GAME_MODES,
+  SETUP_EXEMPT_COMMANDS
 };

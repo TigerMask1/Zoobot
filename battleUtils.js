@@ -66,16 +66,34 @@ function calculateCriticalHit(baseDamage, critChance = 0.15) {
   };
 }
 
-function assignMovesToCharacter(characterName, st) {
-  const specialMove = SPECIAL_MOVES[characterName];
+function assignMovesToCharacter(characterName, st, customMoveData = null) {
+  let specialMove;
+  
+  if (customMoveData && customMoveData.uniqueMove) {
+    specialMove = customMoveData.uniqueMove;
+  } else {
+    specialMove = SPECIAL_MOVES[characterName];
+  }
   
   if (!specialMove) {
-    console.error(`No special move found for character: ${characterName}`);
-    return null;
+    specialMove = { name: 'Basic Attack', damage: 40 };
   }
   
   const tierMoves = getMovesForST(st);
   
+  const shuffled = [...tierMoves].sort(() => Math.random() - 0.5);
+  const selectedMoves = shuffled.slice(0, 2);
+  
+  return {
+    special: specialMove,
+    tierMoves: selectedMoves
+  };
+}
+
+function assignMovesToCustomCharacter(characterData, st) {
+  const specialMove = characterData.uniqueMove || { name: 'Basic Attack', damage: 40 };
+  
+  const tierMoves = getMovesForST(st);
   const shuffled = [...tierMoves].sort(() => Math.random() - 0.5);
   const selectedMoves = shuffled.slice(0, 2);
   
@@ -104,5 +122,6 @@ module.exports = {
   calculateEnergyCost,
   calculateCriticalHit,
   assignMovesToCharacter,
+  assignMovesToCustomCharacter,
   getMoveDisplay
 };
