@@ -4,15 +4,17 @@ const { calculateBaseHP, assignMovesToCharacter, calculateEnergyCost, calculateD
 const { getCharacterAbility } = require('./characterAbilities.js');
 const { MOVE_EFFECTS, applyEffect, processEffects, hasEffect, getEffectsDisplay, clearAllEffects } = require('./moveEffects.js');
 const { checkTaskProgress, completePersonalizedTask, initializePersonalizedTaskData } = require('./personalizedTaskSystem.js');
+const characterManager = require('./characterManager.js');
 
-const AI_CHARACTERS = ['Bali', 'Betsy', 'Bruce', 'Buck', 'Buddy', 'Caly', 'Dillo', 'Donna', 'Duke', 'Earl', 'Edna', 'Faye', 'Finn', 'Frank'];
 const STARTING_ENERGY = 50;
 const ENERGY_PER_TURN = 10;
 const MAX_ENERGY = 100;
 const aiActiveBattles = new Map();
 
-function createAIOpponent(CHARACTERS, difficulty = 'normal', playerCharacter = null) {
-  const aiCharName = AI_CHARACTERS[Math.floor(Math.random() * AI_CHARACTERS.length)];
+function createAIOpponent(difficulty = 'normal', playerCharacter = null) {
+  const CHARACTERS = characterManager.getCharacters();
+  const allCharNames = CHARACTERS.map(c => c.name);
+  const aiCharName = allCharNames[Math.floor(Math.random() * allCharNames.length)];
   const charData = CHARACTERS.find(c => c.name === aiCharName);
   
   let level, st;
@@ -66,7 +68,7 @@ function createAIOpponent(CHARACTERS, difficulty = 'normal', playerCharacter = n
   };
 }
 
-async function startAIBattle(message, data, playerId, botId, difficulty, CHARACTERS) {
+async function startAIBattle(message, data, playerId, botId, difficulty) {
   if (aiActiveBattles.has(playerId)) {
     await message.reply('❌ You are already in an AI battle!');
     return;
@@ -118,7 +120,7 @@ async function startAIBattle(message, data, playerId, botId, difficulty, CHARACT
     
     collector.stop();
     
-    const aiOpponent = createAIOpponent(CHARACTERS, difficulty, selectedChar);
+    const aiOpponent = createAIOpponent(difficulty, selectedChar);
     
     await m.reply(`✅ You selected **${selectedChar.name} ${selectedChar.emoji}**!`);
     await message.channel.send(`🤖 AI selected **${aiOpponent.name} ${aiOpponent.emoji}** (Lvl ${aiOpponent.level}, ST: ${aiOpponent.st}%)!`);

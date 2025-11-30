@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { saveDataImmediate } = require('./dataManager.js');
 const { getUSTBalance, removeUST } = require('./ustSystem.js');
-const { CHARACTERS } = require('./characters.js');
+const characterManager = require('./characterManager.js');
 const fs = require('fs');
 const path = require('path');
 

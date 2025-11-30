@@ -41,7 +41,6 @@ const client = new Client({
   ]
 });
 
-const CHARACTERS = require('./characters.js');
 const { loadData, saveData, saveDataImmediate, deleteUser } = require('./dataManager.js');
 const { getLevelRequirements, calculateLevel } = require('./levelSystem.js');
 const { openCrate, buyCrate, openCratesInBulk } = require('./crateSystem.js');
@@ -527,6 +526,372 @@ client.on('interactionCreate', async (interaction) => {
       });
     } catch (error) {
       console.error('Error showing auction category select:', error);
+      await interaction.reply({ content: '❌ An error occurred!', ephemeral: true }).catch(() => {});
+    }
+    return;
+  }
+  
+  if (interaction.isButton() && interaction.customId.startsWith('open_createchar_modal_')) {
+    if (!data) return;
+    
+    const userId = interaction.user.id;
+    if (!isSuperAdmin(userId)) {
+      await interaction.reply({ content: '❌ Only Super Admins can create characters!', ephemeral: true });
+      return;
+    }
+    
+    try {
+      const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+      
+      const modal = new ModalBuilder()
+        .setCustomId(`createchar_form_${userId}`)
+        .setTitle('🦁 Create New Character');
+      
+      const nameInput = new TextInputBuilder()
+        .setCustomId('char_name')
+        .setLabel('Character Name')
+        .setPlaceholder('e.g., Luna')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(20);
+      
+      const emojiInput = new TextInputBuilder()
+        .setCustomId('char_emoji')
+        .setLabel('Emoji')
+        .setPlaceholder('e.g., 🦋 or <:custom:123456>')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(50);
+      
+      const obtainableInput = new TextInputBuilder()
+        .setCustomId('char_obtainable')
+        .setLabel('How to Obtain')
+        .setPlaceholder('crate, starter, drop, event, or exclusive')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(20);
+      
+      const abilityInput = new TextInputBuilder()
+        .setCustomId('char_ability')
+        .setLabel('Ability (Name|Emoji|Desc|Effect|Value)')
+        .setPlaceholder('Lunar Glow|🌙|Heal 5% HP per turn|healPerTurn|0.05')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false)
+        .setMaxLength(200);
+      
+      const moveInput = new TextInputBuilder()
+        .setCustomId('char_move')
+        .setLabel('Special Move (Name|Damage)')
+        .setPlaceholder('Moon Beam|90')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false)
+        .setMaxLength(50);
+      
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(nameInput),
+        new ActionRowBuilder().addComponents(emojiInput),
+        new ActionRowBuilder().addComponents(obtainableInput),
+        new ActionRowBuilder().addComponents(abilityInput),
+        new ActionRowBuilder().addComponents(moveInput)
+      );
+      
+      await interaction.showModal(modal);
+    } catch (error) {
+      console.error('Error showing createchar modal:', error);
+      await interaction.reply({ content: '❌ An error occurred!', ephemeral: true }).catch(() => {});
+    }
+    return;
+  }
+  
+  if (interaction.isButton() && interaction.customId.startsWith('createchar_dropdown_')) {
+    if (!data) return;
+    
+    const userId = interaction.user.id;
+    if (!isSuperAdmin(userId)) {
+      await interaction.reply({ content: '❌ Only Super Admins can create characters!', ephemeral: true });
+      return;
+    }
+    
+    try {
+      const ABILITY_EFFECTS_PAGE1 = [
+        { label: 'Critical Damage Bonus', value: 'criticalDamageBonus', description: 'Critical hits deal X% more damage', emoji: '⚔️' },
+        { label: 'Heal Per Turn', value: 'healPerTurn', description: 'Recover X% HP each turn', emoji: '💚' },
+        { label: 'Damage Reduction', value: 'damageReduction', description: 'Take X% less damage', emoji: '🛡️' },
+        { label: 'Dodge Chance', value: 'dodgeChance', description: 'X% chance to dodge attacks', emoji: '💨' },
+        { label: 'Lifesteal', value: 'lifesteal', description: 'Heal for X% of damage dealt', emoji: '🧛' },
+        { label: 'Freeze Chance', value: 'freezeChance', description: 'X% chance to freeze enemy', emoji: '❄️' },
+        { label: 'Burn Chance', value: 'burnChance', description: 'X% chance to burn enemy', emoji: '🔥' },
+        { label: 'Critical Hit Chance', value: 'criticalChanceBonus', description: '+X% crit chance', emoji: '🎯' },
+        { label: 'Energy Regen Per Turn', value: 'energyRegenPerTurn', description: '+X energy each turn', emoji: '⚡' },
+        { label: 'Starting Energy Bonus', value: 'startingEnergyBonus', description: 'Start with +X energy', emoji: '🔋' },
+        { label: 'Flat Damage Bonus', value: 'flatDamageBonus', description: '+X damage to all attacks', emoji: '💥' },
+        { label: 'Special Damage Bonus', value: 'specialDamageBonus', description: '+X% special move damage', emoji: '✨' },
+        { label: 'Energy Steal', value: 'energySteal', description: 'Steal X energy on hit', emoji: '🌀' },
+        { label: 'Starting Shield', value: 'startingShield', description: 'Start with X% HP shield', emoji: '🔰' },
+        { label: 'First Attack Bonus', value: 'firstAttackBonus', description: 'First attack +X% damage', emoji: '🥊' },
+        { label: 'Paralyze Chance', value: 'paralyzeChance', description: 'X% chance to stun enemy', emoji: '⚡' },
+        { label: 'Double Attack Chance', value: 'doubleAttackChance', description: 'X% chance to attack twice', emoji: '👊' },
+        { label: 'Healing Bonus', value: 'healingBonus', description: 'Heals are X% stronger', emoji: '💖' },
+        { label: 'Defense Bonus', value: 'defenseBonus', description: 'X% damage reduction', emoji: '🏰' },
+        { label: 'Extra Turn Chance', value: 'extraTurnChance', description: 'X% chance extra turn', emoji: '🔄' },
+        { label: 'No Ability', value: 'none', description: 'Character has no ability', emoji: '❌' }
+      ];
+      
+      const abilitySelect = new StringSelectMenuBuilder()
+        .setCustomId(`createchar_ability_select_${userId}`)
+        .setPlaceholder('⚔️ Select an Ability Effect')
+        .addOptions(ABILITY_EFFECTS_PAGE1);
+      
+      await interaction.reply({
+        content: '**Step 2:** Choose an ability effect for your character:\n\n*This determines what passive power the character has in battle.*',
+        components: [new ActionRowBuilder().addComponents(abilitySelect)],
+        ephemeral: true
+      });
+    } catch (error) {
+      console.error('Error showing ability dropdown:', error);
+      await interaction.reply({ content: '❌ An error occurred!', ephemeral: true }).catch(() => {});
+    }
+    return;
+  }
+  
+  if (interaction.isStringSelectMenu() && interaction.customId.startsWith('createchar_ability_select_')) {
+    if (!data) return;
+    
+    const userId = interaction.user.id;
+    if (!isSuperAdmin(userId)) {
+      await interaction.reply({ content: '❌ Only Super Admins!', ephemeral: true });
+      return;
+    }
+    
+    const selectedEffect = interaction.values[0];
+    
+    if (!pendingCharacterCreations) {
+      global.pendingCharacterCreations = new Map();
+    }
+    
+    const pending = pendingCharacterCreations.get(userId);
+    if (!pending) {
+      await interaction.reply({ content: '❌ Session expired! Use !createchar2 again.', ephemeral: true });
+      return;
+    }
+    
+    pending.effectType = selectedEffect;
+    pendingCharacterCreations.set(userId, pending);
+    
+    if (selectedEffect === 'none') {
+      try {
+        const result = await characterManager.createCharacter(userId, {
+          name: pending.name,
+          emoji: pending.emoji,
+          obtainable: pending.obtainable,
+          ability: null,
+          specialMove: pending.specialMove || null
+        });
+        
+        pendingCharacterCreations.delete(userId);
+        
+        if (result.success) {
+          const embed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle('✅ Character Created!')
+            .setDescription(`**${pending.emoji} ${pending.name}** has been added to the game!`)
+            .addFields(
+              { name: 'Obtainable', value: pending.obtainable, inline: true },
+              { name: 'Ability', value: 'None', inline: true },
+              { name: 'Special Move', value: pending.specialMove ? `${pending.specialMove.name} (${pending.specialMove.damage} DMG)` : 'Default', inline: true }
+            );
+          await interaction.reply({ embeds: [embed] });
+        } else {
+          await interaction.reply({ content: result.message, ephemeral: true });
+        }
+      } catch (error) {
+        console.error('Error creating character:', error);
+        await interaction.reply({ content: '❌ An error occurred!', ephemeral: true });
+      }
+      return;
+    }
+    
+    try {
+      const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+      
+      const modal = new ModalBuilder()
+        .setCustomId(`createchar_details_${userId}`)
+        .setTitle('⚔️ Ability Details');
+      
+      const abilityNameInput = new TextInputBuilder()
+        .setCustomId('ability_name')
+        .setLabel('Ability Name')
+        .setPlaceholder('e.g., Fierce Claws, Shadow Strike')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(30);
+      
+      const abilityEmojiInput = new TextInputBuilder()
+        .setCustomId('ability_emoji')
+        .setLabel('Ability Emoji')
+        .setPlaceholder('e.g., 🐯 ⚔️ 🔥')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(20);
+      
+      const abilityDescInput = new TextInputBuilder()
+        .setCustomId('ability_desc')
+        .setLabel('Ability Description')
+        .setPlaceholder('e.g., Critical hits deal 50% more damage')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(100);
+      
+      const abilityValueInput = new TextInputBuilder()
+        .setCustomId('ability_value')
+        .setLabel('Effect Value (decimal or number)')
+        .setPlaceholder('e.g., 0.5 for 50%, 10 for flat bonus')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(10);
+      
+      const moveDamageInput = new TextInputBuilder()
+        .setCustomId('move_damage')
+        .setLabel('Special Move Damage (optional)')
+        .setPlaceholder('e.g., 90 (leave empty for default)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false)
+        .setMaxLength(5);
+      
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(abilityNameInput),
+        new ActionRowBuilder().addComponents(abilityEmojiInput),
+        new ActionRowBuilder().addComponents(abilityDescInput),
+        new ActionRowBuilder().addComponents(abilityValueInput),
+        new ActionRowBuilder().addComponents(moveDamageInput)
+      );
+      
+      await interaction.showModal(modal);
+    } catch (error) {
+      console.error('Error showing ability details modal:', error);
+      await interaction.reply({ content: '❌ An error occurred!', ephemeral: true }).catch(() => {});
+    }
+    return;
+  }
+  
+  if (interaction.isModalSubmit() && interaction.customId.startsWith('createchar_details_')) {
+    if (!data) return;
+    
+    const userId = interaction.user.id;
+    
+    if (!pendingCharacterCreations) {
+      global.pendingCharacterCreations = new Map();
+    }
+    
+    const pending = pendingCharacterCreations.get(userId);
+    if (!pending) {
+      await interaction.reply({ content: '❌ Session expired! Use !createchar2 again.', ephemeral: true });
+      return;
+    }
+    
+    try {
+      const abilityName = interaction.fields.getTextInputValue('ability_name');
+      const abilityEmoji = interaction.fields.getTextInputValue('ability_emoji');
+      const abilityDesc = interaction.fields.getTextInputValue('ability_desc');
+      const abilityValue = parseFloat(interaction.fields.getTextInputValue('ability_value')) || 0.1;
+      const moveDamage = interaction.fields.getTextInputValue('move_damage');
+      
+      const ability = {
+        name: abilityName,
+        emoji: abilityEmoji,
+        description: abilityDesc,
+        effectType: pending.effectType,
+        effectValue: abilityValue
+      };
+      
+      let specialMove = pending.specialMove;
+      if (moveDamage && parseInt(moveDamage) > 0) {
+        specialMove = {
+          name: `${pending.name}'s Strike`,
+          damage: parseInt(moveDamage)
+        };
+      }
+      
+      const result = await characterManager.createCharacter(userId, {
+        name: pending.name,
+        emoji: pending.emoji,
+        obtainable: pending.obtainable,
+        ability: ability,
+        specialMove: specialMove
+      });
+      
+      pendingCharacterCreations.delete(userId);
+      
+      if (result.success) {
+        const embed = new EmbedBuilder()
+          .setColor('#00FF00')
+          .setTitle('✅ Character Created!')
+          .setDescription(`**${pending.emoji} ${pending.name}** has been added to the game!`)
+          .addFields(
+            { name: 'Obtainable', value: pending.obtainable, inline: true },
+            { name: 'Ability', value: `${abilityEmoji} ${abilityName}`, inline: true },
+            { name: 'Effect', value: `${pending.effectType}: ${abilityValue}`, inline: true },
+            { name: 'Special Move', value: specialMove ? `${specialMove.name} (${specialMove.damage} DMG)` : 'Default', inline: true }
+          )
+          .setFooter({ text: 'Character is now available in drops, crates, and battles!' });
+        await interaction.reply({ embeds: [embed] });
+      } else {
+        await interaction.reply({ content: result.message, ephemeral: true });
+      }
+    } catch (error) {
+      console.error('Error completing character creation:', error);
+      await interaction.reply({ content: '❌ An error occurred!', ephemeral: true }).catch(() => {});
+    }
+    return;
+  }
+  
+  if (interaction.isButton() && interaction.customId.startsWith('createchar_skip_')) {
+    if (!data) return;
+    
+    const userId = interaction.user.id;
+    if (!isSuperAdmin(userId)) {
+      await interaction.reply({ content: '❌ Only Super Admins!', ephemeral: true });
+      return;
+    }
+    
+    if (!global.pendingCharacterCreations) {
+      global.pendingCharacterCreations = new Map();
+    }
+    
+    const pending = pendingCharacterCreations.get(userId);
+    if (!pending) {
+      await interaction.reply({ content: '❌ Session expired! Use !createchar2 again.', ephemeral: true });
+      return;
+    }
+    
+    try {
+      const result = await characterManager.createCharacter(userId, {
+        name: pending.name,
+        emoji: pending.emoji,
+        obtainable: pending.obtainable,
+        ability: null,
+        specialMove: null
+      });
+      
+      pendingCharacterCreations.delete(userId);
+      
+      if (result.success) {
+        const embed = new EmbedBuilder()
+          .setColor('#00FF00')
+          .setTitle('✅ Character Created!')
+          .setDescription(`**${pending.emoji} ${pending.name}** has been added to the game!`)
+          .addFields(
+            { name: 'Obtainable', value: pending.obtainable, inline: true },
+            { name: 'Ability', value: 'None (can add later with !setability)', inline: true },
+            { name: 'Special Move', value: 'Default (can set with !setmove)', inline: true }
+          )
+          .setFooter({ text: 'Character is now available in drops, crates, and battles!' });
+        await interaction.reply({ embeds: [embed] });
+      } else {
+        await interaction.reply({ content: result.message, ephemeral: true });
+      }
+    } catch (error) {
+      console.error('Error creating character (skip):', error);
       await interaction.reply({ content: '❌ An error occurred!', ephemeral: true }).catch(() => {});
     }
     return;
@@ -1077,7 +1442,7 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const starterChar = CHARACTERS.find(c => c.name.toLowerCase() === starterChoice);
+        const starterChar = characterManager.getCharacterByName(starterChoice);
         const starterST = generateST();
         
         const pendingTokens = data.users[userId].pendingTokens || 0;
@@ -2413,7 +2778,7 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const foundChar = CHARACTERS.find(c => c.name.toLowerCase() === charToGrant.toLowerCase());
+        const foundChar = characterManager.getCharacterByName(charToGrant);
         
         if (!foundChar) {
           await message.reply('❌ Character not found!');
@@ -2480,7 +2845,7 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const foundSkinChar = CHARACTERS.find(c => c.name.toLowerCase() === skinCharName.toLowerCase());
+        const foundSkinChar = characterManager.getCharacterByName(skinCharName);
         if (!foundSkinChar) {
           await message.reply('❌ Character not found!');
           return;
@@ -2521,7 +2886,7 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const foundUpdateChar = CHARACTERS.find(c => c.name.toLowerCase() === updateCharName.toLowerCase());
+        const foundUpdateChar = characterManager.getCharacterByName(updateCharName);
         if (!foundUpdateChar) {
           await message.reply('❌ Character not found!');
           return;
@@ -2664,7 +3029,7 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const foundDeleteChar = CHARACTERS.find(c => c.name.toLowerCase() === deleteCharName.toLowerCase());
+        const foundDeleteChar = characterManager.getCharacterByName(deleteCharName);
         if (!foundDeleteChar) {
           await message.reply('❌ Character not found!');
           return;
@@ -2743,7 +3108,7 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const foundUploadChar = CHARACTERS.find(c => c.name.toLowerCase() === uploadCharName.toLowerCase());
+        const foundUploadChar = characterManager.getCharacterByName(uploadCharName);
         if (!foundUploadChar) {
           await message.reply('❌ Character not found!');
           return;
@@ -3020,7 +3385,7 @@ client.on('messageCreate', async (message) => {
           
           const difficulty = (battleArg === 'easy' || battleArg === 'normal' || battleArg === 'hard') ? battleArg : 'normal';
           const { startAIBattle } = require('./aiBattleSystem.js');
-          await startAIBattle(message, data, userId, client.user.id, difficulty, CHARACTERS);
+          await startAIBattle(message, data, userId, client.user.id, difficulty);
           return;
         }
         
@@ -3166,7 +3531,7 @@ client.on('messageCreate', async (message) => {
         }
         
         // Otherwise show general character info (even if not owned)
-        const genCharData = CHARACTERS.find(c => c.name.toLowerCase() === infoCharName);
+        const genCharData = characterManager.getCharacterByName(infoCharName);
         if (!genCharData) {
           await message.reply(`❌ Character **${infoCharName}** not found!`);
           return;
@@ -5581,70 +5946,15 @@ client.on('messageCreate', async (message) => {
         }
         
         try {
-          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
-          
-          const modal = new ModalBuilder()
-            .setCustomId(`createchar_form_${userId}`)
-            .setTitle('🦁 Create New Character');
-          
-          const nameInput = new TextInputBuilder()
-            .setCustomId('char_name')
-            .setLabel('Character Name')
-            .setPlaceholder('e.g., Luna')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(20);
-          
-          const emojiInput = new TextInputBuilder()
-            .setCustomId('char_emoji')
-            .setLabel('Emoji')
-            .setPlaceholder('e.g., 🦋 or <:custom:123456>')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(50);
-          
-          const obtainableInput = new TextInputBuilder()
-            .setCustomId('char_obtainable')
-            .setLabel('How to Obtain')
-            .setPlaceholder('crate, starter, drop, event, or exclusive')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(20);
-          
-          const abilityInput = new TextInputBuilder()
-            .setCustomId('char_ability')
-            .setLabel('Ability (Name|Emoji|Desc|Effect|Value)')
-            .setPlaceholder('Lunar Glow|🌙|Heal 5% HP per turn|healPerTurn|0.05')
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(false)
-            .setMaxLength(200);
-          
-          const moveInput = new TextInputBuilder()
-            .setCustomId('char_move')
-            .setLabel('Special Move (Name|Damage)')
-            .setPlaceholder('Moon Beam|90')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setMaxLength(50);
-          
-          modal.addComponents(
-            new ActionRowBuilder().addComponents(nameInput),
-            new ActionRowBuilder().addComponents(emojiInput),
-            new ActionRowBuilder().addComponents(obtainableInput),
-            new ActionRowBuilder().addComponents(abilityInput),
-            new ActionRowBuilder().addComponents(moveInput)
-          );
-          
-          const dmChannel = await message.author.createDM();
-          
           const promptEmbed = new EmbedBuilder()
             .setColor('#FFD700')
-            .setTitle('🦁 Create Character Form')
+            .setTitle('🦁 Create Character')
             .setDescription('Click the button below to open the character creation form!')
             .addFields(
-              { name: 'Ability Format', value: '`Name|Emoji|Description|EffectType|Value`\nExample: `Lunar Glow|🌙|Heal 5% HP per turn|healPerTurn|0.05`' },
-              { name: 'Move Format', value: '`Name|Damage`\nExample: `Moon Beam|90`' },
-              { name: 'Effect Types', value: 'criticalDamageBonus, healPerTurn, damageReduction, dodgeChance, freezeChance, lifesteal, flatDamageBonus, and more!' }
+              { name: '📝 Form Method', value: 'Click the button to fill out a form with all character details' },
+              { name: '⚔️ Ability Format', value: '`Name|Emoji|Description|EffectType|Value`\nExample: `Lunar Glow|🌙|Heal 5% HP|healPerTurn|0.05`' },
+              { name: '💥 Move Format', value: '`Name|Damage`\nExample: `Moon Beam|90`' },
+              { name: '📋 Text Alternative', value: 'Use `!addchar` for text-based creation\nUse `!createchar2` for dropdown ability selection' }
             );
           
           const formButton = new ButtonBuilder()
@@ -5655,17 +5965,224 @@ client.on('messageCreate', async (message) => {
           
           const row = new ActionRowBuilder().addComponents(formButton);
           
-          const promptMsg = await message.reply({ embeds: [promptEmbed], components: [row] });
-          
-          const filter = (i) => i.customId === `open_createchar_modal_${userId}` && i.user.id === userId;
-          const collector = promptMsg.createMessageComponentCollector({ filter, time: 60000 });
-          
-          collector.on('collect', async (i) => {
-            await i.showModal(modal);
-          });
+          await message.reply({ embeds: [promptEmbed], components: [row] });
           
         } catch (error) {
           console.error('Error with createchar:', error);
+          await message.reply('❌ An error occurred!');
+        }
+        break;
+        
+      case 'addchar':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can add characters!');
+          return;
+        }
+        
+        if (args.length < 3) {
+          const addcharHelp = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('📝 Add Character (Text Command)')
+            .setDescription('Create characters using text commands!')
+            .addFields(
+              { name: 'Basic Usage', value: '`!addchar <name> <emoji> <obtainable>`\nExample: `!addchar Luna 🌙 crate`' },
+              { name: 'With Ability', value: '`!addchar <name> <emoji> <obtainable> | <abilityName> <abilityEmoji> <desc> <effectType> <value>`\nExample: `!addchar Luna 🌙 crate | Moonlight 🌙 Heal 5% HP healPerTurn 0.05`' },
+              { name: 'With Move', value: 'Add `| <moveName> <damage>` at the end\nExample: `!addchar Luna 🌙 crate | Moonlight 🌙 Heal 5% HP healPerTurn 0.05 | Moon Beam 90`' },
+              { name: 'Obtainable Types', value: '`crate`, `starter`, `drop`, `event`, `exclusive`' },
+              { name: 'Common Effect Types', value: '`healPerTurn`, `damageReduction`, `criticalDamageBonus`, `dodgeChance`, `lifesteal`, `freezeChance`, `burnChance`, `flatDamageBonus`' }
+            )
+            .setFooter({ text: 'Use !effecttypes to see all available effect types' });
+          
+          await message.reply({ embeds: [addcharHelp] });
+          return;
+        }
+        
+        try {
+          const fullArgs = args.join(' ');
+          const sections = fullArgs.split('|').map(s => s.trim());
+          
+          if (sections.length > 3) {
+            await message.reply('❌ Too many sections! Format: `name emoji obtainable | ability | move`');
+            return;
+          }
+          
+          const basicParts = sections[0].split(' ');
+          const charName = basicParts[0];
+          const charEmoji = basicParts[1];
+          const charObtainable = basicParts[2]?.toLowerCase();
+          
+          if (!charName || !charEmoji || !charObtainable) {
+            await message.reply('❌ Missing required fields! Use `!addchar` for help.');
+            return;
+          }
+          
+          const validObtainableTypes = ['crate', 'starter', 'drop', 'event', 'exclusive'];
+          if (!validObtainableTypes.includes(charObtainable)) {
+            await message.reply(`❌ Invalid obtainable type! Must be: ${validObtainableTypes.join(', ')}`);
+            return;
+          }
+          
+          const existingChar = characterManager.getCharacterByName(charName);
+          if (existingChar) {
+            await message.reply(`❌ Character "${charName}" already exists!`);
+            return;
+          }
+          
+          let ability = null;
+          if (sections[1] && sections[1].trim()) {
+            const abilityParts = sections[1].split(' ');
+            if (abilityParts.length < 5) {
+              await message.reply('❌ Ability needs 5 parts: `Name Emoji Description EffectType Value`\nExample: `Moonlight 🌙 Heal 5% HP healPerTurn 0.05`');
+              return;
+            }
+            
+            const effectValue = parseFloat(abilityParts[abilityParts.length - 1]);
+            const effectType = abilityParts[abilityParts.length - 2];
+            const description = abilityParts.slice(2, -2).join(' ');
+            
+            if (isNaN(effectValue)) {
+              await message.reply(`❌ Effect value must be a number! Got: "${abilityParts[abilityParts.length - 1]}"`);
+              return;
+            }
+            
+            ability = {
+              name: abilityParts[0],
+              emoji: abilityParts[1],
+              description: description,
+              effectType: effectType,
+              effectValue: effectValue
+            };
+          }
+          
+          let specialMove = null;
+          if (sections[2] && sections[2].trim()) {
+            const moveParts = sections[2].split(' ');
+            if (moveParts.length < 2) {
+              await message.reply('❌ Move needs at least 2 parts: `Name Damage`\nExample: `Moon Beam 90`');
+              return;
+            }
+            
+            const moveDamage = parseInt(moveParts[moveParts.length - 1]);
+            const moveName = moveParts.slice(0, -1).join(' ');
+            
+            if (isNaN(moveDamage) || moveDamage <= 0) {
+              await message.reply(`❌ Move damage must be a positive number! Got: "${moveParts[moveParts.length - 1]}"`);
+              return;
+            }
+            
+            specialMove = { name: moveName, damage: moveDamage };
+          }
+          
+          const result = await characterManager.createCharacter(userId, {
+            name: charName,
+            emoji: charEmoji,
+            obtainable: charObtainable,
+            ability: ability,
+            specialMove: specialMove
+          });
+          
+          if (result.success) {
+            const embed = new EmbedBuilder()
+              .setColor('#00FF00')
+              .setTitle('✅ Character Created!')
+              .setDescription(`**${charEmoji} ${charName}** has been added to the game!`)
+              .addFields(
+                { name: 'Obtainable', value: charObtainable, inline: true },
+                { name: 'Ability', value: ability ? `${ability.emoji} ${ability.name}` : 'None', inline: true },
+                { name: 'Special Move', value: specialMove ? `${specialMove.name} (${specialMove.damage} DMG)` : 'Default', inline: true }
+              )
+              .setFooter({ text: 'Character is now available in the game!' });
+            await message.reply({ embeds: [embed] });
+          } else {
+            await message.reply(result.message);
+          }
+        } catch (error) {
+          console.error('Error with addchar:', error);
+          await message.reply('❌ An error occurred! Check your format.');
+        }
+        break;
+        
+      case 'createchar2':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can create characters!');
+          return;
+        }
+        
+        if (args.length < 3) {
+          const createchar2Help = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('🦁 Create Character (Dropdown Mode)')
+            .setDescription('Create characters with easy dropdown ability selection!')
+            .addFields(
+              { name: 'Usage', value: '`!createchar2 <name> <emoji> <obtainable>`' },
+              { name: 'Example', value: '`!createchar2 Luna 🌙 crate`' },
+              { name: 'Obtainable Types', value: '`crate`, `starter`, `drop`, `event`, `exclusive`' },
+              { name: 'Next Steps', value: 'After running this command, a dropdown will appear to select the ability effect type, then you can fill in the details.' }
+            );
+          
+          await message.reply({ embeds: [createchar2Help] });
+          return;
+        }
+        
+        try {
+          const char2Name = args[0];
+          const char2Emoji = args[1];
+          const char2Obtainable = args[2]?.toLowerCase();
+          
+          const validObtainable = ['crate', 'starter', 'drop', 'event', 'exclusive'];
+          if (!validObtainable.includes(char2Obtainable)) {
+            await message.reply(`❌ Invalid obtainable type! Must be: ${validObtainable.join(', ')}`);
+            return;
+          }
+          
+          const existingChar = characterManager.getCharacterByName(char2Name);
+          if (existingChar) {
+            await message.reply(`❌ Character "${char2Name}" already exists!`);
+            return;
+          }
+          
+          if (!global.pendingCharacterCreations) {
+            global.pendingCharacterCreations = new Map();
+          }
+          
+          global.pendingCharacterCreations.set(userId, {
+            name: char2Name,
+            emoji: char2Emoji,
+            obtainable: char2Obtainable,
+            effectType: null,
+            specialMove: null
+          });
+          
+          const dropdownButton = new ButtonBuilder()
+            .setCustomId(`createchar_dropdown_${userId}`)
+            .setLabel('Select Ability Effect')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('⚔️');
+          
+          const skipButton = new ButtonBuilder()
+            .setCustomId(`createchar_skip_${userId}`)
+            .setLabel('No Ability')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('❌');
+          
+          const row = new ActionRowBuilder().addComponents(dropdownButton, skipButton);
+          
+          const embed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('🦁 Creating Character')
+            .setDescription(`**${char2Emoji} ${char2Name}** (${char2Obtainable})\n\nClick below to select an ability effect, or skip if no ability needed.`)
+            .setFooter({ text: 'Session expires in 5 minutes' });
+          
+          await message.reply({ embeds: [embed], components: [row] });
+          
+          setTimeout(() => {
+            if (global.pendingCharacterCreations?.has(userId)) {
+              global.pendingCharacterCreations.delete(userId);
+            }
+          }, 300000);
+          
+        } catch (error) {
+          console.error('Error with createchar2:', error);
           await message.reply('❌ An error occurred!');
         }
         break;

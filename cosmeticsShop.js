@@ -8,7 +8,7 @@ const {
   purchaseCosmetic,
   userOwnsCosmetic
 } = require('./cosmeticsSystem.js');
-const CHARACTERS = require('./characters.js');
+const characterManager = require('./characterManager.js');
 
 const activeShops = new Map();
 
@@ -198,7 +198,7 @@ async function showCosmeticType(interaction, data, type) {
   
   if (type === 'skin') {
     options = ownedCharacters.map(charName => {
-      const char = CHARACTERS[charName];
+      const char = characterManager.getCharacterByName(charName);
       return {
         label: charName,
         value: `skin|${charName}`,
@@ -220,7 +220,7 @@ async function showCosmeticType(interaction, data, type) {
     const characterSet = new Set(allCosmetics.map(c => c.characterName));
     options = Array.from(characterSet).map(charName => {
       const displayName = charName.charAt(0).toUpperCase() + charName.slice(1);
-      const char = CHARACTERS[displayName];
+      const char = characterManager.getCharacterByName(displayName);
       return {
         label: displayName,
         value: `pfp|${displayName}`,

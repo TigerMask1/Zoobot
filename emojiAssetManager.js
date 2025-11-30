@@ -1,11 +1,12 @@
 const { getCollection } = require('./mongoManager.js');
-const CHARACTERS = require('./characters.js');
+const characterManager = require('./characterManager.js');
 
 const emojiCache = new Map();
 
 async function initializeEmojiAssets() {
   try {
     const collection = await getCollection('emoji_assets');
+    const CHARACTERS = characterManager.getCharacters();
     
     const existing = await collection.find({}).toArray();
     const existingMap = new Map(existing.map(e => [e.characterSlug, e]));
@@ -48,7 +49,7 @@ function getEmojiForCharacter(characterName) {
   const cached = emojiCache.get(slug);
   
   if (!cached) {
-    const char = CHARACTERS.find(c => c.name.toLowerCase() === slug);
+    const char = characterManager.getCharacterByName(characterName);
     return char ? char.emoji : '❓';
   }
   
@@ -62,7 +63,7 @@ function getEmojiForCharacter(characterName) {
 async function setCharacterEmoji(characterName, emojiIdOrUnicode) {
   try {
     const slug = characterName.toLowerCase();
-    const char = CHARACTERS.find(c => c.name.toLowerCase() === slug);
+    const char = characterManager.getCharacterByName(characterName);
     
     if (!char) {
       return { success: false, message: `Character "${characterName}" not found!` };
@@ -133,6 +134,7 @@ async function refreshAllCharacterEmojis(userData) {
 
 async function getAllCharacterEmojis() {
   const emojis = {};
+  const CHARACTERS = characterManager.getCharacters();
   CHARACTERS.forEach(char => {
     emojis[char.name] = getEmojiForCharacter(char.name);
   });

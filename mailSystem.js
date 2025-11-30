@@ -1,4 +1,4 @@
-const CHARACTERS = require('./characters.js');
+const characterManager = require('./characterManager.js');
 const { assignMovesAndHP } = require('./battleUtils.js');
 
 function sendMailToAll(message, rewards = {}, senderName = "Admin") {
@@ -51,7 +51,7 @@ function claimMail(userData, mailIndex) {
   
   if (mail.rewards.character) {
     const charName = mail.rewards.character;
-    const charData = CHARACTERS.find(c => c.name.toLowerCase() === charName.toLowerCase());
+    const charData = characterManager.getCharacterByName(charName);
     
     if (charData) {
       if (!userData.characters) userData.characters = {};
