@@ -2363,11 +2363,17 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const foundChar = CHARACTERS.find(c => c.name.toLowerCase() === charToGrant.toLowerCase());
+        let foundChar = CHARACTERS.find(c => c.name.toLowerCase() === charToGrant.toLowerCase());
         
+        // Check custom characters if not found in main roster
         if (!foundChar) {
-          await message.reply('❌ Character not found!');
-          return;
+          const customChar = await getApprovedCharacter(charToGrant);
+          if (customChar) {
+            foundChar = customChar;
+          } else {
+            await message.reply('❌ Character not found!');
+            return;
+          }
         }
         
         if (!data.users[charUser.id]) {
