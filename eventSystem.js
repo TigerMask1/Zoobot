@@ -1,10 +1,14 @@
 const { EmbedBuilder } = require('discord.js');
-const mongoManager = require('./mongoManager');
 const dataManager = require('./dataManager');
-const { ObjectId } = require('mongodb');
 const { sendMailToAll, addMailToUser } = require('./mailSystem');
 const { addCageKeys, initializeKeys } = require('./keySystem');
 const { getEventsChannel, isMainServer } = require('./serverConfigManager');
+
+const USE_MONGODB = process.env.USE_MONGODB === 'true';
+let mongoManager = null;
+if (USE_MONGODB) {
+  mongoManager = require('./mongoManager');
+}
 
 const EVENT_TYPES = ['trophy_hunt', 'crate_master', 'drop_catcher'];
 const EVENT_DURATION_MS = 24 * 60 * 60 * 1000;
@@ -28,7 +32,17 @@ let scheduleCheckInterval = null;
 let sharedData = null;
 let isTransitioning = false;
 
-// ✅ Fixed permanent channel ID
+// In-memory event state for JSON mode
+let jsonModeEvent = null;
+let jsonModeParticipants = {};
+let jsonModeSchedule = {
+  timezone: 'Asia/Kolkata',
+  startTime: '05:30',
+  enabled: true,
+  lastRun: null
+};
+
+// Fixed channel ID
 const FIXED_CHANNEL_ID = '1432171168168808620';
 
 // IST is UTC+5:30
@@ -63,8 +77,86 @@ function getISTTime(date = new Date()) {
   };
 }
 
+async function getEventSchedule() {
+  if (!USE_MONGODB) {
+    return jsonModeSchedule;
+  }
+  return await mongoManager.getEventSchedule();
+}
+
+async function upsertEventSchedule(config) {
+  if (!USE_MONGODB) {
+    jsonModeSchedule = { ...jsonModeSchedule, ...config };
+    return true;
+  }
+  return await mongoManager.upsertEventSchedule(config);
+}
+
+async function getCurrentEvent() {
+  if (!USE_MONGODB) {
+    return jsonModeEvent;
+  }
+  return await mongoManager.getCurrentEvent();
+}
+
+async function getEventParticipants(eventId) {
+  if (!USE_MONGODB) {
+    const participants = Object.values(jsonModeParticipants);
+    return participants.sort((a, b) => b.score - a.score);
+  }
+  return await mongoManager.getEventParticipants(eventId);
+}
+
+async function getEventParticipant(eventId, userId) {
+  if (!USE_MONGODB) {
+    return jsonModeParticipants[userId] || null;
+  }
+  return await mongoManager.getEventParticipant(eventId, userId);
+}
+
+async function recordEventProgressInternal(eventId, userId, username, delta) {
+  if (!USE_MONGODB) {
+    if (!jsonModeParticipants[userId]) {
+      jsonModeParticipants[userId] = {
+        userId,
+        username,
+        score: 0,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+    }
+    jsonModeParticipants[userId].score += delta;
+    jsonModeParticipants[userId].username = username;
+    jsonModeParticipants[userId].updatedAt = new Date();
+    return true;
+  }
+  return await mongoManager.recordEventProgress(eventId, userId, username, delta);
+}
+
+async function createEventInternal(eventData) {
+  if (!USE_MONGODB) {
+    jsonModeEvent = {
+      ...eventData,
+      _id: 'json_event_' + Date.now()
+    };
+    jsonModeParticipants = {};
+    return jsonModeEvent._id;
+  }
+  return await mongoManager.createEvent(eventData);
+}
+
+async function updateEventInternal(eventId, updateData) {
+  if (!USE_MONGODB) {
+    if (jsonModeEvent) {
+      jsonModeEvent = { ...jsonModeEvent, ...updateData };
+    }
+    return true;
+  }
+  return await mongoManager.updateEvent(eventId, updateData);
+}
+
 async function checkAndStartScheduledEvent() {
-  const schedule = await mongoManager.getEventSchedule();
+  const schedule = await getEventSchedule();
   
   if (!schedule.enabled) {
     return;
@@ -85,7 +177,7 @@ async function checkAndStartScheduledEvent() {
       
       isTransitioning = true;
       try {
-        const activeEvent = await mongoManager.getCurrentEvent();
+        const activeEvent = await getCurrentEvent();
         
         if (activeEvent && activeEvent.status === 'active') {
           console.log('🛑 Stopping current event before starting scheduled event');
@@ -97,7 +189,7 @@ async function checkAndStartScheduledEvent() {
         }
         
         await startNextEvent();
-        await mongoManager.upsertEventSchedule({ ...schedule, lastRun: now });
+        await upsertEventSchedule({ ...schedule, lastRun: now });
         console.log(`⏰ Started scheduled event at ${schedule.startTime} IST`);
       } finally {
         isTransitioning = false;
@@ -130,23 +222,23 @@ async function init(client, data) {
   botClient = client;
   sharedData = data;
 
-  // ✅ Always force event channel to the fixed ID
+  // Always force event channel to the fixed ID
   eventChannelId = FIXED_CHANNEL_ID;
   data.eventChannelId = FIXED_CHANNEL_ID;
 
-  // ✅ Save it to your MongoDB/data file for consistency
+  // Save it for consistency
   await dataManager.saveData(data);
 
-  // ✅ Initialize event schedule if not exists
-  await mongoManager.getEventSchedule();
+  // Initialize event schedule
+  await getEventSchedule();
 
-  // ✅ Check if an active event exists
-  const activeEvent = await mongoManager.getCurrentEvent();
+  // Check if an active event exists
+  const activeEvent = await getCurrentEvent();
 
   if (activeEvent) {
     // If it uses an old/wrong channel, fix it
     if (activeEvent.announcementChannelId !== FIXED_CHANNEL_ID) {
-      await mongoManager.updateEvent(activeEvent._id, {
+      await updateEventInternal(activeEvent._id, {
         announcementChannelId: FIXED_CHANNEL_ID
       });
       console.log(`🔧 Updated active event channel to fixed ID: ${FIXED_CHANNEL_ID}`);
@@ -188,8 +280,8 @@ function scheduleEventEnd(event, timeUntilEnd) {
       await endEvent(event);
       await startNextEvent();
       
-      const schedule = await mongoManager.getEventSchedule();
-      await mongoManager.upsertEventSchedule({ ...schedule, lastRun: new Date() });
+      const schedule = await getEventSchedule();
+      await upsertEventSchedule({ ...schedule, lastRun: new Date() });
       console.log('⏰ Updated lastRun after timer-driven transition');
     } finally {
       isTransitioning = false;
@@ -198,12 +290,19 @@ function scheduleEventEnd(event, timeUntilEnd) {
 }
 
 async function startNextEvent() {
-  const eventsCollection = await mongoManager.getCollection('events');
-  const lastEvent = await eventsCollection.findOne({}, { sort: { startAt: -1 } });
-
   let rotationIndex = 0;
-  if (lastEvent && lastEvent.rotationIndex !== undefined) {
-    rotationIndex = (lastEvent.rotationIndex + 1) % EVENT_TYPES.length;
+  
+  if (USE_MONGODB) {
+    const eventsCollection = await mongoManager.getCollection('events');
+    const lastEvent = await eventsCollection.findOne({}, { sort: { startAt: -1 } });
+    if (lastEvent && lastEvent.rotationIndex !== undefined) {
+      rotationIndex = (lastEvent.rotationIndex + 1) % EVENT_TYPES.length;
+    }
+  } else {
+    // In JSON mode, rotate based on current event
+    if (jsonModeEvent && jsonModeEvent.rotationIndex !== undefined) {
+      rotationIndex = (jsonModeEvent.rotationIndex + 1) % EVENT_TYPES.length;
+    }
   }
 
   const eventType = EVENT_TYPES[rotationIndex];
@@ -216,12 +315,12 @@ async function startNextEvent() {
     startAt,
     endAt,
     rotationIndex,
-    announcementChannelId: FIXED_CHANNEL_ID, // ✅ Always fixed
+    announcementChannelId: FIXED_CHANNEL_ID,
     leaderboardSnapshot: null,
     rewardsDistributed: false
   };
 
-  const eventId = await mongoManager.createEvent(eventData);
+  const eventId = await createEventInternal(eventData);
   eventData._id = eventId;
 
   scheduleEventEnd(eventData, EVENT_DURATION_MS);
@@ -231,7 +330,7 @@ async function startNextEvent() {
 }
 
 async function endEvent(event) {
-  const participants = await mongoManager.getEventParticipants(event._id);
+  const participants = await getEventParticipants(event._id);
 
   const leaderboard = participants.map((p, index) => ({
     rank: index + 1,
@@ -240,7 +339,7 @@ async function endEvent(event) {
     score: p.score
   }));
 
-  await mongoManager.updateEvent(event._id, {
+  await updateEventInternal(event._id, {
     status: 'ended',
     leaderboardSnapshot: leaderboard
   });
@@ -360,7 +459,7 @@ async function distributeRewards(event, leaderboard) {
   await dataManager.saveDataImmediate(sharedData);
   console.log(`💾 Saved event rewards to database for ${leaderboard.length} participants`);
   
-  await mongoManager.updateEvent(event._id, { rewardsDistributed: true });
+  await updateEventInternal(event._id, { rewardsDistributed: true });
   console.log(`🎁 Distributed rewards to ${leaderboard.length} participants`);
 }
 
@@ -493,7 +592,7 @@ async function announceEventEnd(event, leaderboard) {
 }
 
 async function recordProgress(userId, username, delta, eventType) {
-  const activeEvent = await mongoManager.getCurrentEvent();
+  const activeEvent = await getCurrentEvent();
 
   if (!activeEvent || activeEvent.status !== 'active') {
     return false;
@@ -503,7 +602,7 @@ async function recordProgress(userId, username, delta, eventType) {
     return false;
   }
 
-  return await mongoManager.recordEventProgress(
+  return await recordEventProgressInternal(
     activeEvent._id,
     userId,
     username,
@@ -512,7 +611,7 @@ async function recordProgress(userId, username, delta, eventType) {
 }
 
 async function getEventInfo(userId) {
-  const activeEvent = await mongoManager.getCurrentEvent();
+  const activeEvent = await getCurrentEvent();
 
   if (!activeEvent) {
     return { status: 'no_event', message: 'No event is currently active.' };
@@ -522,8 +621,8 @@ async function getEventInfo(userId) {
   const endAt = new Date(activeEvent.endAt);
 
   if (activeEvent.status === 'active' && now < endAt) {
-    const participants = await mongoManager.getEventParticipants(activeEvent._id);
-    const userParticipant = await mongoManager.getEventParticipant(
+    const participants = await getEventParticipants(activeEvent._id);
+    const userParticipant = await getEventParticipant(
       activeEvent._id,
       userId
     );
@@ -563,7 +662,7 @@ async function getEventInfo(userId) {
 }
 
 async function startEventManually(eventType = null) {
-  const activeEvent = await mongoManager.getCurrentEvent();
+  const activeEvent = await getCurrentEvent();
   
   if (activeEvent && activeEvent.status === 'active') {
     return {
@@ -592,12 +691,14 @@ async function startEventManually(eventType = null) {
 }
 
 async function startSpecificEvent(eventType) {
-  const eventsCollection = await mongoManager.getCollection('events');
-  const lastEvent = await eventsCollection.findOne({}, { sort: { startAt: -1 } });
-  
   let rotationIndex = 0;
-  if (lastEvent && lastEvent.rotationIndex !== undefined) {
-    rotationIndex = (lastEvent.rotationIndex + 1) % EVENT_TYPES.length;
+  
+  if (USE_MONGODB) {
+    const eventsCollection = await mongoManager.getCollection('events');
+    const lastEvent = await eventsCollection.findOne({}, { sort: { startAt: -1 } });
+    if (lastEvent && lastEvent.rotationIndex !== undefined) {
+      rotationIndex = (lastEvent.rotationIndex + 1) % EVENT_TYPES.length;
+    }
   }
   
   const startAt = new Date();
@@ -614,7 +715,7 @@ async function startSpecificEvent(eventType) {
     rewardsDistributed: false
   };
   
-  const eventId = await mongoManager.createEvent(eventData);
+  const eventId = await createEventInternal(eventData);
   eventData._id = eventId;
   
   scheduleEventEnd(eventData, EVENT_DURATION_MS);
@@ -624,7 +725,7 @@ async function startSpecificEvent(eventType) {
 }
 
 async function stopEventManually() {
-  const activeEvent = await mongoManager.getCurrentEvent();
+  const activeEvent = await getCurrentEvent();
   
   if (!activeEvent || activeEvent.status !== 'active') {
     return {
@@ -654,7 +755,7 @@ async function stopEventManually() {
 }
 
 async function getScheduleInfo() {
-  const schedule = await mongoManager.getEventSchedule();
+  const schedule = await getEventSchedule();
   const istNow = getISTTime();
   
   return {
@@ -667,8 +768,8 @@ async function getScheduleInfo() {
 }
 
 async function toggleSchedule(enabled) {
-  const schedule = await mongoManager.getEventSchedule();
-  await mongoManager.upsertEventSchedule({ ...schedule, enabled });
+  const schedule = await getEventSchedule();
+  await upsertEventSchedule({ ...schedule, enabled });
   
   return {
     success: true,
@@ -688,8 +789,8 @@ async function updateScheduleTime(newTime) {
     };
   }
   
-  const schedule = await mongoManager.getEventSchedule();
-  await mongoManager.upsertEventSchedule({ ...schedule, startTime: newTime });
+  const schedule = await getEventSchedule();
+  await upsertEventSchedule({ ...schedule, startTime: newTime });
   
   return {
     success: true,
@@ -701,10 +802,12 @@ module.exports = {
   init,
   recordProgress,
   getEventInfo,
-  EVENT_TYPES,
   startEventManually,
   stopEventManually,
   getScheduleInfo,
   toggleSchedule,
-  updateScheduleTime
+  updateScheduleTime,
+  EVENT_TYPES,
+  EVENT_DISPLAY_NAMES,
+  EVENT_DESCRIPTIONS
 };

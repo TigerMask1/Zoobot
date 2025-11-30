@@ -1,4 +1,13 @@
-const { getCollection } = require('./mongoManager.js');
+const fs = require('fs');
+const path = require('path');
+
+const USE_MONGODB = process.env.USE_MONGODB === 'true';
+let mongoManager = null;
+if (USE_MONGODB) {
+  mongoManager = require('./mongoManager.js');
+}
+
+const SERVER_CONFIGS_FILE = path.join(__dirname, 'serverConfigs.json');
 
 const MAIN_SERVER_ID = '1430516117851340893';
 const SUPER_ADMINS = ['1296110901057032202', '1296109674361520146','1178728978488504400'];
@@ -10,9 +19,38 @@ const GAME_MODES = {
 
 let serverConfigs = {};
 
-async function loadServerConfigs() {
+function loadServerConfigsFromFile() {
   try {
-    const collection = await getCollection('serverConfigs');
+    if (fs.existsSync(SERVER_CONFIGS_FILE)) {
+      const rawData = fs.readFileSync(SERVER_CONFIGS_FILE, 'utf8');
+      serverConfigs = JSON.parse(rawData);
+      console.log(`✅ Loaded ${Object.keys(serverConfigs).length} server configurations (JSON mode)`);
+    } else {
+      serverConfigs = {};
+      console.log('✅ Server configs ready (JSON mode - no existing configs)');
+    }
+  } catch (error) {
+    console.error('Error loading server configs from file:', error);
+    serverConfigs = {};
+  }
+}
+
+function saveServerConfigsToFile() {
+  try {
+    fs.writeFileSync(SERVER_CONFIGS_FILE, JSON.stringify(serverConfigs, null, 2));
+  } catch (error) {
+    console.error('Error saving server configs to file:', error);
+  }
+}
+
+async function loadServerConfigs() {
+  if (!USE_MONGODB) {
+    loadServerConfigsFromFile();
+    return;
+  }
+
+  try {
+    const collection = await mongoManager.getCollection('serverConfigs');
     const configs = await collection.find({}).toArray();
     
     serverConfigs = {};
@@ -28,8 +66,14 @@ async function loadServerConfigs() {
 }
 
 async function saveServerConfig(serverId, config) {
+  if (!USE_MONGODB) {
+    serverConfigs[serverId] = { ...serverConfigs[serverId], ...config, serverId };
+    saveServerConfigsToFile();
+    return true;
+  }
+
   try {
-    const collection = await getCollection('serverConfigs');
+    const collection = await mongoManager.getCollection('serverConfigs');
     await collection.updateOne(
       { serverId },
       { $set: config },

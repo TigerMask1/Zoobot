@@ -1,11 +1,32 @@
-const { getCollection } = require('./mongoManager.js');
 const CHARACTERS = require('./characters.js');
+
+const USE_MONGODB = process.env.USE_MONGODB === 'true';
+let mongoManager = null;
+if (USE_MONGODB) {
+  mongoManager = require('./mongoManager.js');
+}
 
 const emojiCache = new Map();
 
 async function initializeEmojiAssets() {
+  if (!USE_MONGODB) {
+    // In JSON mode, just initialize cache from characters.js
+    for (const char of CHARACTERS) {
+      const slug = char.name.toLowerCase();
+      emojiCache.set(slug, {
+        characterSlug: slug,
+        characterName: char.name,
+        emojiId: null,
+        unicodeEmoji: char.emoji,
+        sourceType: 'unicode'
+      });
+    }
+    console.log(`✅ Initialized emoji assets for ${CHARACTERS.length} characters (JSON mode)`);
+    return;
+  }
+
   try {
-    const collection = await getCollection('emoji_assets');
+    const collection = await mongoManager.getCollection('emoji_assets');
     
     const existing = await collection.find({}).toArray();
     const existingMap = new Map(existing.map(e => [e.characterSlug, e]));
@@ -60,6 +81,10 @@ function getEmojiForCharacter(characterName) {
 }
 
 async function setCharacterEmoji(characterName, emojiIdOrUnicode) {
+  if (!USE_MONGODB) {
+    return { success: false, message: '❌ Custom emojis require MongoDB mode!' };
+  }
+
   try {
     const slug = characterName.toLowerCase();
     const char = CHARACTERS.find(c => c.name.toLowerCase() === slug);
@@ -68,7 +93,7 @@ async function setCharacterEmoji(characterName, emojiIdOrUnicode) {
       return { success: false, message: `Character "${characterName}" not found!` };
     }
     
-    const collection = await getCollection('emoji_assets');
+    const collection = await mongoManager.getCollection('emoji_assets');
     
     const isCustom = emojiIdOrUnicode.match(/^(\d+)$/) || emojiIdOrUnicode.startsWith('<:');
     let emojiId = null;

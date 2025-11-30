@@ -1,5 +1,10 @@
-const { getCollection } = require('./mongoManager.js');
 const { openCrate, CRATE_TYPES } = require('./crateSystem.js');
+
+const USE_MONGODB = process.env.USE_MONGODB === 'true';
+let mongoManager = null;
+if (USE_MONGODB) {
+  mongoManager = require('./mongoManager.js');
+}
 
 const activeSessions = new Map();
 
@@ -21,9 +26,26 @@ const DEFAULT_CHEST_COLORS = {
   tyrant: 0xFF0000
 };
 
+// In-memory cache for JSON mode
+const chestVisualsCache = {};
+
 async function initializeChestVisuals() {
+  if (!USE_MONGODB) {
+    // In JSON mode, just use defaults
+    for (const [crateType, data] of Object.entries(CRATE_TYPES)) {
+      chestVisualsCache[crateType] = {
+        crateType: crateType,
+        displayName: crateType.charAt(0).toUpperCase() + crateType.slice(1),
+        readyGifUrl: DEFAULT_CHEST_GIFS[crateType] || DEFAULT_CHEST_GIFS.bronze,
+        embedColor: DEFAULT_CHEST_COLORS[crateType] || DEFAULT_CHEST_COLORS.bronze
+      };
+    }
+    console.log('✅ Initialized chest visuals for all crate types (JSON mode)');
+    return;
+  }
+
   try {
-    const collection = await getCollection('crate_visuals');
+    const collection = await mongoManager.getCollection('crate_visuals');
     
     const existing = await collection.find({}).toArray();
     const existingTypes = new Set(existing.map(e => e.crateType));
@@ -47,8 +69,18 @@ async function initializeChestVisuals() {
 }
 
 async function getChestVisual(crateType) {
+  if (!USE_MONGODB) {
+    // Return from cache or defaults in JSON mode
+    return chestVisualsCache[crateType] || {
+      crateType,
+      displayName: crateType.charAt(0).toUpperCase() + crateType.slice(1),
+      readyGifUrl: DEFAULT_CHEST_GIFS[crateType] || DEFAULT_CHEST_GIFS.bronze,
+      embedColor: DEFAULT_CHEST_COLORS[crateType] || DEFAULT_CHEST_COLORS.bronze
+    };
+  }
+
   try {
-    const collection = await getCollection('crate_visuals');
+    const collection = await mongoManager.getCollection('crate_visuals');
     const visual = await collection.findOne({ crateType });
     
     if (!visual) {
@@ -73,6 +105,10 @@ async function getChestVisual(crateType) {
 }
 
 async function setChestGif(crateType, gifUrl, adminUserId) {
+  if (!USE_MONGODB) {
+    return { success: false, message: '❌ Custom chest GIFs require MongoDB mode!' };
+  }
+
   try {
     if (!CRATE_TYPES[crateType]) {
       return { success: false, message: `Invalid crate type! Available: ${Object.keys(CRATE_TYPES).join(', ')}` };
@@ -83,7 +119,7 @@ async function setChestGif(crateType, gifUrl, adminUserId) {
       return { success: false, message: 'Invalid image URL! Must be a direct link to an image file (gif, png, jpg, webp)' };
     }
     
-    const collection = await getCollection('crate_visuals');
+    const collection = await mongoManager.getCollection('crate_visuals');
     
     await collection.updateOne(
       { crateType },
