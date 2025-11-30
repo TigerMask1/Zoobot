@@ -3117,20 +3117,28 @@ client.on('messageCreate', async (message) => {
         
         // Otherwise show general character info (even if not owned)
         const genCharData = CHARACTERS.find(c => c.name.toLowerCase() === infoCharName);
-        if (!genCharData) {
-          await message.reply(`❌ Character **${infoCharName}** not found!`);
-          return;
+        
+        // Check custom characters if not found in main roster
+        let charData = genCharData;
+        if (!charData) {
+          const customChar = await getApprovedCharacter(infoCharName);
+          if (customChar) {
+            charData = customChar;
+          } else {
+            await message.reply(`❌ Character **${infoCharName}** not found!`);
+            return;
+          }
         }
         
-        const genAbility = getCharacterAbility(genCharData.name);
-        const genSkinUrl = await getSkinUrl(genCharData.name, 'default');
+        const genAbility = await getCharacterAbilityAsync(charData.name);
+        const genSkinUrl = await getSkinUrl(charData.name, 'default');
         
         const genInfoEmbed = new EmbedBuilder()
           .setColor('#00D9FF')
-          .setTitle(`${genCharData.emoji} ${genCharData.name}`)
+          .setTitle(`${charData.emoji} ${charData.name}`)
           .setImage(genSkinUrl)
           .addFields(
-            { name: '📍 Availability', value: genCharData.obtainable === 'starter' ? '⭐ **Starter Character**' : '📦 **Crate Only**', inline: true }
+            { name: '📍 Availability', value: charData.obtainable === 'starter' ? '⭐ **Starter Character**' : charData.obtainable === 'custom' ? '👤 **Custom Character**' : '📦 **Crate Only**', inline: true }
           );
         
         if (genAbility) {
@@ -3141,8 +3149,12 @@ client.on('messageCreate', async (message) => {
           });
         }
         
-        genInfoEmbed.setDescription(`You don't own this character yet.\n\n💡 Tip: Use \`!crate\` to try unlocking it!`)
-          .setFooter({ text: 'Interested? Get this character from crates!' });
+        const tipText = charData.obtainable === 'custom' 
+          ? `💡 Tip: This custom character was created by the community!`
+          : `You don't own this character yet.\n\n💡 Tip: Use \`!crate\` to try unlocking it!`;
+        
+        genInfoEmbed.setDescription(tipText)
+          .setFooter({ text: charData.obtainable === 'custom' ? 'Community Created' : 'Interested? Get this character from crates!' });
         
         await message.reply({ embeds: [genInfoEmbed] });
         break;
