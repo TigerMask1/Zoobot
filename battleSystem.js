@@ -1,7 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { saveData, saveDataImmediate } = require('./dataManager.js');
 const { calculateBaseHP, calculateDamage, calculateEnergyCost, calculateCriticalHit, getMoveDisplay } = require('./battleUtils.js');
-const { getCharacterAbility } = require('./characterAbilities.js');
+const { getCharacterAbility, getCharacterAbilityAsync } = require('./characterAbilities.js');
 const { MOVE_EFFECTS, applyEffect, processEffects, hasEffect, getEffectsDisplay, clearAllEffects } = require('./moveEffects.js');
 const { getUserBattleItems, useItem } = require('./itemsSystem.js');
 const eventSystem = require('./eventSystem.js');
@@ -222,7 +222,10 @@ async function startCharacterSelection(channel, data, player1Id, player2Id) {
       return;
     }
     
-    const ability = getCharacterAbility(selectedChar.name);
+    let ability = selectedChar.ability || null;
+    if (!ability) {
+      ability = await getCharacterAbilityAsync(selectedChar.name);
+    }
     
     if (userId === player1Id && !battle.player1Character) {
       battle.player1Character = selectedChar;
