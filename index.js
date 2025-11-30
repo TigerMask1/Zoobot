@@ -2396,17 +2396,21 @@ client.on('messageCreate', async (message) => {
         let grantedMoves;
         if (foundChar.isCustom) {
           // Custom characters already have special move stored
+          const baseDamage = foundChar.specialMove.damage;
           grantedMoves = {
             special: foundChar.specialMove,
             tierMoves: [
-              { name: foundChar.specialMove.name, damage: Math.floor(foundChar.specialMove.damage * 0.7), energyCost: 25 },
-              { name: foundChar.specialMove.name, damage: Math.floor(foundChar.specialMove.damage * 0.5), energyCost: 15 }
+              { name: `${foundChar.specialMove.name} I`, damage: Math.floor(baseDamage * 0.7), energyCost: 25 },
+              { name: `${foundChar.specialMove.name} II`, damage: Math.floor(baseDamage * 0.5), energyCost: 15 }
             ]
           };
         } else {
           grantedMoves = assignMovesToCharacter(foundChar.name, grantedST);
         }
         const grantedHP = calculateBaseHP(grantedST);
+        
+        // Ensure ability is properly stored for custom characters
+        const charAbility = foundChar.isCustom && foundChar.ability ? JSON.parse(JSON.stringify(foundChar.ability)) : undefined;
         
         data.users[charUser.id].characters.push({
           name: foundChar.name,
@@ -2418,8 +2422,8 @@ client.on('messageCreate', async (message) => {
           baseHp: grantedHP,
           currentSkin: 'default',
           ownedSkins: ['default'],
-          // Store ability for custom characters
-          ability: foundChar.isCustom ? foundChar.ability : undefined
+          // Store ability for custom characters - deep copy to ensure persistence
+          ability: charAbility
         });
         
         if (wasFirstChar && pendingToGrant > 0) {
@@ -3141,13 +3145,16 @@ client.on('messageCreate', async (message) => {
           const infoSkinUrl = await getSkinUrl(userInfoChar.name, userInfoChar.currentSkin || 'default');
           // Get ability - custom chars store it directly, others use getAbilityDescription
           let abilityDesc = getAbilityDescription(userInfoChar.name);
+          
+          // If not found in built-in characters, check custom ability
           if (!abilityDesc && userInfoChar.ability) {
             const ab = userInfoChar.ability;
-            abilityDesc = `${ab.emoji || '⭐'} **${ab.name || 'Unknown Ability'}**\n${ab.description || 'No description'}`;
+            abilityDesc = `${ab.emoji || '⭐'} **${ab.name || 'Unnamed Ability'}**\n${ab.description || 'No description'}`;
           }
+          
+          // Final fallback
           if (!abilityDesc) {
-            // Fallback for missing abilities
-            abilityDesc = '⚠️ Run `!backfillabilities` to restore ability data';
+            abilityDesc = '❌ Ability data not found';
           }
           
           const infoEmbed = new EmbedBuilder()
