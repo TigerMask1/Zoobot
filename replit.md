@@ -3,8 +3,8 @@
 ## Overview
 This project is a Discord bot focused on character collection, featuring over 50 unique characters with stats, leveling, and a skin system. It includes a comprehensive economy with multiple currencies, a dynamic battle system, interactive elements like crates and random drops, player trading, and competitive daily events. The bot aims to boost community engagement and offer a persistent, captivating virtual world for users. It also incorporates multi-game support, allowing servers to select specific character bundles, and robust anti-cheat and moderation systems for a fair and safe environment.
 
-## Website & Server Management Dashboard (December 2025)
-The project includes a professional website and Discord OAuth-based server management dashboard:
+## Website (December 2025)
+The project includes a professional public website:
 
 **Public Pages (public/ folder):**
 - `/` or `/index.html` - Landing page with features overview
@@ -13,45 +13,42 @@ The project includes a professional website and Discord OAuth-based server manag
 - `/changelog.html` - Version history and updates
 - `/about.html` - About ZooBot and team info
 
-**Server Management Dashboard:**
-- `/login.html` - Discord OAuth login page
-- `/dashboard.html` - Server management panel (protected)
-- Any Discord user with ADMINISTRATOR permission can manage their servers
-- Real-time permission verification on each request
-
-**Dashboard Features:**
-- View all servers where user has admin permissions
-- Toggle features per server: Drops, Events, Trading, Battles, Crates, Marketplace
-- Select active game/character bundle
-- View server setup status
-- Beautiful responsive UI with dark theme
-
-**Security Features:**
-- Discord OAuth2 with state parameter (CSRF protection)
-- Real-time permission verification on protected endpoints
-- Rate limiting (30 auth requests per 15 min, 100 API requests per min)
-- JWT tokens with 7-day expiry stored in HttpOnly cookies
-- Helmet.js security headers with CSP
-- Secure cookies in production
-
 **API Endpoints:**
-- `GET /api/auth/discord` - Initiate Discord OAuth
-- `GET /api/auth/discord/callback` - OAuth callback handler
-- `POST /api/auth/logout` - Logout
-- `GET /api/auth/me` - Get current user info
-- `GET /api/servers` - List user's admin servers
-- `GET /api/servers/:id/settings` - Get server settings
-- `PUT /api/servers/:id/settings` - Update server settings
 - `GET /api/stats` - Bot statistics
 - `GET /api/changelog` - Changelog entries
 - `GET /health` - Health check
 
-**Environment Variables for Dashboard:**
-- `DISCORD_CLIENT_ID` - **REQUIRED** Discord application client ID
-- `DISCORD_CLIENT_SECRET` - **REQUIRED** Discord application client secret
-- `DISCORD_REDIRECT_URI` - OAuth callback URL (auto-detected if not set)
-- `JWT_SECRET` - Secret for JWT signing (auto-generated if not set)
-- `WEBSITE_URL` - Base URL for the website (auto-detected from Render/Replit)
+## Seasonal Events System (December 2025)
+A comprehensive rotating season pass system to drive player engagement:
+
+**Season Configuration:**
+- **Duration:** 2 weeks per season, auto-rotates every Monday at 00:00 UTC
+- **Themes:** Winter (Dec-Feb), Spring (Mar-May), Summer (Jun-Aug), Autumn (Sep-Nov)
+- Each season has unique colors, emojis, and themed rewards
+
+**Season Pass (40 Levels):**
+- Escalating point requirements (Level 1: 100 pts, Level 40: ~2,950 pts)
+- Milestone rewards at levels 5, 10, 15, 20, 25, 30, 35, 40
+- Rewards include coins, gems, shards, crates, ST boosters, and UST
+- Grand prize at Level 40: Tyrant Crate + ST Booster + 100 UST
+
+**Daily Tasks System:**
+- 5 tasks per day: 2 Easy (10-15 pts), 2 Medium (25-35 pts), 1 Hard (50-75 pts)
+- Tasks reset at 00:00 UTC (5:30 AM IST)
+- Random task selection using seeded RNG for consistency
+- Task types: catchDrops, winBattles, openCrates, tradePlayers, earnCoins, etc.
+
+**Lure Messaging:**
+- All season commands show upcoming milestone rewards
+- Messages like "A reward is waiting at Level X!" to encourage progress
+- Progress bars and visual feedback for motivation
+
+**Season Commands:**
+- `!season` / `!seasonpass` / `!sp` - View season pass progress
+- `!seasontasks` / `!dailytasks` / `!dt` - View daily tasks
+- `!seasonrewards` / `!srewards` - View all milestone rewards
+- `!taskclaimall` / `!tclaim` - Claim completed task rewards
+- `!seasonclaimall` / `!sclaim` - Claim unlocked season rewards
 
 ## User Preferences
 The agent should prioritize iterative development, frequently asking for feedback and approval before implementing major changes. Communication should be clear and concise, avoiding jargon where possible. For coding, a preference for modular, readable, and well-documented code is essential. The agent should always provide detailed explanations for proposed changes or new features. Do not make changes to the `dataManager.js` or `mongoManager.js` files without explicit instruction, as these are critical for data integrity across environments.
