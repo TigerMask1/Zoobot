@@ -274,9 +274,19 @@ const moderationSystem = require('./moderationSystem.js');
 const PREFIX = '!';
 let data;
 
+const USE_MONGODB = process.env.USE_MONGODB === 'true';
+
 async function initializeBot() {
-  await initializeEmojiAssets();
-  await initializeChestVisuals();
+  if (USE_MONGODB) {
+    try {
+      await initializeEmojiAssets();
+      await initializeChestVisuals();
+    } catch (error) {
+      console.warn('⚠️ MongoDB features disabled - running in JSON-only mode');
+    }
+  } else {
+    console.log('ℹ️ Running in JSON-only mode (USE_MONGODB not set to true)');
+  }
   
   await characterManager.initializeCharacterSystem();
   console.log('✅ Dynamic character system initialized');
@@ -284,12 +294,20 @@ async function initializeBot() {
   data = await loadData();
   console.log('✅ Data loaded successfully');
   
-  await refreshAllCharacterEmojis(data.users);
-  console.log('✅ Custom emojis applied to all characters');
+  if (USE_MONGODB) {
+    try {
+      await refreshAllCharacterEmojis(data.users);
+      console.log('✅ Custom emojis applied to all characters');
+    } catch (error) {
+      console.warn('⚠️ Could not refresh character emojis');
+    }
+  }
 }
 
+const { generateST: sharedGenerateST, initializeUserData, formatNumber, createErrorEmbed, createSuccessEmbed, safeReply } = require('./utils/shared.js');
+
 function generateST() {
-  return parseFloat((Math.random() * 100).toFixed(2));
+  return sharedGenerateST();
 }
 
 function startPersonalizedTaskSystem(client, data) {
@@ -354,17 +372,65 @@ function startPersonalizedTaskSystem(client, data) {
 client.on('clientReady', async () => {
   console.log(`✅ Logged in as ${client.user.tag}!`);
   console.log(`🎮 Bot is ready to serve ${client.guilds.cache.size} servers!`);
-  await initializeBot();
-  await loadServerConfigs();
-  await gameSystem.loadGames();
-  await charSubmissionSystem.loadSubmissions();
+  
+  try {
+    await initializeBot();
+  } catch (error) {
+    console.error('Error in initializeBot:', error.message);
+  }
+  
+  if (USE_MONGODB) {
+    try {
+      await loadServerConfigs();
+    } catch (error) {
+      console.warn('⚠️ Could not load server configs from MongoDB');
+    }
+    
+    try {
+      await gameSystem.loadGames();
+    } catch (error) {
+      console.warn('⚠️ Could not load games from MongoDB');
+    }
+    
+    try {
+      await charSubmissionSystem.loadSubmissions();
+    } catch (error) {
+      console.warn('⚠️ Could not load submissions from MongoDB');
+    }
+  } else {
+    console.log('ℹ️ Skipping MongoDB-dependent systems (server configs, games, submissions)');
+  }
+  
   initializeClanData(data);
   marketSystem.init(client);
   auctionSystem.init(client);
-  await initializeGiveawaySystem(client, data);
-  await initializeLotterySystem(client, data);
-  await eventSystem.init(client, data);
-  await startDropSystem(client, data);
+  
+  try {
+    await initializeGiveawaySystem(client, data);
+  } catch (error) {
+    console.warn('⚠️ Giveaway system init error:', error.message);
+  }
+  
+  try {
+    await initializeLotterySystem(client, data);
+  } catch (error) {
+    console.warn('⚠️ Lottery system init error:', error.message);
+  }
+  
+  if (USE_MONGODB) {
+    try {
+      await eventSystem.init(client, data);
+    } catch (error) {
+      console.warn('⚠️ Event system init error:', error.message);
+    }
+  }
+  
+  try {
+    await startDropSystem(client, data);
+  } catch (error) {
+    console.warn('⚠️ Drop system init error:', error.message);
+  }
+  
   startPromotionSystem(client);
   startPersonalizedTaskSystem(client, data);
   startWeeklyClanWars(client, data);
@@ -372,7 +438,14 @@ client.on('clientReady', async () => {
   const superAdminIds = require('./serverConfigManager.js').getSuperAdminIds ? require('./serverConfigManager.js').getSuperAdminIds() : [];
   antiCheatSystem.initAntiCheat(superAdminIds);
   moderationSystem.initModeration(superAdminIds);
-  await moderationSystem.loadModerationData();
+  
+  if (USE_MONGODB) {
+    try {
+      await moderationSystem.loadModerationData();
+    } catch (error) {
+      console.warn('⚠️ Could not load moderation data from MongoDB');
+    }
+  }
   
   console.log('✅ All systems initialized!');
 });

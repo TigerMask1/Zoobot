@@ -1,4 +1,8 @@
-const { getCollection } = require('./mongoManager.js');
+const USE_MONGODB = process.env.USE_MONGODB === 'true';
+let mongoManager = null;
+if (USE_MONGODB) {
+  mongoManager = require('./mongoManager.js');
+}
 const { isSuperAdmin } = require('./serverConfigManager.js');
 
 let CHARACTERS = [];
@@ -27,8 +31,12 @@ const VALID_EFFECT_TYPES = [
 const OBTAINABLE_TYPES = ['crate', 'starter', 'drop', 'event', 'exclusive'];
 
 async function loadCharactersFromDB() {
+  if (!USE_MONGODB || !mongoManager) {
+    return false;
+  }
+  
   try {
-    const collection = await getCollection('characters');
+    const collection = await mongoManager.getCollection('characters');
     const charDoc = await collection.findOne({ _id: 'character_data' });
     
     if (charDoc && charDoc.characters && charDoc.characters.length > 0) {
@@ -47,8 +55,13 @@ async function loadCharactersFromDB() {
 }
 
 async function saveCharactersToDB() {
+  if (!USE_MONGODB || !mongoManager) {
+    console.log(`ℹ️ Running in JSON mode - characters not saved to MongoDB`);
+    return true;
+  }
+  
   try {
-    const collection = await getCollection('characters');
+    const collection = await mongoManager.getCollection('characters');
     await collection.updateOne(
       { _id: 'character_data' },
       { 
@@ -83,8 +96,12 @@ async function migrateHardcodedCharacters() {
     CHARACTER_ABILITIES = { ...hardcodedAbilities };
     SPECIAL_MOVES = { ...hardcodedMoves };
     
-    await saveCharactersToDB();
-    console.log(`✅ Migrated ${CHARACTERS.length} hardcoded characters to MongoDB with game/createdBy fields`);
+    if (USE_MONGODB) {
+      await saveCharactersToDB();
+      console.log(`✅ Migrated ${CHARACTERS.length} hardcoded characters to MongoDB with game/createdBy fields`);
+    } else {
+      console.log(`✅ Loaded ${CHARACTERS.length} hardcoded characters (JSON mode)`);
+    }
     return true;
   } catch (error) {
     console.error('Error migrating hardcoded characters:', error);
@@ -129,7 +146,11 @@ async function initializeCharacterSystem() {
   const loaded = await loadCharactersFromDB();
   
   if (!loaded) {
-    console.log('📦 No characters in MongoDB, migrating from hardcoded files...');
+    if (USE_MONGODB) {
+      console.log('📦 No characters in MongoDB, migrating from hardcoded files...');
+    } else {
+      console.log('📦 Loading characters from hardcoded files (JSON mode)...');
+    }
     await migrateHardcodedCharacters();
   } else {
     await backfillGameAndCreator();

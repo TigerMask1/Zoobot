@@ -3,9 +3,13 @@ const { EmbedBuilder } = require('discord.js');
 const COOLDOWNS = new Map();
 
 function generateST() {
+  return parseFloat((Math.random() * 100).toFixed(2));
+}
+
+function generateCode(length = 6) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < length; i++) {
     code += chars[Math.floor(Math.random() * chars.length)];
   }
   return code;
@@ -195,6 +199,7 @@ function delay(ms) {
 
 module.exports = {
   generateST,
+  generateCode,
   initializeUserData,
   formatNumber,
   formatDuration,

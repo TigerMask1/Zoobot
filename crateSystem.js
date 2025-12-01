@@ -8,6 +8,7 @@ const { recordEvent } = require('./analyticsSystem.js');
 const { getEmojiForCharacter } = require('./emojiAssetManager.js');
 const { getServerGame, DEFAULT_GAME } = require('./serverConfigManager.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
+const { generateST } = require('./utils/shared.js');
 
 const CRATE_TYPES = {
   bronze: {
@@ -61,10 +62,6 @@ const CRATE_TYPES = {
 };
 
 module.exports.CRATE_TYPES = CRATE_TYPES;
-
-function generateST() {
-  return parseFloat((Math.random() * 100).toFixed(2));
-}
 
 async function buyCrate(data, userId, crateType) {
   const crate = CRATE_TYPES[crateType];
