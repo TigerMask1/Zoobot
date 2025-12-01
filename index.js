@@ -6,19 +6,19 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || uuidv4() + '-' + Date.now();
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || (ADMIN_PASSWORD ? bcrypt.hashSync(ADMIN_PASSWORD, 10) : null);
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
+const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/auth/discord/callback`;
+const WEBSITE_URL = process.env.WEBSITE_URL || process.env.RENDER_EXTERNAL_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
 
-const ADMIN_ENABLED = !!(ADMIN_USERNAME && ADMIN_PASSWORD_HASH);
-if (!ADMIN_ENABLED) {
-  console.log('⚠️ Admin dashboard disabled: Set ADMIN_USERNAME and ADMIN_PASSWORD environment variables to enable');
+const OAUTH_ENABLED = !!(DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET);
+if (!OAUTH_ENABLED) {
+  console.log('⚠️ Discord OAuth disabled: Set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET to enable server management dashboard');
 }
 
 const app = express();
@@ -30,8 +30,8 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"]
+      imgSrc: ["'self'", "data:", "https:", "cdn.discordapp.com"],
+      connectSrc: ["'self'", "discord.com"]
     }
   },
   crossOriginEmbedderPolicy: false
@@ -39,8 +39,8 @@ app.use(helmet({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { success: false, message: 'Too many login attempts. Please try again later.' },
+  max: 30,
+  message: { success: false, message: 'Too many requests. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false
 });
@@ -67,7 +67,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 const verifyToken = (req, res, next) => {
-  const token = req.cookies.auth_token;
+  const token = req.cookies.discord_token;
   if (!token) {
     return res.status(401).json({ success: false, message: 'Authentication required' });
   }
@@ -76,60 +76,291 @@ const verifyToken = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    res.clearCookie('auth_token');
-    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    res.clearCookie('discord_token');
+    return res.status(401).json({ success: false, message: 'Session expired. Please login again.' });
   }
 };
 
-app.post('/api/auth/login', authLimiter, async (req, res) => {
+app.get('/api/auth/discord', authLimiter, (req, res) => {
+  if (!OAUTH_ENABLED) {
+    return res.status(503).json({ 
+      success: false, 
+      message: 'Discord OAuth not configured. Set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET.' 
+    });
+  }
+  
+  const state = uuidv4();
+  res.cookie('oauth_state', state, { 
+    httpOnly: true, 
+    maxAge: 600000, 
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production'
+  });
+  
+  const params = new URLSearchParams({
+    client_id: DISCORD_CLIENT_ID,
+    redirect_uri: DISCORD_REDIRECT_URI,
+    response_type: 'code',
+    scope: 'identify guilds',
+    state: state,
+    prompt: 'consent'
+  });
+  
+  res.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`);
+});
+
+app.get('/api/auth/discord/callback', authLimiter, async (req, res) => {
   try {
-    if (!ADMIN_ENABLED) {
-      return res.status(503).json({ 
-        success: false, 
-        message: 'Admin dashboard not configured. Set ADMIN_USERNAME and ADMIN_PASSWORD environment variables.' 
-      });
-    }
-
-    const { username, password } = req.body;
+    const { code, state } = req.query;
+    const storedState = req.cookies.oauth_state;
     
-    if (!username || !password) {
-      return res.status(400).json({ success: false, message: 'Username and password required' });
+    res.clearCookie('oauth_state');
+    
+    if (!code) {
+      return res.redirect('/login.html?error=no_code');
+    }
+    
+    if (state !== storedState) {
+      return res.redirect('/login.html?error=invalid_state');
     }
 
-    const isValidUser = username === ADMIN_USERNAME;
-    const isValidPassword = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
-
-    if (!isValidUser || !isValidPassword) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
-    }
-
-    const token = jwt.sign(
-      { username, role: 'admin' },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    res.cookie('auth_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: DISCORD_CLIENT_ID,
+        client_secret: DISCORD_CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: DISCORD_REDIRECT_URI
+      })
     });
 
-    res.json({ success: true, message: 'Login successful' });
+    if (!tokenResponse.ok) {
+      console.error('Token exchange failed:', await tokenResponse.text());
+      return res.redirect('/login.html?error=token_failed');
+    }
+
+    const tokens = await tokenResponse.json();
+
+    const userResponse = await fetch('https://discord.com/api/users/@me', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` }
+    });
+
+    if (!userResponse.ok) {
+      return res.redirect('/login.html?error=user_fetch_failed');
+    }
+
+    const user = await userResponse.json();
+
+    const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` }
+    });
+
+    let adminGuilds = [];
+    if (guildsResponse.ok) {
+      const guilds = await guildsResponse.json();
+      adminGuilds = guilds
+        .filter(g => (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8))
+        .map(g => ({
+          id: g.id,
+          name: g.name,
+          icon: g.icon
+        }));
+    }
+
+    const jwtToken = jwt.sign({
+      userId: user.id,
+      username: user.username,
+      discriminator: user.discriminator || '0',
+      avatar: user.avatar,
+      accessToken: tokens.access_token,
+      adminGuilds: adminGuilds
+    }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.cookie('discord_token', jwtToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    res.redirect('/dashboard.html');
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('OAuth callback error:', error);
+    res.redirect('/login.html?error=server_error');
   }
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('auth_token');
+  res.clearCookie('discord_token');
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
 app.get('/api/auth/me', verifyToken, (req, res) => {
-  res.json({ username: req.user.username, role: req.user.role });
+  const { userId, username, discriminator, avatar, adminGuilds } = req.user;
+  res.json({ 
+    success: true,
+    user: {
+      id: userId,
+      username,
+      discriminator,
+      avatar,
+      avatarUrl: avatar 
+        ? `https://cdn.discordapp.com/avatars/${userId}/${avatar}.png`
+        : `https://cdn.discordapp.com/embed/avatars/${parseInt(discriminator || '0') % 5}.png`
+    },
+    adminGuilds
+  });
+});
+
+app.get('/api/servers', verifyToken, async (req, res) => {
+  try {
+    const { adminGuilds, accessToken } = req.user;
+    
+    const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+
+    if (!guildsResponse.ok) {
+      return res.json({ success: true, servers: adminGuilds || [] });
+    }
+
+    const guilds = await guildsResponse.json();
+    const freshAdminGuilds = guilds
+      .filter(g => (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8))
+      .map(g => ({
+        id: g.id,
+        name: g.name,
+        icon: g.icon,
+        iconUrl: g.icon 
+          ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png`
+          : null
+      }));
+
+    res.json({ success: true, servers: freshAdminGuilds });
+  } catch (error) {
+    console.error('Error fetching servers:', error);
+    res.json({ success: true, servers: req.user.adminGuilds || [] });
+  }
+});
+
+let serverSettingsCache = {};
+
+async function verifyServerAccess(accessToken, serverId) {
+  try {
+    const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    
+    if (!guildsResponse.ok) {
+      return { valid: false, reason: 'token_expired' };
+    }
+    
+    const guilds = await guildsResponse.json();
+    const guild = guilds.find(g => g.id === serverId);
+    
+    if (!guild) {
+      return { valid: false, reason: 'not_member' };
+    }
+    
+    const hasAdmin = (BigInt(guild.permissions) & BigInt(0x8)) === BigInt(0x8);
+    if (!hasAdmin) {
+      return { valid: false, reason: 'not_admin' };
+    }
+    
+    return { valid: true };
+  } catch (error) {
+    console.error('Error verifying server access:', error);
+    return { valid: false, reason: 'error' };
+  }
+}
+
+app.get('/api/servers/:serverId/settings', verifyToken, async (req, res) => {
+  try {
+    const { serverId } = req.params;
+    const { accessToken } = req.user;
+    
+    const access = await verifyServerAccess(accessToken, serverId);
+    if (!access.valid) {
+      if (access.reason === 'token_expired') {
+        res.clearCookie('discord_token');
+        return res.status(401).json({ success: false, message: 'Session expired. Please login again.' });
+      }
+      return res.status(403).json({ success: false, message: 'You do not have admin access to this server' });
+    }
+
+    const { loadServerConfigs } = require('./serverConfigManager.js');
+    const configs = loadServerConfigs();
+    const serverConfig = configs[serverId] || {};
+    
+    const gameSystem = require('./gameSystem.js');
+    const games = gameSystem.getAllGames ? gameSystem.getAllGames() : [];
+    
+    res.json({
+      success: true,
+      settings: {
+        isSetup: !!serverConfig.isSetup,
+        selectedGame: serverConfig.selectedGame || 'default',
+        dropChannel: serverConfig.dropChannel || null,
+        eventsChannel: serverConfig.eventsChannel || null,
+        updatesChannel: serverConfig.updatesChannel || null,
+        dropsEnabled: serverConfig.dropsEnabled !== false,
+        eventsEnabled: serverConfig.eventsEnabled !== false,
+        tradingEnabled: serverConfig.tradingEnabled !== false,
+        battlesEnabled: serverConfig.battlesEnabled !== false,
+        cratesEnabled: serverConfig.cratesEnabled !== false,
+        marketEnabled: serverConfig.marketEnabled !== false
+      },
+      availableGames: games
+    });
+  } catch (error) {
+    console.error('Error fetching server settings:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch settings' });
+  }
+});
+
+app.put('/api/servers/:serverId/settings', verifyToken, async (req, res) => {
+  try {
+    const { serverId } = req.params;
+    const { accessToken } = req.user;
+    const updates = req.body;
+    
+    const access = await verifyServerAccess(accessToken, serverId);
+    if (!access.valid) {
+      if (access.reason === 'token_expired') {
+        res.clearCookie('discord_token');
+        return res.status(401).json({ success: false, message: 'Session expired. Please login again.' });
+      }
+      return res.status(403).json({ success: false, message: 'You do not have admin access to this server' });
+    }
+
+    const { loadServerConfigs } = require('./serverConfigManager.js');
+    const fs = require('fs');
+    
+    const configs = loadServerConfigs();
+    if (!configs[serverId]) {
+      configs[serverId] = { isSetup: true };
+    }
+    
+    const allowedFields = [
+      'selectedGame', 'dropsEnabled', 'eventsEnabled', 'tradingEnabled',
+      'battlesEnabled', 'cratesEnabled', 'marketEnabled'
+    ];
+    
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        configs[serverId][field] = updates[field];
+      }
+    }
+    
+    fs.writeFileSync('./serverConfigs.json', JSON.stringify(configs, null, 2));
+    
+    res.json({ success: true, message: 'Settings updated successfully' });
+  } catch (error) {
+    console.error('Error updating server settings:', error);
+    res.status(500).json({ success: false, message: 'Failed to update settings' });
+  }
 });
 
 app.get('/api/stats', apiLimiter, (req, res) => {
