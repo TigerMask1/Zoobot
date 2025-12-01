@@ -2,6 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 const { saveData, saveDataImmediate } = require('./dataManager.js');
 const characterManager = require('./characterManager.js');
 const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerGame, hasSelectedGame, DEFAULT_GAME } = require('./serverConfigManager.js');
+const { updateTaskProgress } = require('./seasonSystem.js');
 
 let dropIntervals = new Map();
 let activeClient = null;

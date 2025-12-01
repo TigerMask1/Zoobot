@@ -3,6 +3,7 @@ const { saveDataImmediate } = require('./dataManager.js');
 const { trackChallengeProgress } = require('./weeklyChallengeSystem.js');
 const { checkAchievements } = require('./achievementSystem.js');
 const { recordEvent } = require('./analyticsSystem.js');
+const { updateTaskProgress } = require('./seasonSystem.js');
 
 const STREAK_REWARDS = {
   1: { coins: 100, gems: 0, bonus: null },
@@ -132,6 +133,14 @@ async function claimDaily(message, data) {
   
   trackChallengeProgress(userData, 'dailyClaimed', 1);
   checkAchievements(userData);
+  
+  // Track season daily task progress for daily claimed
+  updateTaskProgress(userData, 'dailyClaimed', 1);
+  
+  // Track coins earned for daily tasks
+  if (reward.coins > 0) {
+    updateTaskProgress(userData, 'coinsEarned', reward.coins);
+  }
   
   if (message.guild) {
     recordEvent(data, message.guild.id, 'dailysClaimed', 1, userId);

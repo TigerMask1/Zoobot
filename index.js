@@ -2773,6 +2773,8 @@ client.on('messageCreate', async (message) => {
             
             if (drop.type === 'coins') {
               data.users[userId].coins += drop.amount;
+              // Track coins earned for season daily tasks
+              updateTaskProgress(data.users[userId], 'coinsEarned', drop.amount);
             } else if (drop.type === 'gems') {
               data.users[userId].gems += drop.amount;
             } else if (drop.type === 'shards') {

@@ -138,6 +138,11 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
   checkAchievements(user);
   updateTaskProgress(user, 'cratesOpened', 1);
   
+  // Track coins earned for season daily tasks
+  if (crate.coins > 0) {
+    updateTaskProgress(user, 'coinsEarned', crate.coins);
+  }
+  
   // Track rare crate openings for daily tasks (gold, emerald, legendary, tyrant)
   if (['gold', 'emerald', 'legendary', 'tyrant'].includes(crateType)) {
     updateTaskProgress(user, 'raresCratesOpened', 1);
@@ -339,6 +344,19 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
   
   trackChallengeProgress(user, 'cratesOpened', quantity);
   checkAchievements(user);
+  
+  // Track season daily tasks for bulk crate opening
+  updateTaskProgress(user, 'cratesOpened', quantity);
+  
+  // Track coins earned for season daily tasks
+  if (totalCoins > 0) {
+    updateTaskProgress(user, 'coinsEarned', totalCoins);
+  }
+  
+  // Track rare crate openings for daily tasks (gold, emerald, legendary, tyrant)
+  if (['gold', 'emerald', 'legendary', 'tyrant'].includes(crateType)) {
+    updateTaskProgress(user, 'raresCratesOpened', quantity);
+  }
   
   if (serverId) {
     recordEvent(data, serverId, 'cratesOpened', quantity, userId);
