@@ -9,6 +9,7 @@ const { checkTaskProgress, completePersonalizedTask, initializePersonalizedTaskD
 const { trackChallengeProgress } = require('./weeklyChallengeSystem.js');
 const { checkAchievements } = require('./achievementSystem.js');
 const { recordEvent } = require('./analyticsSystem.js');
+const { updateTaskProgress } = require('./seasonSystem.js');
 
 const activeBattles = new Map();
 const battleInvites = new Map();
@@ -1062,6 +1063,9 @@ async function endBattle(battle, channel, data, reason, winner = null) {
     
     trackChallengeProgress(data.users[winner], 'battlesWon', 1);
     checkAchievements(data.users[winner]);
+    updateTaskProgress(data.users[winner], 'battlesWon', 1);
+    updateTaskProgress(data.users[winner], 'battlesParticipated', 1);
+    updateTaskProgress(data.users[loser], 'battlesParticipated', 1);
     
     if (channel.guild) {
       recordEvent(data, channel.guild.id, 'battlesPlayed', 1, winner);

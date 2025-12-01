@@ -109,110 +109,6 @@ function showToast(message, type = 'success') {
   }, 3000);
 }
 
-async function handleLogin(event) {
-  event.preventDefault();
-  
-  const username = document.getElementById('username').value;
-  const password = document.getElementById('password').value;
-  const errorEl = document.querySelector('.login-error');
-  const submitBtn = event.target.querySelector('button[type="submit"]');
-  
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = '<span class="loading-spinner"></span> Logging in...';
-  errorEl.classList.remove('show');
-
-  try {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ username, password })
-    });
-
-    const data = await response.json();
-
-    if (response.ok && data.success) {
-      showToast('Login successful! Redirecting...', 'success');
-      setTimeout(() => window.location.href = '/dashboard.html', 1000);
-    } else {
-      errorEl.textContent = data.message || 'Invalid credentials';
-      errorEl.classList.add('show');
-    }
-  } catch (error) {
-    errorEl.textContent = 'Connection error. Please try again.';
-    errorEl.classList.add('show');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = 'Login to Dashboard';
-  }
-}
-
-async function handleLogout() {
-  try {
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-      credentials: 'include'
-    });
-    showToast('Logged out successfully', 'success');
-    setTimeout(() => window.location.href = '/login.html', 500);
-  } catch (error) {
-    window.location.href = '/login.html';
-  }
-}
-
-async function checkAuth() {
-  try {
-    const response = await fetch('/api/auth/me', {
-      credentials: 'include'
-    });
-    
-    if (!response.ok) {
-      window.location.href = '/login.html';
-      return null;
-    }
-    
-    return await response.json();
-  } catch (error) {
-    window.location.href = '/login.html';
-    return null;
-  }
-}
-
-async function loadDashboardData() {
-  const user = await checkAuth();
-  if (!user) return;
-
-  const userNameEl = document.getElementById('user-name');
-  if (userNameEl) {
-    userNameEl.textContent = user.username;
-  }
-
-  try {
-    const statsResponse = await fetch('/api/stats', { credentials: 'include' });
-    const stats = await statsResponse.json();
-    
-    if (stats) {
-      updateDashboardStats(stats);
-    }
-  } catch (error) {
-    console.error('Error loading dashboard data:', error);
-  }
-}
-
-function updateDashboardStats(stats) {
-  const elements = {
-    'stat-servers': stats.servers || 0,
-    'stat-users': stats.users || 0,
-    'stat-characters': stats.characters || 51,
-    'stat-uptime': stats.uptime || '99.9%'
-  };
-
-  Object.entries(elements).forEach(([id, value]) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value;
-  });
-}
-
 async function loadChangelog() {
   const container = document.getElementById('changelog-container');
   if (!container) return;
@@ -295,8 +191,5 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   });
 });
 
-window.handleLogin = handleLogin;
-window.handleLogout = handleLogout;
-window.loadDashboardData = loadDashboardData;
 window.loadChangelog = loadChangelog;
 window.showToast = showToast;

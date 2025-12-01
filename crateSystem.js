@@ -7,6 +7,7 @@ const { checkAchievements } = require('./achievementSystem.js');
 const { recordEvent } = require('./analyticsSystem.js');
 const { getEmojiForCharacter } = require('./emojiAssetManager.js');
 const { getServerGame, DEFAULT_GAME } = require('./serverConfigManager.js');
+const { updateTaskProgress } = require('./seasonSystem.js');
 
 const CRATE_TYPES = {
   bronze: {
@@ -135,6 +136,7 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
   
   trackChallengeProgress(user, 'cratesOpened', 1);
   checkAchievements(user);
+  updateTaskProgress(user, 'cratesOpened', 1);
   
   if (serverId) {
     recordEvent(data, serverId, 'cratesOpened', 1, userId);

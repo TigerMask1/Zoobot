@@ -4,22 +4,8 @@ const http = require('http');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const cookieParser = require('cookie-parser');
-const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
-
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || uuidv4() + '-' + Date.now();
-
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
-const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
-const DISCORD_REDIRECT_URI = process.env.DISCORD_REDIRECT_URI || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co/api/auth/discord/callback`;
 const WEBSITE_URL = process.env.WEBSITE_URL || process.env.RENDER_EXTERNAL_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
-
-const OAUTH_ENABLED = !!(DISCORD_CLIENT_ID && DISCORD_CLIENT_SECRET);
-if (!OAUTH_ENABLED) {
-  console.log('⚠️ Discord OAuth disabled: Set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET to enable server management dashboard');
-}
 
 const app = express();
 
@@ -39,15 +25,6 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  message: { success: false, message: 'Too many requests. Please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => req.ip === '::1'
-});
-
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 100,
@@ -56,7 +33,6 @@ const apiLimiter = rateLimit({
 });
 
 app.use(express.json({ limit: '10kb' }));
-app.use(cookieParser());
 
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -69,303 +45,6 @@ app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1h',
   etag: true
 }));
-
-const verifyToken = (req, res, next) => {
-  const token = req.cookies.discord_token;
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'Authentication required' });
-  }
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.clearCookie('discord_token');
-    return res.status(401).json({ success: false, message: 'Session expired. Please login again.' });
-  }
-};
-
-app.get('/api/auth/discord', authLimiter, (req, res) => {
-  if (!OAUTH_ENABLED) {
-    return res.status(503).json({ 
-      success: false, 
-      message: 'Discord OAuth not configured. Set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET.' 
-    });
-  }
-  
-  const state = uuidv4();
-  res.cookie('oauth_state', state, { 
-    httpOnly: true, 
-    maxAge: 600000, 
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production'
-  });
-  
-  const params = new URLSearchParams({
-    client_id: DISCORD_CLIENT_ID,
-    redirect_uri: DISCORD_REDIRECT_URI,
-    response_type: 'code',
-    scope: 'identify guilds',
-    state: state,
-    prompt: 'consent'
-  });
-  
-  res.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`);
-});
-
-app.get('/api/auth/discord/callback', authLimiter, async (req, res) => {
-  try {
-    const { code, state } = req.query;
-    const storedState = req.cookies.oauth_state;
-    
-    res.clearCookie('oauth_state');
-    
-    if (!code) {
-      return res.redirect('/login.html?error=no_code');
-    }
-    
-    if (state !== storedState) {
-      return res.redirect('/login.html?error=invalid_state');
-    }
-
-    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: DISCORD_CLIENT_ID,
-        client_secret: DISCORD_CLIENT_SECRET,
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: DISCORD_REDIRECT_URI
-      })
-    });
-
-    if (!tokenResponse.ok) {
-      console.error('Token exchange failed:', await tokenResponse.text());
-      return res.redirect('/login.html?error=token_failed');
-    }
-
-    const tokens = await tokenResponse.json();
-
-    const userResponse = await fetch('https://discord.com/api/users/@me', {
-      headers: { Authorization: `Bearer ${tokens.access_token}` }
-    });
-
-    if (!userResponse.ok) {
-      return res.redirect('/login.html?error=user_fetch_failed');
-    }
-
-    const user = await userResponse.json();
-
-    const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
-      headers: { Authorization: `Bearer ${tokens.access_token}` }
-    });
-
-    let adminGuilds = [];
-    if (guildsResponse.ok) {
-      const guilds = await guildsResponse.json();
-      adminGuilds = guilds
-        .filter(g => (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8))
-        .map(g => ({
-          id: g.id,
-          name: g.name,
-          icon: g.icon
-        }));
-    }
-
-    const jwtToken = jwt.sign({
-      userId: user.id,
-      username: user.username,
-      discriminator: user.discriminator || '0',
-      avatar: user.avatar,
-      accessToken: tokens.access_token,
-      adminGuilds: adminGuilds
-    }, JWT_SECRET, { expiresIn: '7d' });
-
-    res.cookie('discord_token', jwtToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
-
-    res.redirect('/dashboard.html');
-  } catch (error) {
-    console.error('OAuth callback error:', error);
-    res.redirect('/login.html?error=server_error');
-  }
-});
-
-app.post('/api/auth/logout', (req, res) => {
-  res.clearCookie('discord_token');
-  res.json({ success: true, message: 'Logged out successfully' });
-});
-
-app.get('/api/auth/me', verifyToken, (req, res) => {
-  const { userId, username, discriminator, avatar, adminGuilds } = req.user;
-  res.json({ 
-    success: true,
-    user: {
-      id: userId,
-      username,
-      discriminator,
-      avatar,
-      avatarUrl: avatar 
-        ? `https://cdn.discordapp.com/avatars/${userId}/${avatar}.png`
-        : `https://cdn.discordapp.com/embed/avatars/${parseInt(discriminator || '0') % 5}.png`
-    },
-    adminGuilds
-  });
-});
-
-app.get('/api/servers', verifyToken, async (req, res) => {
-  try {
-    const { adminGuilds, accessToken } = req.user;
-    
-    const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-
-    if (!guildsResponse.ok) {
-      return res.json({ success: true, servers: adminGuilds || [] });
-    }
-
-    const guilds = await guildsResponse.json();
-    const freshAdminGuilds = guilds
-      .filter(g => (BigInt(g.permissions) & BigInt(0x8)) === BigInt(0x8))
-      .map(g => ({
-        id: g.id,
-        name: g.name,
-        icon: g.icon,
-        iconUrl: g.icon 
-          ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png`
-          : null
-      }));
-
-    res.json({ success: true, servers: freshAdminGuilds });
-  } catch (error) {
-    console.error('Error fetching servers:', error);
-    res.json({ success: true, servers: req.user.adminGuilds || [] });
-  }
-});
-
-let serverSettingsCache = {};
-
-async function verifyServerAccess(accessToken, serverId) {
-  try {
-    const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    
-    if (!guildsResponse.ok) {
-      return { valid: false, reason: 'token_expired' };
-    }
-    
-    const guilds = await guildsResponse.json();
-    const guild = guilds.find(g => g.id === serverId);
-    
-    if (!guild) {
-      return { valid: false, reason: 'not_member' };
-    }
-    
-    const hasAdmin = (BigInt(guild.permissions) & BigInt(0x8)) === BigInt(0x8);
-    if (!hasAdmin) {
-      return { valid: false, reason: 'not_admin' };
-    }
-    
-    return { valid: true };
-  } catch (error) {
-    console.error('Error verifying server access:', error);
-    return { valid: false, reason: 'error' };
-  }
-}
-
-app.get('/api/servers/:serverId/settings', verifyToken, async (req, res) => {
-  try {
-    const { serverId } = req.params;
-    const { accessToken } = req.user;
-    
-    const access = await verifyServerAccess(accessToken, serverId);
-    if (!access.valid) {
-      if (access.reason === 'token_expired') {
-        res.clearCookie('discord_token');
-        return res.status(401).json({ success: false, message: 'Session expired. Please login again.' });
-      }
-      return res.status(403).json({ success: false, message: 'You do not have admin access to this server' });
-    }
-
-    const { loadServerConfigs } = require('./serverConfigManager.js');
-    const configs = loadServerConfigs();
-    const serverConfig = configs[serverId] || {};
-    
-    const gameSystem = require('./gameSystem.js');
-    const games = gameSystem.getAllGames ? gameSystem.getAllGames() : [];
-    
-    res.json({
-      success: true,
-      settings: {
-        isSetup: !!serverConfig.isSetup,
-        selectedGame: serverConfig.selectedGame || 'default',
-        dropChannel: serverConfig.dropChannel || null,
-        eventsChannel: serverConfig.eventsChannel || null,
-        updatesChannel: serverConfig.updatesChannel || null,
-        dropsEnabled: serverConfig.dropsEnabled !== false,
-        eventsEnabled: serverConfig.eventsEnabled !== false,
-        tradingEnabled: serverConfig.tradingEnabled !== false,
-        battlesEnabled: serverConfig.battlesEnabled !== false,
-        cratesEnabled: serverConfig.cratesEnabled !== false,
-        marketEnabled: serverConfig.marketEnabled !== false
-      },
-      availableGames: games
-    });
-  } catch (error) {
-    console.error('Error fetching server settings:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch settings' });
-  }
-});
-
-app.put('/api/servers/:serverId/settings', verifyToken, async (req, res) => {
-  try {
-    const { serverId } = req.params;
-    const { accessToken } = req.user;
-    const updates = req.body;
-    
-    const access = await verifyServerAccess(accessToken, serverId);
-    if (!access.valid) {
-      if (access.reason === 'token_expired') {
-        res.clearCookie('discord_token');
-        return res.status(401).json({ success: false, message: 'Session expired. Please login again.' });
-      }
-      return res.status(403).json({ success: false, message: 'You do not have admin access to this server' });
-    }
-
-    const { loadServerConfigs } = require('./serverConfigManager.js');
-    const fs = require('fs');
-    
-    const configs = loadServerConfigs();
-    if (!configs[serverId]) {
-      configs[serverId] = { isSetup: true };
-    }
-    
-    const allowedFields = [
-      'selectedGame', 'dropsEnabled', 'eventsEnabled', 'tradingEnabled',
-      'battlesEnabled', 'cratesEnabled', 'marketEnabled'
-    ];
-    
-    for (const field of allowedFields) {
-      if (updates[field] !== undefined) {
-        configs[serverId][field] = updates[field];
-      }
-    }
-    
-    fs.writeFileSync('./serverConfigs.json', JSON.stringify(configs, null, 2));
-    
-    res.json({ success: true, message: 'Settings updated successfully' });
-  } catch (error) {
-    console.error('Error updating server settings:', error);
-    res.status(500).json({ success: false, message: 'Failed to update settings' });
-  }
-});
 
 app.get('/api/stats', apiLimiter, (req, res) => {
   res.json({
@@ -402,7 +81,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/:page.html', (req, res, next) => {
-  const validPages = ['index', 'features', 'guide', 'changelog', 'about', 'login', 'dashboard'];
+  const validPages = ['index', 'features', 'guide', 'changelog', 'about'];
   if (validPages.includes(req.params.page)) {
     res.sendFile(path.join(__dirname, 'public', `${req.params.page}.html`));
   } else {
@@ -513,6 +192,15 @@ const {
 } = require('./personalizedTaskSystem.js');
 const { getHistory, getHistorySummary, formatHistory } = require('./historySystem.js');
 const { claimDaily, formatStreakDisplay } = require('./dailyRewardSystem.js');
+const { 
+  showSeasonPass, 
+  showDailyTasks, 
+  showSeasonRewards, 
+  claimAllTaskRewardsCommand, 
+  claimAllSeasonRewardsCommand,
+  updateTaskProgress,
+  initializeSeasonData
+} = require('./seasonSystem.js');
 const { displayGlobalLeaderboard, handleGlobalLeaderboardButton } = require('./globalLeaderboardSystem.js');
 const { displayChallenges, claimChallenge, handleChallengeButton, trackChallengeProgress } = require('./weeklyChallengeSystem.js');
 const { displayAchievements, checkAchievements, formatAchievementBadges, notifyNewAchievement } = require('./achievementSystem.js');
@@ -3038,6 +2726,7 @@ client.on('messageCreate', async (message) => {
               
               trackChallengeProgress(data.users[userId], 'dropsCaught', 1);
               checkAchievements(data.users[userId]);
+              updateTaskProgress(data.users[userId], 'dropsCaught', 1);
               if (message.guild) {
                 recordEvent(data, message.guild.id, 'dropsClaimed', 1, userId);
               }
@@ -3080,6 +2769,7 @@ client.on('messageCreate', async (message) => {
             
             trackChallengeProgress(data.users[userId], 'dropsCaught', 1);
             checkAchievements(data.users[userId]);
+            updateTaskProgress(data.users[userId], 'dropsCaught', 1);
             if (message.guild) {
               recordEvent(data, message.guild.id, 'dropsClaimed', 1, userId);
             }
@@ -4536,6 +4226,38 @@ client.on('messageCreate', async (message) => {
         
       case 'daily':
         await claimDaily(message, data);
+        if (data.users[userId]?.started) {
+          updateTaskProgress(data.users[userId], 'dailyClaimed', 1);
+          await saveDataImmediate(data);
+        }
+        break;
+      
+      case 'season':
+      case 'seasonpass':
+      case 'sp':
+        await showSeasonPass(message, data);
+        break;
+      
+      case 'seasontasks':
+      case 'stasks':
+      case 'dailytasks':
+      case 'dt':
+        await showDailyTasks(message, data);
+        break;
+      
+      case 'seasonrewards':
+      case 'srewards':
+        await showSeasonRewards(message, data);
+        break;
+      
+      case 'taskclaimall':
+      case 'tclaim':
+        await claimAllTaskRewardsCommand(message, data);
+        break;
+      
+      case 'seasonclaimall':
+      case 'sclaim':
+        await claimAllSeasonRewardsCommand(message, data);
         break;
         
       case 'globalboard':

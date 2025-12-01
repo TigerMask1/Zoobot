@@ -149,6 +149,11 @@ function backfillUserData(data) {
       needsSave = true;
     }
     
+    if (user.seasonPass === undefined) {
+      user.seasonPass = {};
+      needsSave = true;
+    }
+    
     if (user.characters && Array.isArray(user.characters)) {
       user.characters.forEach(char => {
         if (char.st === undefined) {
