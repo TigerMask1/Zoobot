@@ -1,4 +1,5 @@
 const { calculateBaseHP } = require('./battleUtils.js');
+const { updateTaskProgress } = require('./seasonSystem.js');
 
 const SHARDS_PER_BOOSTER = 100;
 const MAX_BOOSTS_PER_CHARACTER = 3;
@@ -138,6 +139,9 @@ function useBooster(userData, characterName) {
   // Track quest progress
   if (!userData.questProgress) userData.questProgress = {};
   userData.questProgress.boostsUsed = (userData.questProgress.boostsUsed || 0) + 1;
+  
+  // Track season daily task progress
+  updateTaskProgress(userData, 'boostersUsed', 1);
   
   // Determine result message
   let resultEmoji, resultText, resultColor;

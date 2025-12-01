@@ -138,6 +138,11 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
   checkAchievements(user);
   updateTaskProgress(user, 'cratesOpened', 1);
   
+  // Track rare crate openings for daily tasks (gold, emerald, legendary, tyrant)
+  if (['gold', 'emerald', 'legendary', 'tyrant'].includes(crateType)) {
+    updateTaskProgress(user, 'raresCratesOpened', 1);
+  }
+  
   if (serverId) {
     recordEvent(data, serverId, 'cratesOpened', 1, userId);
   }

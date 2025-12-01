@@ -1093,6 +1093,9 @@ async function endBattle(battle, channel, data, reason, winner = null) {
       data.users[winner].questProgress.currentWinStreak
     );
     
+    // Track win streak for season daily tasks
+    updateTaskProgress(data.users[winner], 'winStreak', data.users[winner].questProgress.currentWinStreak);
+    
     const winnerChar = winner === battle.player1 ? battle.player1Character : battle.player2Character;
     if (winnerChar.level >= 30) {
       data.users[winner].questProgress.highLevelWin = 1;

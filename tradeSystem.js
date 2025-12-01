@@ -4,6 +4,7 @@ const { checkTaskProgress, completePersonalizedTask, initializePersonalizedTaskD
 const { trackChallengeProgress } = require('./weeklyChallengeSystem.js');
 const { checkAchievements } = require('./achievementSystem.js');
 const { recordEvent } = require('./analyticsSystem.js');
+const { updateTaskProgress } = require('./seasonSystem.js');
 
 const activeTrades = new Map();
 
@@ -189,6 +190,7 @@ async function completeTrade(trade, data, channel) {
   
   trackChallengeProgress(initiatorData, 'tradesCompleted', 1);
   checkAchievements(initiatorData);
+  updateTaskProgress(initiatorData, 'tradesCompleted', 1);
   
   const ptDataInitiator = initializePersonalizedTaskData(initiatorData);
   if (ptDataInitiator.taskProgress.tradesCompleted !== undefined || ptDataInitiator.taskProgress.anyTrade !== undefined) {
@@ -230,6 +232,7 @@ async function completeTrade(trade, data, channel) {
   
   trackChallengeProgress(receiverData, 'tradesCompleted', 1);
   checkAchievements(receiverData);
+  updateTaskProgress(receiverData, 'tradesCompleted', 1);
   
   if (channel.guild) {
     recordEvent(data, channel.guild.id, 'tradesCompleted', 1, trade.initiator);

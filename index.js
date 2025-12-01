@@ -1152,6 +1152,9 @@ client.on('messageCreate', async (message) => {
     data.users[userId].messageCount = (data.users[userId].messageCount || 0) + 1;
     data.users[userId].lastActivity = Date.now();
     
+    // Track season daily task progress for messages
+    updateTaskProgress(data.users[userId], 'messagesSent', 1);
+    
     const ptData = initializePersonalizedTaskData(data.users[userId]);
     if (ptData.taskProgress.messagesSent !== undefined) {
       const completedTask = checkTaskProgress(data.users[userId], 'messagesSent', 1);
@@ -1685,6 +1688,11 @@ client.on('messageCreate', async (message) => {
         if (!data.users[targetId]) {
           await message.reply('This user hasn\'t started yet!');
           return;
+        }
+        
+        // Track profile view for season daily task (only for own profile)
+        if (targetId === userId && data.users[userId].started) {
+          updateTaskProgress(data.users[userId], 'profileViewed', 1);
         }
         
         const user = data.users[targetId];
@@ -2412,6 +2420,9 @@ client.on('messageCreate', async (message) => {
           charToLevel.level += 1;
           data.users[userId].lastActivity = Date.now();
           
+          // Track season daily task progress for levels gained
+          updateTaskProgress(data.users[userId], 'levelsGained', 1);
+          
           const ptData = initializePersonalizedTaskData(data.users[userId]);
           if (ptData.taskProgress.levelsGained !== undefined) {
             const completedTask = checkTaskProgress(data.users[userId], 'levelsGained', 1);
@@ -2460,6 +2471,11 @@ client.on('messageCreate', async (message) => {
         if (!userChar) {
           await message.reply('You don\'t own this character!');
           return;
+        }
+        
+        // Track season daily task progress for viewing characters
+        if (data.users[userId].started) {
+          updateTaskProgress(data.users[userId], 'charsViewed', 1);
         }
         
         const charReq = getLevelRequirements(userChar.level);
@@ -3917,6 +3933,9 @@ client.on('messageCreate', async (message) => {
         const claimResult = claimQuest(data.users[userId], questToClaim);
         
         if (claimResult.success) {
+          // Track season daily task progress for quests completed
+          updateTaskProgress(data.users[userId], 'questsCompleted', 1);
+          
           await saveDataImmediate(data);
           const claimEmbed = new EmbedBuilder()
             .setColor('#2ECC71')
@@ -3935,6 +3954,11 @@ client.on('messageCreate', async (message) => {
         if (!claimAllResult.success) {
           await message.reply(claimAllResult.message);
           return;
+        }
+        
+        // Track season daily task progress for quests completed
+        if (claimAllResult.claimedCount > 0) {
+          updateTaskProgress(data.users[userId], 'questsCompleted', claimAllResult.claimedCount);
         }
         
         await saveDataImmediate(data);
@@ -5620,6 +5644,14 @@ client.on('messageCreate', async (message) => {
         }
         
         completeWork(data.users[userId]);
+        
+        // Track season daily task progress for work completed
+        updateTaskProgress(data.users[userId], 'workCompleted', 1);
+        
+        // Track coins earned for daily tasks
+        if (jobResult.rewards.coins > 0) {
+          updateTaskProgress(data.users[userId], 'coinsEarned', jobResult.rewards.coins);
+        }
         
         const workEmbed = new EmbedBuilder()
           .setColor('#00D9FF')
