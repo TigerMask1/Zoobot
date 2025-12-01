@@ -3,6 +3,56 @@
 ## Overview
 This project is a Discord bot focused on character collection, featuring over 50 unique characters with stats, leveling, and a skin system. It includes a comprehensive economy with multiple currencies, a dynamic battle system, interactive elements like crates and random drops, player trading, and competitive daily events. The bot aims to boost community engagement and offer a persistent, captivating virtual world for users. It also incorporates multi-game support, allowing servers to select specific character bundles, and robust anti-cheat and moderation systems for a fair and safe environment.
 
+## Recent Refactoring Updates (December 2025)
+
+### Architecture Improvements
+- **Command Handler System:** Created modular command handler structure in `commands/` directory with category-based organization (economy, characters, battle, social, work, admin, moderation)
+- **Shared Utilities:** Consolidated duplicate code into reusable modules:
+  - `utils/shared.js` - Common functions (generateST, formatNumber, cooldown management, safe reply helpers)
+  - `utils/validation.js` - Input validation (user mentions, positive numbers, enums, command args)
+  - `utils/embeds.js` - Standardized embed creation for errors, success, and info messages
+  - `utils/errorHandler.js` - Centralized error types, logging, and safe error handling
+  - `utils/logger.js` - Structured logging with categories and log levels
+- **Configuration Centralization:** Created `config.js` with all bot constants (cooldowns, limits, economy values, anti-cheat thresholds, colors, messages)
+
+### Critical Bug Fixes
+- **generateST() Fix:** Fixed critical bug where generateST() returned 6-character string instead of numeric value (0-100). Now correctly returns `parseFloat((Math.random() * 100).toFixed(2))`
+- **MongoDB Graceful Fallback:** Bot now runs in JSON-only mode when USE_MONGODB is not set, allowing local testing without MongoDB dependency
+
+### Code Quality
+- **Error Handling:** Created standardized BotError class with error types (VALIDATION, DATABASE, DISCORD_API, PERMISSION, etc.)
+- **Logging:** Implemented structured logging with categories (SYSTEM, COMMAND, DATABASE, BOT, SECURITY) and log levels (DEBUG, INFO, WARN, ERROR, FATAL)
+- **Input Validation:** Comprehensive validation utilities for Discord mentions, positive integers/numbers, strings, enums, currencies, crate types, and rarities
+
+### Key Files Added/Modified
+```
+commands/
+  commandHandler.js     # Modular command loader and registration
+  economy/
+    daily.js, balance.js, shop.js
+  characters/
+    collection.js
+  battle/
+    battle.js
+  social/
+    profile.js
+  work/
+    work.js
+  admin/
+    give.js
+  moderation/
+    warn.js
+
+utils/
+  shared.js             # generateST(), formatNumber(), cooldowns, safe reply
+  validation.js         # Input validation, mention parsing, command args
+  embeds.js             # Standardized embed creators
+  errorHandler.js       # BotError class, error logging, safe handlers
+  logger.js             # Structured logging with levels and categories
+
+config.js               # Centralized bot configuration
+```
+
 ## Website (December 2025)
 The project includes a professional public website:
 
