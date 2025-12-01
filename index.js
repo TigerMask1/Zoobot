@@ -23,6 +23,8 @@ if (!OAUTH_ENABLED) {
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -42,13 +44,15 @@ const authLimiter = rateLimit({
   max: 30,
   message: { success: false, message: 'Too many requests. Please try again later.' },
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  skip: (req) => req.ip === '::1'
 });
 
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 100,
-  message: { success: false, message: 'Too many requests. Please slow down.' }
+  message: { success: false, message: 'Too many requests. Please slow down.' },
+  skip: (req) => req.ip === '::1'
 });
 
 app.use(express.json({ limit: '10kb' }));
