@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ZooBot Admin Dashboard Login">
+  <title>Admin Login - ZooBot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <a href="/" class="logo">
+        <span class="logo-icon">🦁</span>
+        <span>ZooBot</span>
+      </a>
+      <button class="mobile-menu-btn">☰</button>
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/features.html">Features</a></li>
+        <li><a href="/guide.html">Guide</a></li>
+        <li><a href="/changelog.html">Updates</a></li>
+        <li><a href="/about.html">About</a></li>
+        <li><a href="/login.html" class="nav-btn active">Admin Dashboard</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="login-container">
+    <div class="login-card">
+      <div class="logo">🦁 ZooBot</div>
+      <h2>Admin Dashboard</h2>
+      <p class="subtitle">Sign in to manage your bot settings</p>
+
+      <div class="login-error" id="login-error"></div>
+
+      <form onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" required placeholder="Enter your username" autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" required placeholder="Enter your password" autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary login-btn">Login to Dashboard</button>
+      </form>
+
+      <p style="margin-top: 25px; color: var(--text-muted); font-size: 0.85em;">
+        Admin access is restricted to authorized personnel only.
+      </p>
+    </div>
+  </div>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

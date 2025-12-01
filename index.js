@@ -1,15 +1,191 @@
-// Lightweight Express server for health checks and arena routes
+// ZooBot Web Server + Discord Bot
 const express = require('express');
 const http = require('http');
+const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
 
 const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || uuidv4() + '-' + Date.now();
+
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || (ADMIN_PASSWORD ? bcrypt.hashSync(ADMIN_PASSWORD, 10) : null);
+
+const ADMIN_ENABLED = !!(ADMIN_USERNAME && ADMIN_PASSWORD_HASH);
+if (!ADMIN_ENABLED) {
+  console.log('⚠️ Admin dashboard disabled: Set ADMIN_USERNAME and ADMIN_PASSWORD environment variables to enable');
+}
 
 const app = express();
-app.use(express.json());
 
-// Health check endpoint
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Too many login attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 100,
+  message: { success: false, message: 'Too many requests. Please slow down.' }
+});
+
+app.use(express.json({ limit: '10kb' }));
+app.use(cookieParser());
+
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1h',
+  etag: true
+}));
+
+const verifyToken = (req, res, next) => {
+  const token = req.cookies.auth_token;
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
+  }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.clearCookie('auth_token');
+    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  }
+};
+
+app.post('/api/auth/login', authLimiter, async (req, res) => {
+  try {
+    if (!ADMIN_ENABLED) {
+      return res.status(503).json({ 
+        success: false, 
+        message: 'Admin dashboard not configured. Set ADMIN_USERNAME and ADMIN_PASSWORD environment variables.' 
+      });
+    }
+
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ success: false, message: 'Username and password required' });
+    }
+
+    const isValidUser = username === ADMIN_USERNAME;
+    const isValidPassword = await bcrypt.compare(password, ADMIN_PASSWORD_HASH);
+
+    if (!isValidUser || !isValidPassword) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const token = jwt.sign(
+      { username, role: 'admin' },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.cookie('auth_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    res.json({ success: true, message: 'Login successful' });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('auth_token');
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
+app.get('/api/auth/me', verifyToken, (req, res) => {
+  res.json({ username: req.user.username, role: req.user.role });
+});
+
+app.get('/api/stats', apiLimiter, (req, res) => {
+  res.json({
+    servers: '10+',
+    users: '500+',
+    characters: 51,
+    uptime: '99.9%'
+  });
+});
+
+app.get('/api/changelog', apiLimiter, (req, res) => {
+  res.json({
+    entries: [
+      {
+        version: 'v2.0',
+        date: 'November 30, 2025',
+        content: '<h4>Anti-Cheat & Moderation</h4><ul><li>Rate limiting and suspicious activity detection</li><li>Moderation commands for Bot Admins</li><li>Transaction logging and rollback capability</li></ul>'
+      },
+      {
+        version: 'v1.9',
+        date: 'November 2025',
+        content: '<h4>Weekly Challenges & Achievements</h4><ul><li>Rotating weekly goals with rewards</li><li>Achievement badges for milestones</li><li>Global leaderboards</li></ul>'
+      }
+    ]
+  });
+});
+
 app.get('/health', (req, res) => {
-  res.send('Bot is alive!');
+  res.json({ status: 'ok', message: 'Bot is alive!', timestamp: new Date().toISOString() });
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/:page.html', (req, res, next) => {
+  const validPages = ['index', 'features', 'guide', 'changelog', 'about', 'login', 'dashboard'];
+  if (validPages.includes(req.params.page)) {
+    res.sendFile(path.join(__dirname, 'public', `${req.params.page}.html`));
+  } else {
+    next();
+  }
+});
+
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ success: false, message: 'Internal server error' });
+});
+
+app.use((req, res) => {
+  if (req.accepts('html')) {
+    res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
+  } else {
+    res.status(404).json({ success: false, message: 'Not found' });
+  }
 });
 
 const server = http.createServer(app);

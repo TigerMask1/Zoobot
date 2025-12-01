@@ -3,6 +3,45 @@
 ## Overview
 This project is a Discord bot focused on character collection, featuring over 50 unique characters with stats, leveling, and a skin system. It includes a comprehensive economy with multiple currencies, a dynamic battle system, interactive elements like crates and random drops, player trading, and competitive daily events. The bot aims to boost community engagement and offer a persistent, captivating virtual world for users. It also incorporates multi-game support, allowing servers to select specific character bundles, and robust anti-cheat and moderation systems for a fair and safe environment.
 
+## Website & Admin Dashboard (NEW - December 2025)
+The project now includes a professional website and admin dashboard served from the same Express server:
+
+**Public Pages (public/ folder):**
+- `/` or `/index.html` - Landing page with features overview
+- `/features.html` - Detailed feature breakdown
+- `/guide.html` - Complete player guide with commands
+- `/changelog.html` - Version history and updates
+- `/about.html` - About ZooBot and team info
+
+**Admin Dashboard:**
+- `/login.html` - Secure admin login page
+- `/dashboard.html` - Admin control panel (protected)
+- Authentication via JWT with HttpOnly cookies
+- **REQUIRED:** Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` environment variables to enable
+- Dashboard is disabled until credentials are configured (security by default)
+
+**Security Features:**
+- Helmet.js for security headers
+- Rate limiting on auth endpoints (10 attempts per 15 min)
+- API rate limiting (100 requests per minute)
+- JWT tokens with 24-hour expiry
+- HttpOnly secure cookies
+- Content Security Policy configured
+
+**API Endpoints:**
+- `POST /api/auth/login` - Admin login
+- `POST /api/auth/logout` - Logout
+- `GET /api/auth/me` - Verify authentication
+- `GET /api/stats` - Bot statistics
+- `GET /api/changelog` - Changelog entries
+- `GET /health` - Health check
+
+**Environment Variables for Website:**
+- `JWT_SECRET` - Secret for JWT signing (auto-generated if not set)
+- `ADMIN_USERNAME` - **REQUIRED** Admin username (no default - must be set)
+- `ADMIN_PASSWORD` - **REQUIRED** Admin password (no default - must be set)
+- `ADMIN_PASSWORD_HASH` - Pre-hashed password (optional, for production - use instead of ADMIN_PASSWORD)
+
 ## User Preferences
 The agent should prioritize iterative development, frequently asking for feedback and approval before implementing major changes. Communication should be clear and concise, avoiding jargon where possible. For coding, a preference for modular, readable, and well-documented code is essential. The agent should always provide detailed explanations for proposed changes or new features. Do not make changes to the `dataManager.js` or `mongoManager.js` files without explicit instruction, as these are critical for data integrity across environments.
 
