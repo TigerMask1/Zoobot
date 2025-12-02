@@ -392,6 +392,206 @@ Examples:
 
 ---
 
+## 🔑 Character Keys System
+
+### What Are Character Keys?
+
+Character Keys are a new alternative way to unlock characters! Instead of relying on crate luck, you can collect **750 keys** for any specific character and unlock them directly.
+
+#### How It Works
+- Each character has their own type of key (e.g., "Nix Keys", "Bruce Keys")
+- Collect 750 keys for a character to unlock them
+- Keys only work for characters in your server's selected game bundle
+- Keys drop during **Key Rush** events and rarely during normal gameplay
+
+### Getting Character Keys
+
+#### Key Rush Events 🔥
+Special 1-hour events where **ALL drops become character keys!**
+
+**Main Server:**
+- Automatic Key Rush at **10:00 UTC**, **16:00 UTC**, and **22:00 UTC** daily
+- No payment needed - always active
+
+**Other Servers:**
+- ZooAdmins can activate with `!keyrush` (costs 250 gems, lasts 1 hour)
+- Super Admins can grant free Key Rush with `!grantkeyrush`
+
+**During Key Rush:**
+- Keys drop every 45 seconds (main server) or 60 seconds (other servers)
+- Drops are 1-3 keys for a random character
+- Type `!c <code>` to catch them quickly!
+
+#### Normal Gameplay Drops
+- **5% chance** for character keys to drop during regular gameplay
+- Drops 1-2 keys when triggered
+- Random character from your server's bundle
+
+### Commands
+
+#### View Your Key Collection
+```
+!charkeys
+!ck
+```
+
+**Shows:**
+- Beautiful progress bars for each character
+- How many keys you have (current/750)
+- Which characters you can unlock (🔓 icon)
+- Interactive menu to unlock characters directly
+
+**Progress Bar Colors:**
+- 🔒 Locked: Under 750 keys
+- 🔓 Ready: 750+ keys available
+- ✅ Owned: Character already unlocked
+
+#### Unlock a Character
+```
+!keyunlock <character name>
+```
+
+Examples:
+```
+!keyunlock Nix
+!keyunlock Bruce
+!keyunlock Donna the Diva
+```
+
+**Requirements:**
+- Must have 750+ keys for that character
+- Character must be in your server's bundle
+- You must not already own the character
+
+**What happens:**
+- 750 keys are consumed
+- Character is unlocked with random ST (0-100%)
+- Character starts at Level 1
+- You can use them immediately!
+
+#### Convert Excess Keys
+```
+!convertkeys
+```
+
+**Auto-converts** all excess keys for characters you already own into tokens (1:1 ratio).
+
+**Example:**
+- You own Nix and have 850 Nix keys
+- Running `!convertkeys` gives you 850 Nix tokens
+- Your Nix keys reset to 0
+
+**Pro Tip:** Keys for owned characters auto-convert when you catch them during drops!
+
+#### Check Key Rush Status
+```
+!keyrushstatus
+```
+
+**Shows:**
+- Whether Key Rush is currently active
+- Time remaining
+- Which server it's active on
+
+#### Activate Key Rush (ZooAdmin Only)
+```
+!keyrush
+```
+
+**Requirements:**
+- ZooAdmin role or higher
+- 250 gems (consumed on activation)
+- Not available on main server (always active there)
+
+**Grants:**
+- 1 hour of Key Rush
+- All drops become character keys
+- Members can collect keys rapidly
+
+### Key Rush Strategy
+
+#### Best Times to Play
+**Main Server:**
+- 10:00 UTC - First daily Key Rush
+- 16:00 UTC - Afternoon Key Rush
+- 22:00 UTC - Evening Key Rush
+
+**Other Servers:**
+- Ask ZooAdmins to activate during peak hours
+- Coordinate with your server community
+
+#### Maximizing Your Keys
+1. **Stay Active** during Key Rush hours
+2. **Type fast** - keys are first-come, first-served
+3. **Focus on one character** you want to unlock
+4. **Convert excess keys** to tokens for characters you own
+5. **Check progress** with `!charkeys` regularly
+
+#### Smart Collection Tips
+- **Target rare characters** you haven't pulled from crates
+- **Collect keys for high-value characters** in your server's bundle
+- **Don't waste** keys on characters you already own (auto-convert instead)
+- **Participate in all Key Rush events** for maximum efficiency
+
+### Key Drop Mechanics
+
+#### During Key Rush
+- **Drop Rate:** Every 45s (main server) or 60s (other servers)
+- **Amount:** 1-3 keys per drop
+- **Character:** Random from server's game bundle
+- **Catch:** Type `!c <code>` shown in the drop message
+
+#### Normal Gameplay
+- **Drop Chance:** 5% of all drops
+- **Amount:** 1-2 keys per drop
+- **Character:** Random from server's bundle
+- **Rarity:** Between shards (2%) and tokens (55%)
+
+### Visual Progress Tracking
+
+The `!charkeys` menu shows beautiful visual progress:
+
+```
+🦊 Nix 🔓
+🔑 ███████████████░░░░░ 750/750 (100%)
+
+🦍 Bruce 🔒
+🔑 ██████░░░░░░░░░░░░░░ 200/750 (27%)
+
+🐂 Buck ✅
+🔑 ████████████████████ 850/750 (Owned)
+```
+
+**Icons:**
+- 🔒 = Locked (under 750 keys)
+- 🔓 = Ready to unlock!
+- ✅ = Already owned
+
+### FAQ
+
+**Q: Can I trade character keys?**
+A: Not yet, but it's planned for future updates!
+
+**Q: Do keys expire?**
+A: No! Keys stay in your collection forever until used.
+
+**Q: What happens if I get keys for a character I own?**
+A: They auto-convert to tokens (1:1) when you catch them!
+
+**Q: Can I unlock characters not in my server's bundle?**
+A: No, you can only unlock characters from your server's selected game.
+
+**Q: How many keys do I need?**
+A: Always **750 keys** for any character.
+
+**Q: Can I get keys without Key Rush?**
+A: Yes! There's a 5% chance during normal drops.
+
+**Q: Do keys carry over between servers?**
+A: Yes! Your key collection is account-wide, but unlocks must follow each server's bundle.
+
+---
+
 ## 🎁 Crates & Rewards
 
 ### Crate Types & Probabilities
