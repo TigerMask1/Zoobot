@@ -127,6 +127,46 @@
       </div>
 
       <div class="guide-section">
+        <h2>🎉 Auto Giveaways & Lottery</h2>
+        <p>Participate in daily automated giveaways and lotteries for amazing rewards!</p>
+        
+        <h3>Automatic Giveaways</h3>
+        <ul>
+          <li><strong>Schedule:</strong> Runs automatically at <strong>00:00 UTC</strong> every day</li>
+          <li><strong>Duration:</strong> 60 minutes</li>
+          <li><strong>Prize:</strong> 500 gems to the winner</li>
+          <li><strong>How to Enter:</strong> React to the giveaway message when it starts</li>
+          <li><strong>Winner Announcement:</strong> Posted in events channel across all servers</li>
+        </ul>
+
+        <h3>Automatic Lottery</h3>
+        <ul>
+          <li><strong>Schedule:</strong> Runs automatically at <strong>00:00 UTC</strong> every day</li>
+          <li><strong>Duration:</strong> 60 minutes</li>
+          <li><strong>Entry Fee:</strong> Configurable by server admins (gems or coins)</li>
+          <li><strong>Prize Pool:</strong> All entry fees go to the winner</li>
+          <li><strong>How to Enter:</strong> Use <code>!lottery join &lt;tickets&gt;</code></li>
+        </ul>
+
+        <h3>Commands</h3>
+        <ul>
+          <li><code>!giveaway</code> - View current giveaway information</li>
+          <li><code>!nextgiveaway</code> - Check when the next auto giveaway starts</li>
+          <li><code>!lottery</code> - View current lottery details</li>
+          <li><code>!lottery join &lt;tickets&gt;</code> - Buy lottery tickets</li>
+          <li><code>!nextlottery</code> - Check when the next auto lottery starts</li>
+        </ul>
+
+        <h3>Pro Tips</h3>
+        <ul>
+          <li>Both systems start at 00:00 UTC - set a reminder!</li>
+          <li>Winners are announced across ALL servers</li>
+          <li>Manual giveaways/lotteries can still be started by admins</li>
+          <li>Auto systems wait for manual ones to complete before starting</li>
+        </ul>
+      </div>
+
+      <div class="guide-section">
         <h2>🔑 Character Keys System</h2>
         <p>A new way to unlock characters! Collect 750 keys for any character to unlock them directly.</p>
         
@@ -153,8 +193,9 @@
           <li><code>!charkeys</code> or <code>!ck</code> - View your key collection with progress bars</li>
           <li><code>!keyunlock &lt;character&gt;</code> - Unlock a character using 750 keys</li>
           <li><code>!convertkeys</code> - Convert excess keys to tokens (1:1 for owned characters)</li>
-          <li><code>!keyrushstatus</code> - Check if Key Rush is active</li>
-          <li><code>!keyrush</code> - Activate Key Rush (ZooAdmin, 250 gems, 1 hour)</li>
+          <li><code>!keyrushstatus</code> - Check if Key Rush is active and time remaining</li>
+          <li><code>!keyrush</code> - Activate Key Rush (ZooAdmin only, 250 gems, 1 hour)</li>
+          <li><code>!grantkeyrush [serverID]</code> - Grant free Key Rush (Super Admin only)</li>
         </ul>
 
         <h3>Key Collection Strategy</h3>
@@ -226,6 +267,28 @@
       </div>
 
       <div class="guide-section">
+        <h2>🎰 Minigames</h2>
+        <p>Test your luck with 5 exciting minigames! Main server players get 1.5× rewards.</p>
+        
+        <h3>Available Games</h3>
+        <ul>
+          <li><strong>🪙 Coin Duel</strong> - <code>!coinduel &lt;h/t&gt; &lt;bet&gt;</code> - Flip heads or tails for 2× payout</li>
+          <li><strong>🎲 Dice Clash</strong> - <code>!diceclash &lt;bet&gt;</code> - Roll against the house</li>
+          <li><strong>🚪 Door of Fate</strong> - <code>!dooroffate &lt;bet&gt;</code> - Pick the right door for 3× payout</li>
+          <li><strong>✊ Rock Paper Scissors</strong> - <code>!rps &lt;r/p/s&gt; &lt;bet&gt;</code> - Classic RPS for 2× payout</li>
+          <li><strong>🎰 Almost Win</strong> - <code>!almostwin &lt;bet&gt;</code> - Guess 1-10 for up to 10× payout</li>
+        </ul>
+
+        <h3>Tips</h3>
+        <ul>
+          <li>Main server bonus: 1.5× all winnings!</li>
+          <li>Start with small bets to learn each game</li>
+          <li>Set a budget and stick to it</li>
+          <li>Door of Fate has the best jackpot potential</li>
+        </ul>
+      </div>
+
+      <div class="guide-section">
         <h2>💼 Work System</h2>
         <p>Complete jobs to earn coins, gems, and special resources!</p>
         
@@ -244,10 +307,13 @@
         <h2>❓ FAQ</h2>
         
         <h3>How often do drops happen?</h3>
-        <p>Characters drop every 30 seconds in the designated drop channel. Tokens and special drops occur randomly.</p>
+        <p>Main server: Every 20-30 seconds (FREE). Other servers: Every 20-30 seconds when drops are active (100 gems for 3 hours via <code>!paydrops</code>).</p>
 
         <h3>What's the best way to get rare characters?</h3>
-        <p>Open Tyrant Crates (guaranteed character), participate in events, trade with other players, or get lucky with drops!</p>
+        <p>1) Collect 750 character keys and use <code>!keyunlock</code>, 2) Open Tyrant Crates, 3) Participate in events, 4) Trade with other players, or 5) Get lucky with cage keys!</p>
+
+        <h3>When do auto giveaways and lotteries start?</h3>
+        <p>Both start automatically at 00:00 UTC every day and run for 60 minutes. Use <code>!nextgiveaway</code> or <code>!nextlottery</code> to check timing.</p>
 
         <h3>How do I level up faster?</h3>
         <p>Battle frequently, complete quests, and use coins to directly level up your characters with <code>!levelup</code>.</p>

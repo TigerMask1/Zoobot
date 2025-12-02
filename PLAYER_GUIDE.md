@@ -592,6 +592,62 @@ A: Yes! Your key collection is account-wide, but unlocks must follow each server
 
 ---
 
+## 🎰 Minigames System
+
+### Available Minigames
+
+ZooBot features **5 exciting minigames** to test your luck and win big!
+
+**Main Server Bonus:** Players on the main server receive **1.5× rewards** on all minigames!
+
+#### 1. Coin Duel 🪙
+```
+!coinduel <h/t> <bet>
+```
+- Classic coin flip: Heads or Tails
+- 50% win chance
+- 2× payout on win
+
+#### 2. Dice Clash 🎲
+```
+!diceclash <bet>
+```
+- Roll dice against the house
+- Beat the house roll to win
+- Variable payout based on roll difference
+
+#### 3. Door of Fate 🚪
+```
+!dooroffate <bet>
+```
+- Choose from 3 doors
+- One door has the prize
+- 33% win chance, 3× payout
+
+#### 4. Rock Paper Scissors ✊
+```
+!rps <r/p/s> <bet>
+```
+- Classic RPS against the bot
+- Win: 2× payout
+- Draw: Bet returned
+
+#### 5. Almost Win Machine 🎰
+```
+!almostwin <bet>
+```
+- Guess a number from 1-10
+- Exact match: 10× payout
+- Close (±1): 2× payout
+- Very close excitement!
+
+### Minigame Strategy
+- **Start small** - Test the waters with low bets
+- **Main server advantage** - Play there for 1.5× rewards
+- **Know the odds** - Door of Fate has best big-win potential
+- **Set limits** - Don't gamble more than you can afford to lose
+- **Mix it up** - Try different games to keep it fun!
+
 ## 🎁 Crates & Rewards
 
 ### Crate Types & Probabilities
@@ -642,7 +698,13 @@ A: Yes! Your key collection is account-wide, but unlocks must follow each server
 
 ### Drop System
 
-Every 20 seconds, a random drop appears in the drop channel!
+**NEW PAID MODEL:**
+- **Main Server:** Unlimited FREE drops every 20-30 seconds!
+- **Other Servers:** Pay 100 gems for 3 hours of drops (`!paydrops`)
+  - Auto-pauses after 30 uncaught drops to save resources
+  - Use `!revivedrops` to resume after inactivity
+
+Every 20-30 seconds (depending on server), a random drop appears in the drop channel!
 
 #### How to Catch Drops
 ```
@@ -876,6 +938,61 @@ The bot runs **competitive daily events** that rotate automatically!
 - **3rd Place**: 1 Cage Key 🗝️ + 2 Gold Crates
 
 **Rewards are automatic!** No claiming needed - rewards are added directly to your account when the event ends.
+
+### Auto Giveaways & Lottery
+
+#### Automatic Giveaways 🎉
+The bot runs **automatic giveaways daily** at 00:00 UTC!
+
+**How it works:**
+- Starts automatically at 00:00 UTC every day
+- Runs for 60 minutes
+- Prize: **500 gems** to the winner
+- Winner announced in events channel across ALL servers
+- Free to participate - just react to enter!
+
+**Commands:**
+```
+!giveaway         # View current giveaway info
+!nextgiveaway     # Check when next auto giveaway starts
+```
+
+**For Admins:**
+```
+!autogiveaway enable/disable    # Toggle auto giveaways
+!startgiveaway <minutes>        # Start manual giveaway
+!endgiveaway                    # End current giveaway
+```
+
+#### Automatic Lottery 🎟️
+The bot runs **automatic lottery daily** at 00:00 UTC!
+
+**How it works:**
+- Starts automatically at 00:00 UTC every day
+- Runs for 60 minutes
+- Configurable ticket price (gems or coins)
+- Winner gets the entire prize pool!
+- Announced in events channel
+
+**Commands:**
+```
+!lottery                    # View current lottery info
+!lottery join <tickets>     # Buy tickets to enter
+!nextlottery               # Check when next auto lottery starts
+```
+
+**For Admins:**
+```
+!autolottery enable/disable <fee> <currency>    # Toggle and configure
+!startlottery <duration> <fee> <currency>       # Manual lottery
+!stoplottery                                     # Stop current lottery
+```
+
+**Pro Tips:**
+- Both systems cycle automatically at 00:00 UTC
+- If manually started, auto systems wait until completion
+- Winners announced to all servers in events channels
+- Join the main server for giveaway announcements!
 
 ### Key & Cage System
 

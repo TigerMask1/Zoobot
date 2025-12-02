@@ -29,13 +29,14 @@ const HUB_CATEGORIES = {
   rewards: {
     emoji: '🎁',
     name: 'Rewards',
-    description: 'Daily rewards, crates, quests, character keys, and mail',
+    description: 'Daily rewards, crates, quests, character keys, giveaways, lottery, and mail',
     color: 0xF39C12,
     features: [
       { id: 'daily', emoji: '📅', name: 'Daily', desc: 'Claim daily reward', command: '!daily' },
       { id: 'crates', emoji: '📦', name: 'Crates', desc: 'Open your crates', command: '!crate' },
       { id: 'charkeys', emoji: '🔑', name: 'Character Keys', desc: 'Collect 750 keys to unlock characters', command: '!charkeys' },
       { id: 'quests', emoji: '📋', name: 'Quests', desc: 'Complete tasks for rewards', command: '!quests' },
+      { id: 'giveaway', emoji: '🎉', name: 'Giveaways', desc: 'Participate in auto giveaways', command: '!giveaway' },
       { id: 'mail', emoji: '📬', name: 'Mail', desc: 'Check your mailbox', command: '!mail' }
     ],
     allCommands: [
@@ -59,9 +60,11 @@ const HUB_CATEGORIES = {
       { cmd: '!keys', desc: 'View your cage keys' },
       { cmd: '!unlock <character>', desc: 'Unlock a character with keys' },
       { cmd: '!cage', desc: 'Open a random cage' },
-      { cmd: '!giveaway', desc: 'View active giveaway info' },
-      { cmd: '!lottery', desc: 'View lottery info' },
-      { cmd: '!lottery join <tickets>', desc: 'Join the lottery' }
+      { cmd: '!giveaway', desc: 'View active giveaway info (Auto: 00:00 UTC daily)' },
+      { cmd: '!nextgiveaway', desc: 'Check when the next auto giveaway starts' },
+      { cmd: '!lottery', desc: 'View lottery info (Auto: 00:00 UTC daily)' },
+      { cmd: '!lottery join <tickets>', desc: 'Join the lottery' },
+      { cmd: '!nextlottery', desc: 'Check when the next auto lottery starts' }
     ]
   },
   collection: {
@@ -257,12 +260,14 @@ const ADMIN_CATEGORIES = {
       { cmd: '!setemoji <char> <emoji>', desc: 'Set custom character emoji' },
       { cmd: '!setchestgif <type> <url>', desc: 'Set custom crate opening GIF' },
       { cmd: '!serverstats / !stats', desc: 'View server analytics' },
-      { cmd: '!startgiveaway <mins>', desc: 'Start a manual giveaway' },
+      { cmd: '!startgiveaway <mins>', desc: 'Start a manual giveaway (500 gems prize)' },
       { cmd: '!endgiveaway', desc: 'End the current giveaway' },
-      { cmd: '!autogiveaway enable/disable', desc: 'Manage automatic giveaways' },
+      { cmd: '!autogiveaway enable/disable', desc: 'Manage automatic giveaways (runs at 00:00 UTC daily)' },
+      { cmd: '!nextgiveaway', desc: 'Check next giveaway time' },
       { cmd: '!startlottery <duration> <fee> <currency>', desc: 'Start a manual lottery' },
       { cmd: '!stoplottery', desc: 'Stop the current lottery' },
-      { cmd: '!autolottery enable/disable <fee> <currency>', desc: 'Manage automatic lottery' }
+      { cmd: '!autolottery enable/disable <fee> <currency>', desc: 'Manage automatic lottery (runs at 00:00 UTC daily)' },
+      { cmd: '!nextlottery', desc: 'Check next lottery time' }
     ]
   },
   trivia: {
