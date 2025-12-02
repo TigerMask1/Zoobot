@@ -9,12 +9,12 @@ if (USE_MONGODB) {
 
 let activeGiveaway = {
   active: false,
-  channelId: null,
+  channelId: '1430526386593861733',
   messageId: null,
   participants: [],
   endTime: null,
   prizes: {
-    gems: 5000,
+    gems: 500,
     coins: 10000,
     crates: { legendary: 2 }
   },
@@ -346,9 +346,7 @@ async function endGiveaway() {
   const winnerId = activeGiveaway.participants[winnerIndex];
 
   try {
-    const winner = await activeClient.users.fetch(winnerId);
-    
-    // CRITICAL FIX: Use the shared data reference from index.js
+    // CRITICAL FIX: Load data ONCE before updating winner
     if (!sharedData) {
       console.error('❌ CRITICAL: sharedData reference is null in giveaway system!');
       return { success: false, message: '❌ Internal error: Data not available.' };
@@ -359,7 +357,7 @@ async function endGiveaway() {
     // Initialize user if they don't exist
     if (!sharedData.users[winnerId]) {
       sharedData.users[winnerId] = {
-        username: winner.username,
+        username: 'Unknown',
         coins: 0,
         gems: 0,
         characters: [],
@@ -386,21 +384,25 @@ async function endGiveaway() {
     if (!userData.emeraldCrates) userData.emeraldCrates = 0;
     if (!userData.goldCrates) userData.goldCrates = 0;
 
-    // Grant rewards directly to the shared data object
-    const gemsToAdd = activeGiveaway.prizes.gems || 5000;
+    // Grant rewards directly to the shared data object (using += pattern)
+    const gemsToAdd = activeGiveaway.prizes.gems || 500;
     const coinsToAdd = activeGiveaway.prizes.coins || 10000;
     const cratesToAdd = activeGiveaway.prizes.crates?.legendary || 2;
 
-    userData.gems = (userData.gems || 0) + gemsToAdd;
-    userData.coins = (userData.coins || 0) + coinsToAdd;
-    userData.legendaryCrates = (userData.legendaryCrates || 0) + cratesToAdd;
+    userData.gems += gemsToAdd;
+    userData.coins += coinsToAdd;
+    userData.legendaryCrates += cratesToAdd;
     
-    console.log(`🎁 Giveaway: Granted rewards to ${winner.username} (${winnerId})`);
+    // Fetch winner for display
+    const winner = await activeClient.users.fetch(winnerId).catch(() => null);
+    const winnerTag = winner?.tag || `User ${winnerId}`;
+    
+    console.log(`🎁 Giveaway: Granted rewards to ${winnerTag} (${winnerId})`);
     console.log(`   💎 Gems: ${gemsToAdd} (new total: ${userData.gems})`);
     console.log(`   💰 Coins: ${coinsToAdd} (new total: ${userData.coins})`);
     console.log(`   📦 Legendary Crates: ${cratesToAdd} (new total: ${userData.legendaryCrates})`);
     
-    // Save the shared data immediately
+    // Save the shared data ONCE after all updates
     await saveDataImmediate(sharedData);
     console.log('💾 Giveaway rewards saved to shared data');
 
@@ -408,7 +410,7 @@ async function endGiveaway() {
       .setColor('#00FF00')
       .setTitle('🎊 GIVEAWAY WINNER!')
       .setDescription(
-        `**Winner:** ${winner.tag}\n\n` +
+        `**Winner:** ${winnerTag}\n\n` +
         `**Prizes Won:**\n` +
         `💎 ${gemsToAdd.toLocaleString()} Gems\n` +
         `💰 ${coinsToAdd.toLocaleString()} Coins\n` +
@@ -446,8 +448,8 @@ async function endGiveaway() {
 
     return { 
       success: true, 
-      message: `🎉 Giveaway ended! Winner: ${winner.tag}`,
-      winner: winner.tag
+      message: `🎉 Giveaway ended! Winner: ${winnerTag}`,
+      winner: winnerTag
     };
   } catch (error) {
     console.error('Error ending giveaway:', error);
