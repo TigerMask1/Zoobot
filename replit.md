@@ -101,33 +101,49 @@ A comprehensive rotating season pass system to drive player engagement:
 - `!seasonclaimall` / `!sclaim` - Claim unlocked season rewards
 
 ## Interactive Hub System (December 2025)
-A button-based navigation system to make the bot accessible without memorizing commands:
+A comprehensive button-based navigation system to make the bot accessible without memorizing commands:
 
 **Core Files:**
-- `hubSystem.js` - Main hub menu with categorized navigation
+- `hubSystem.js` - Main hub menu with categorized navigation and complete command lists
 - `onboardingSystem.js` - First-time user tutorial with step-by-step guidance
 - `discoverySystem.js` - Tracks feature usage and suggests unexplored features
 - `hubInteractionHandler.js` - Handles all button/menu interactions
 
-**Hub Categories:**
-- **Play** (🎮): Quick actions - Daily rewards, Random Drop, Quick Battle
-- **Collection** (🦁): Character management - My Collection, View All Characters, Skins
-- **Battle** (⚔️): Combat features - PvP Battle, AI Battle, Energy/Inventory
-- **Economy** (💰): Money features - Balance, Shop, Daily/Work
-- **Social** (🤝): Community - Profile, Leaderboards, Trading, Clan
-- **Progression** (📈): Advancement - Quests, Achievements, Season Pass
-- **Fun** (🎲): Mini-games - Trivia, Minigames, Lottery
+**Player Categories (6 total):**
+- **Play** (🎮): Battle, Work, Minigames (11 commands)
+- **Rewards** (🎁): Daily, Crates, Quests, Mail, Keys, Lottery (18 commands)
+- **Collection** (🦁): Characters, Skins, Info, Submissions (13 commands)
+- **Economy** (💰): Balance, Shop, Trade, Market, Inventory, UST (15 commands)
+- **Progress** (🏆): Profile, Achievements, Leaderboards, Season Pass (17 commands)
+- **Social** (🏰): Clans, Trivia, Q&A, News (10 commands)
+
+**Admin Panel (Server Owners & ZooAdmins):**
+- **Server Setup** (⚙️): Channel configuration, drops, game bundles (10 commands)
+- **Moderation** (🛡️): Warnings, bans, mutes, message management (11 commands)
+- **Bot Management** (👑): Admin roles, emojis, giveaways, lottery (11 commands)
+- **Trivia & Q&A** (🧠): Question management, submissions (9 commands)
+
+**Super Admin Panel (Bot Owners):**
+- Economy Management (grants, UST)
+- Character Management (create, edit, abilities)
+- Skin Management (upload, grant, revoke)
+- Game Bundle Management (assign, import)
+- Work System Management (images, jobs)
+- Anti-Cheat & Security (flags, transactions)
+- System Controls (servers, reset)
+
+**Hub Features:**
+- **Know More** button on each category shows ALL commands with descriptions
+- **Server Admin** button on hub homepage for admins
+- One-click access to all major features via buttons
+- Feature discovery tracking - encourages exploration
+- Onboarding tutorial for new players
+- Hub buttons integrated into profile and collection views
+- No command memorization required
 
 **Hub Commands:**
 - `!hub` / `!menu` - Open main navigation hub
 - `!guide` - Quick start guide with visual walkthrough
-
-**Features:**
-- One-click access to all major features via buttons
-- Feature discovery tracking - encourages exploration
-- Onboarding tutorial for new players (triggered on first !start)
-- Hub buttons integrated into profile and collection views
-- No command memorization required
 
 ## User Preferences
 The agent should prioritize iterative development, frequently asking for feedback and approval before implementing major changes. Communication should be clear and concise, avoiding jargon where possible. For coding, a preference for modular, readable, and well-documented code is essential. The agent should always provide detailed explanations for proposed changes or new features. Do not make changes to the `dataManager.js` or `mongoManager.js` files without explicit instruction, as these are critical for data integrity across environments.
