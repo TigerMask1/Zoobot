@@ -1292,7 +1292,7 @@ client.on('interactionCreate', async (interaction) => {
   if (!data) return;
   
   try {
-    if (interaction.customId.startsWith('charkeys_select')) {
+    if (interaction.customId === 'charkeys_unlock_select') {
       await handleCharacterKeysSelect(interaction, data);
     }
   } catch (error) {
@@ -6017,12 +6017,21 @@ client.on('messageCreate', async (message) => {
         break;
       
       case 'keyunlock':
-        const keyUnlockCharName = args.join(' ');
-        if (!keyUnlockCharName) {
+        const keyUnlockCharInput = args.join(' ');
+        if (!keyUnlockCharInput) {
           await message.reply(`❌ Please specify a character! Usage: \`!keyunlock <character name>\`\n\nCollect ${KEYS_TO_UNLOCK} keys to unlock a character. Use \`!charkeys\` to view your collection.`);
           break;
         }
-        const keyUnlockResult = await unlockCharacterWithKeys(data.users[userId], keyUnlockCharName, data, serverId);
+        
+        // Look up character first to get the canonical name (case-insensitive lookup)
+        const keyUnlockChar = characterManager.getCharacterByName(keyUnlockCharInput);
+        if (!keyUnlockChar) {
+          await message.reply(`❌ Character **${keyUnlockCharInput}** not found!`);
+          break;
+        }
+        
+        // Use the canonical character name from the database
+        const keyUnlockResult = await unlockCharacterWithKeys(data.users[userId], keyUnlockChar.name, data, serverId);
         if (keyUnlockResult.success) {
           const unlockEmbed = new EmbedBuilder()
             .setColor('#00FF00')

@@ -86,25 +86,29 @@ async function unlockCharacterWithKeys(userData, characterName, data, serverId) 
     return { success: false, message: '❌ Server ID required for key unlocks!' };
   }
   
-  if (!isCharacterInBundle(characterName, serverId)) {
-    const serverGame = getServerGame(serverId) || DEFAULT_GAME;
-    return { success: false, message: `❌ **${characterName}** is not available in this server's bundle (**${serverGame}**)!\n\nYou can only unlock characters from your server's selected game.` };
-  }
-  
-  if (!canUnlockCharacter(userData, characterName)) {
-    const keys = getCharacterKeyCount(userData, characterName);
-    if (hasCharacter(userData, characterName)) {
-      return { success: false, message: `❌ You already own **${characterName}**!` };
-    }
-    return { success: false, message: `❌ You need ${KEYS_TO_UNLOCK} keys to unlock **${characterName}**!\n\n📊 You have: ${keys}/${KEYS_TO_UNLOCK} keys` };
-  }
-  
+  // Look up the character first to get the canonical name
   const char = characterManager.getCharacterByName(characterName);
   if (!char) {
     return { success: false, message: '❌ Character not found!' };
   }
   
-  userData.characterKeys[characterName] -= KEYS_TO_UNLOCK;
+  // Use the canonical character name from the database for all operations
+  const canonicalName = char.name;
+  
+  if (!isCharacterInBundle(canonicalName, serverId)) {
+    const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+    return { success: false, message: `❌ **${canonicalName}** is not available in this server's bundle (**${serverGame}**)!\n\nYou can only unlock characters from your server's selected game.` };
+  }
+  
+  if (!canUnlockCharacter(userData, canonicalName)) {
+    const keys = getCharacterKeyCount(userData, canonicalName);
+    if (hasCharacter(userData, canonicalName)) {
+      return { success: false, message: `❌ You already own **${canonicalName}**!` };
+    }
+    return { success: false, message: `❌ You need ${KEYS_TO_UNLOCK} keys to unlock **${canonicalName}**!\n\n📊 You have: ${keys}/${KEYS_TO_UNLOCK} keys` };
+  }
+  
+  userData.characterKeys[canonicalName] -= KEYS_TO_UNLOCK;
   
   const { assignMovesToCharacter, calculateBaseHP } = require('./battleUtils.js');
   const st = parseFloat((Math.random() * 100).toFixed(2));
