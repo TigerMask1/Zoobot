@@ -100,6 +100,35 @@ A comprehensive rotating season pass system to drive player engagement:
 - `!taskclaimall` / `!tclaim` - Claim completed task rewards
 - `!seasonclaimall` / `!sclaim` - Claim unlocked season rewards
 
+## Interactive Hub System (December 2025)
+A button-based navigation system to make the bot accessible without memorizing commands:
+
+**Core Files:**
+- `hubSystem.js` - Main hub menu with categorized navigation
+- `onboardingSystem.js` - First-time user tutorial with step-by-step guidance
+- `discoverySystem.js` - Tracks feature usage and suggests unexplored features
+- `hubInteractionHandler.js` - Handles all button/menu interactions
+
+**Hub Categories:**
+- **Play** (🎮): Quick actions - Daily rewards, Random Drop, Quick Battle
+- **Collection** (🦁): Character management - My Collection, View All Characters, Skins
+- **Battle** (⚔️): Combat features - PvP Battle, AI Battle, Energy/Inventory
+- **Economy** (💰): Money features - Balance, Shop, Daily/Work
+- **Social** (🤝): Community - Profile, Leaderboards, Trading, Clan
+- **Progression** (📈): Advancement - Quests, Achievements, Season Pass
+- **Fun** (🎲): Mini-games - Trivia, Minigames, Lottery
+
+**Hub Commands:**
+- `!hub` / `!menu` - Open main navigation hub
+- `!guide` - Quick start guide with visual walkthrough
+
+**Features:**
+- One-click access to all major features via buttons
+- Feature discovery tracking - encourages exploration
+- Onboarding tutorial for new players (triggered on first !start)
+- Hub buttons integrated into profile and collection views
+- No command memorization required
+
 ## User Preferences
 The agent should prioritize iterative development, frequently asking for feedback and approval before implementing major changes. Communication should be clear and concise, avoiding jargon where possible. For coding, a preference for modular, readable, and well-documented code is essential. The agent should always provide detailed explanations for proposed changes or new features. Do not make changes to the `dataManager.js` or `mongoManager.js` files without explicit instruction, as these are critical for data integrity across environments.
 
