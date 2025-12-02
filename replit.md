@@ -72,3 +72,27 @@ Added a new character key collection system as an alternative way to unlock char
 - `characterKeySystem.js` - New file with all key system logic
 - `dropSystem.js` - Added Key Rush drop type support
 - `index.js` - Integrated commands, handlers, and scheduler initialization
+
+### Bug Fixes & Improvements (December 2025)
+
+**ZooAdmin Role Detection Fix:**
+- Fixed `isZooAdmin()` function calls that were passing wrong arguments
+- Now properly checks `message.member` instead of `(message, serverId)`
+- Super Admins and Bot Admins can also use ZooAdmin commands
+
+**Character Key Normal Drops:**
+- Added 5% chance for character keys to drop during normal gameplay
+- Drops 1-2 keys when triggered (between shards and tokens in rarity)
+- Keys follow the server's selected game bundle
+
+**New Super Admin Command:**
+- `!grantkeys @user <character> <amount>` - Grant character keys to any user
+- Supports multi-word character names (e.g., "Donna the Diva")
+
+**Giveaway System Fix:**
+- Fixed critical bug where rewards weren't being saved properly
+- Changed incorrect `saveData.giveaway` to `data.giveaway`
+
+**Hub Documentation Updated:**
+- Added character keys information to rewards section
+- Added `!grantkeys` and `!grantkeyrush` to admin commands
