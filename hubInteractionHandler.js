@@ -1,10 +1,22 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const {
   HUB_CATEGORIES,
+  ADMIN_CATEGORIES,
+  SUPER_ADMIN_COMMANDS,
   createMainHubEmbed,
   createHubCategoryButtons,
   createCategoryEmbed,
   createCategoryButtons,
+  createKnowMoreEmbed,
+  createKnowMoreButtons,
+  createAdminHubEmbed,
+  createAdminCategoryButtons,
+  createAdminCategoryEmbed,
+  createAdminCategoryBackButtons,
+  createSuperAdminEmbed,
+  createSuperAdminCategoryButtons,
+  createSuperAdminCategoryEmbed,
+  createSuperAdminBackButtons,
   createQuickStartEmbed,
   createQuickStartButtons,
   createMinigamesEmbed,
@@ -53,6 +65,7 @@ function initializeUserHubData(userData) {
 
 async function handleHubInteraction(interaction, data, saveData) {
   const userId = interaction.user.id;
+  const guildId = interaction.guildId;
   let userData = data.users[userId];
   
   if (!userData) {
@@ -69,6 +82,8 @@ async function handleHubInteraction(interaction, data, saveData) {
   initializeUserHubData(userData);
   const customId = interaction.customId;
   
+  const serverConfig = data.servers?.[guildId] || {};
+  
   try {
     if (customId === 'hub_main' || customId === 'hub_back') {
       trackFeatureUse(userData, 'hub');
@@ -82,6 +97,51 @@ async function handleHubInteraction(interaction, data, saveData) {
       const embed = createCategoryEmbed(categoryId, interaction.user, userData);
       const buttons = createCategoryButtons(categoryId);
       await interaction.update({ embeds: [embed], components: buttons });
+    }
+    else if (customId.startsWith('knowmore_')) {
+      const categoryId = customId.replace('knowmore_', '');
+      trackFeatureUse(userData, `knowmore_${categoryId}`);
+      const embed = createKnowMoreEmbed(categoryId);
+      const buttons = createKnowMoreButtons(categoryId);
+      if (embed) {
+        await interaction.update({ embeds: [embed], components: buttons });
+      } else {
+        await interaction.reply({ content: '❌ Category not found!', ephemeral: true });
+      }
+    }
+    else if (customId === 'hub_admin') {
+      trackFeatureUse(userData, 'admin');
+      const embed = createAdminHubEmbed(interaction.user, serverConfig);
+      const buttons = createAdminCategoryButtons();
+      await interaction.update({ embeds: [embed], components: buttons });
+    }
+    else if (customId.startsWith('admin_') && customId !== 'admin_superadmin') {
+      const categoryId = customId.replace('admin_', '');
+      if (ADMIN_CATEGORIES[categoryId]) {
+        trackFeatureUse(userData, `admin_${categoryId}`);
+        const embed = createAdminCategoryEmbed(categoryId);
+        const buttons = createAdminCategoryBackButtons(categoryId);
+        await interaction.update({ embeds: [embed], components: buttons });
+      } else {
+        await interaction.reply({ content: '❌ Category not found!', ephemeral: true });
+      }
+    }
+    else if (customId === 'admin_superadmin') {
+      trackFeatureUse(userData, 'superadmin');
+      const embed = createSuperAdminEmbed();
+      const buttons = createSuperAdminCategoryButtons();
+      await interaction.update({ embeds: [embed], components: buttons });
+    }
+    else if (customId.startsWith('superadmin_')) {
+      const categoryId = customId.replace('superadmin_', '');
+      if (SUPER_ADMIN_COMMANDS[categoryId]) {
+        trackFeatureUse(userData, `superadmin_${categoryId}`);
+        const embed = createSuperAdminCategoryEmbed(categoryId);
+        const buttons = createSuperAdminBackButtons();
+        await interaction.update({ embeds: [embed], components: buttons });
+      } else {
+        await interaction.reply({ content: '❌ Category not found!', ephemeral: true });
+      }
     }
     else if (customId === 'hub_guide') {
       trackFeatureUse(userData, 'guide');
@@ -189,28 +249,28 @@ async function handleFeatureButton(interaction, featureId, userData, data, saveD
   trackFeatureUse(userData, featureId);
   
   const featureCommands = {
-    battle: { cmd: '!battle @user', desc: 'Challenge another player to battle!' },
-    work: { cmd: '!work', desc: 'Work to earn coins and resources!' },
+    battle: { cmd: '!battle @user', desc: 'Challenge another player to battle!\n\n**Also try:**\n• `!b easy/normal/hard` - Battle AI opponents' },
+    work: { cmd: '!work', desc: 'Work to earn coins and resources!\n\n**Also try:**\n• `!workguide` - Full work system guide\n• `!crafttool` - Craft tools for better rewards' },
     minigames: { special: 'minigames' },
-    daily: { cmd: '!daily', desc: 'Claim your daily reward!' },
-    crates: { cmd: '!crate', desc: 'View your crate inventory!' },
-    quests: { cmd: '!quests', desc: 'View your quests and tasks!' },
-    mail: { cmd: '!mail', desc: 'Check your mailbox!' },
-    collection: { cmd: '!collection', desc: 'View your character collection!' },
-    skins: { cmd: '!skins', desc: 'View and equip character skins!' },
-    charinfo: { cmd: '!char <name>', desc: 'View detailed character info!' },
-    balance: { cmd: '!balance', desc: 'Check your currency balance!' },
-    shop: { cmd: '!shop', desc: 'Open the shop!' },
-    trade: { cmd: '!trade @user', desc: 'Trade with another player!' },
-    market: { cmd: '!market', desc: 'Browse the player marketplace!' },
-    inventory: { cmd: '!inventory', desc: 'View your inventory!' },
-    profile: { cmd: '!profile', desc: 'View your profile!' },
-    achievements: { cmd: '!achievements', desc: 'View your achievements!' },
-    leaderboard: { cmd: '!leaderboard', desc: 'View the server leaderboard!' },
-    challenges: { cmd: '!challenges', desc: 'View weekly challenges!' },
-    clan: { cmd: '!clan', desc: 'View clan info!' },
-    clanleaderboard: { cmd: '!clanleaderboard', desc: 'View top clans!' },
-    trivia: { cmd: '!trivia', desc: 'Start a trivia game!' }
+    daily: { cmd: '!daily', desc: 'Claim your daily reward!\n\n**Bonus:** Build streaks for extra rewards!' },
+    crates: { cmd: '!crate', desc: 'View your crate inventory!\n\n**Also try:**\n• `!opencrate <type>` - Open a crate\n• `!bulkopen <type> [qty]` - Open multiple' },
+    quests: { cmd: '!quests', desc: 'View your quests and tasks!\n\n**Also try:**\n• `!claimall` - Claim all completed quests\n• `!challenges` - Weekly challenges' },
+    mail: { cmd: '!mail', desc: 'Check your mailbox!\n\n**Also try:**\n• `!claimmail <#>` - Claim mail rewards\n• `!clearmail` - Clear claimed mail' },
+    collection: { cmd: '!collection', desc: 'View your character collection!\n\n**Also try:**\n• `!char <name>` - Detailed character info\n• `!levelup <name>` - Level up a character' },
+    skins: { cmd: '!skins', desc: 'View and equip character skins!\n\n**Also try:**\n• `!equipskin <char> <skin>` - Equip a skin\n• `!ustshop` - Browse skin shop' },
+    charinfo: { cmd: '!char <name>', desc: 'View detailed character info!\n\n**Also try:**\n• `!info <name>` - View any character (no ownership needed)\n• `!I <name>` - Battle stats for owned character' },
+    balance: { cmd: '!balance', desc: 'Check your currency balance!\n\nShows: 💰 Coins, 💎 Gems, 🏆 Trophies' },
+    shop: { cmd: '!shop', desc: 'Open the shop!\n\n**Also try:**\n• `!ustshop` - UST cosmetics shop\n• `!market` - Player marketplace' },
+    trade: { cmd: '!trade @user', desc: 'Trade with another player!\n\nSecure trading system for characters and items.' },
+    market: { cmd: '!market', desc: 'Browse the player marketplace!\n\n**Also try:**\n• `!market sell` - List items for sale\n• `!auctions` - View auctions' },
+    inventory: { cmd: '!inventory', desc: 'View your inventory!\n\nShows: Ores, Wood, Tools, Items, Crates' },
+    profile: { cmd: '!profile', desc: 'View your profile!\n\n**Also try:**\n• `!setpfp <name>` - Set profile picture\n• `!pfps` - View your PFPs' },
+    achievements: { cmd: '!achievements', desc: 'View your achievement badges!\n\nEarn badges by completing various milestones!' },
+    leaderboard: { cmd: '!leaderboard', desc: 'View the server leaderboard!\n\n**Types:** coins, gems, battles, collection, trophies\n**Also try:** `!globalboard` for all servers' },
+    challenges: { cmd: '!challenges', desc: 'View weekly challenges!\n\n**Also try:**\n• `!claimchallenge <id>` - Claim rewards\n• `!seasonpass` - Season progress' },
+    clan: { cmd: '!clan', desc: 'View clan info!\n\n**Also try:**\n• `!joinclan <name>` - Join a clan\n• `!donate <type> <amount>` - Donate to clan' },
+    clanleaderboard: { cmd: '!clans', desc: 'View top clans!\n\nSee the most powerful clans in ZooBot.' },
+    trivia: { cmd: '!trivia', desc: 'Start a trivia game!\n\n**Also try:**\n• `!a <answer>` - Answer a question\n• `!q <keyword>` - Search Q&A database' }
   };
   
   const feature = featureCommands[featureId];
@@ -231,8 +291,8 @@ async function handleFeatureButton(interaction, featureId, userData, data, saveD
     .setColor(0x5865F2)
     .setTitle(`💡 ${featureId.charAt(0).toUpperCase() + featureId.slice(1)}`)
     .setDescription(feature.desc)
-    .addFields({ name: '📝 Command', value: `\`${feature.cmd}\``, inline: false })
-    .setFooter({ text: 'Type this command in the chat to use this feature!' });
+    .addFields({ name: '📝 Main Command', value: `\`${feature.cmd}\``, inline: false })
+    .setFooter({ text: 'Type the command in chat to use this feature!' });
   
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -248,8 +308,8 @@ async function handleFeatureButton(interaction, featureId, userData, data, saveD
 function createHelpEmbed(user) {
   return new EmbedBuilder()
     .setColor(0x3498DB)
-    .setTitle('📚 All Commands')
-    .setDescription('Here are all the commands organized by category. You can also use `!help` for the full list!')
+    .setTitle('📚 Quick Command Reference')
+    .setDescription('Here are the most common commands. For **complete lists**, use the category buttons in the Hub and click **Know More**!')
     .addFields(
       {
         name: '🚀 Getting Started',
@@ -258,36 +318,36 @@ function createHelpEmbed(user) {
       },
       {
         name: '🦁 Collection',
-        value: '`!collection` - View characters\n`!char <name>` - Character info\n`!skins` - View skins',
+        value: '`!collection` - View characters\n`!char <name>` - Character info\n`!info <name>` - Any character info\n`!levelup <name>` - Level up',
         inline: true
       },
       {
         name: '💰 Economy',
-        value: '`!balance` - Check money\n`!shop` - Buy items\n`!daily` - Daily reward\n`!work` - Earn coins',
+        value: '`!balance` - Check money\n`!shop` - Buy items\n`!daily` - Daily reward\n`!work` - Earn coins\n`!market` - Marketplace',
         inline: true
       },
       {
         name: '⚔️ Battle',
-        value: '`!battle @user` - PvP\n`!b easy` - AI battle\n`!leaderboard` - Rankings',
+        value: '`!battle @user` - PvP battle\n`!b easy/normal/hard` - AI battle\n`!leaderboard` - Rankings',
         inline: true
       },
       {
         name: '📦 Crates & Items',
-        value: '`!crate` - View crates\n`!opencrate <type>` - Open\n`!inventory` - Items',
+        value: '`!crate` - View crates\n`!opencrate <type>` - Open crate\n`!bulkopen <type>` - Open many\n`!inventory` - Your items',
         inline: true
       },
       {
         name: '📋 Quests & Progress',
-        value: '`!quests` - Tasks\n`!challenges` - Weekly\n`!achievements` - Badges\n`!profile` - Stats',
+        value: '`!quests` - Daily tasks\n`!challenges` - Weekly goals\n`!achievements` - Badges\n`!seasonpass` - Season Pass',
         inline: true
       },
       {
         name: '🏰 Social',
-        value: '`!clan` - Clan info\n`!joinclan <name>` - Join\n`!trade @user` - Trade',
+        value: '`!clan` - Clan info\n`!joinclan <name>` - Join clan\n`!trade @user` - Trade\n`!trivia` - Play trivia',
         inline: true
       }
     )
-    .setFooter({ text: 'Tip: Use !hub anytime for the interactive menu!' });
+    .setFooter({ text: 'Use category buttons in !hub and click "Know More" for ALL commands!' });
 }
 
 function createActionHelpEmbed(action) {
@@ -329,7 +389,7 @@ function createActionHelpEmbed(action) {
 }
 
 function isHubInteraction(customId) {
-  const hubPrefixes = ['hub_', 'guide_', 'feature_', 'onboard_', 'minigame_'];
+  const hubPrefixes = ['hub_', 'guide_', 'feature_', 'onboard_', 'minigame_', 'knowmore_', 'admin_', 'superadmin_'];
   return hubPrefixes.some(prefix => customId.startsWith(prefix));
 }
 
