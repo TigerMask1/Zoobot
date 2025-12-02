@@ -26,10 +26,19 @@ let activeGiveaway = {
 };
 
 let activeClient = null;
+let sharedData = null;
 let autoScheduleTimeout = null;
 
 function getGiveawayData() {
   return activeGiveaway;
+}
+
+function setSharedData(data) {
+  sharedData = data;
+}
+
+function getSharedData() {
+  return sharedData;
 }
 
 async function setGiveawayData(data) {
@@ -54,13 +63,16 @@ async function setGiveawayData(data) {
   }
 }
 
-async function saveGiveawayToMongo() {
-  if (!USE_MONGODB || !mongoManager) return;
-  
-  try {
-    await mongoManager.saveGiveawayData(activeGiveaway);
-  } catch (error) {
-    console.error('Error saving giveaway to MongoDB:', error);
+async function saveGiveawayState() {
+  if (USE_MONGODB) {
+    try {
+      await mongoManager.saveGiveawayData(activeGiveaway);
+    } catch (error) {
+      console.error('Error saving giveaway to MongoDB:', error);
+    }
+  } else if (sharedData) {
+    sharedData.giveaway = { ...activeGiveaway };
+    await saveDataImmediate(sharedData);
   }
 }
 
@@ -80,15 +92,7 @@ async function enableAutoGiveaway(channelId) {
   activeGiveaway.autoSchedule.enabled = true;
   activeGiveaway.autoSchedule.nextRunTime = Date.now() + (24 * 60 * 60 * 1000);
   
-  if (USE_MONGODB) {
-    await saveGiveawayToMongo();
-  } else {
-    const { loadData } = require('./dataManager.js');
-    const data = await loadData();
-    data.giveaway = activeGiveaway;
-    await saveDataImmediate(data);
-  }
-  
+  await saveGiveawayState();
   scheduleNextAutoGiveaway(channelId);
   
   return { success: true, message: '✅ Auto giveaway enabled! A giveaway will run every 24 hours.' };
@@ -103,14 +107,7 @@ async function disableAutoGiveaway() {
     autoScheduleTimeout = null;
   }
   
-  if (USE_MONGODB) {
-    await saveGiveawayToMongo();
-  } else {
-    const { loadData } = require('./dataManager.js');
-    const data = await loadData();
-    data.giveaway = activeGiveaway;
-    await saveDataImmediate(data);
-  }
+  await saveGiveawayState();
   
   return { success: true, message: '✅ Auto giveaway disabled.' };
 }
@@ -145,21 +142,14 @@ async function startAutomaticGiveaway(channelId) {
   await startGiveaway(channelId, 1440);
   
   activeGiveaway.autoSchedule.nextRunTime = Date.now() + (24 * 60 * 60 * 1000);
-  
-  if (USE_MONGODB) {
-    await saveGiveawayToMongo();
-  } else {
-    const { loadData } = require('./dataManager.js');
-    const data = await loadData();
-    data.giveaway = activeGiveaway;
-    await saveDataImmediate(data);
-  }
+  await saveGiveawayState();
   
   scheduleNextAutoGiveaway(channelId);
 }
 
 async function initializeGiveawaySystem(client, data) {
   activeClient = client;
+  sharedData = data;
   
   if (USE_MONGODB) {
     const mongoData = await loadGiveawayFromMongo();
@@ -186,7 +176,7 @@ async function initializeGiveawaySystem(client, data) {
     scheduleNextAutoGiveaway(activeGiveaway.channelId);
   }
   
-  console.log('✅ Giveaway system initialized with auto-scheduling');
+  console.log('✅ Giveaway system initialized with shared data reference');
 }
 
 async function startGiveaway(channelId, durationMinutes) {
@@ -208,17 +198,7 @@ async function startGiveaway(channelId, durationMinutes) {
     }
   };
 
-  if (USE_MONGODB) {
-    await saveGiveawayToMongo();
-  } else {
-    const { loadData } = require('./dataManager.js');
-    const data = await loadData();
-    if (!data.giveaway) {
-      data.giveaway = {};
-    }
-    data.giveaway = activeGiveaway;
-    await saveDataImmediate(data);
-  }
+  await saveGiveawayState();
 
   const giveawayEmbed = new EmbedBuilder()
     .setColor('#FFD700')
@@ -249,15 +229,7 @@ async function startGiveaway(channelId, durationMinutes) {
     const message = await channel.send({ embeds: [giveawayEmbed], components: [button] });
     
     activeGiveaway.messageId = message.id;
-    
-    if (USE_MONGODB) {
-      await saveGiveawayToMongo();
-    } else {
-      const { loadData } = require('./dataManager.js');
-      const data = await loadData();
-      data.giveaway.messageId = message.id;
-      await saveDataImmediate(data);
-    }
+    await saveGiveawayState();
 
     setTimeout(async () => {
       if (activeGiveaway.active && activeGiveaway.endTime <= Date.now() + 1000) {
@@ -294,15 +266,7 @@ async function handleButtonJoin(interaction) {
   }
 
   activeGiveaway.participants.push(userId);
-
-  if (USE_MONGODB) {
-    await saveGiveawayToMongo();
-  } else {
-    const { loadData } = require('./dataManager.js');
-    const data = await loadData();
-    data.giveaway = activeGiveaway;
-    await saveDataImmediate(data);
-  }
+  await saveGiveawayState();
 
   const updatedEmbed = new EmbedBuilder()
     .setColor('#FFD700')
@@ -354,14 +318,7 @@ async function endGiveaway() {
       activeGiveaway.channelId = null;
     }
     
-    if (USE_MONGODB) {
-      await saveGiveawayToMongo();
-    } else {
-      const { loadData } = require('./dataManager.js');
-      const data = await loadData();
-      data.giveaway = activeGiveaway;
-      await saveDataImmediate(data);
-    }
+    await saveGiveawayState();
 
     try {
       if (preservedChannelId && messageId) {
@@ -389,11 +346,14 @@ async function endGiveaway() {
   try {
     const winner = await activeClient.users.fetch(winnerId);
     
-    const { loadData } = require('./dataManager.js');
-    const data = await loadData();
+    if (!sharedData) {
+      console.error('Error: sharedData is not available in giveaway system');
+      return { success: false, message: '❌ Internal error: Data not available.' };
+    }
 
-    if (!data.users[winnerId]) {
-      data.users[winnerId] = {
+    if (!sharedData.users[winnerId]) {
+      sharedData.users[winnerId] = {
+        username: winner.username,
         coins: 0,
         gems: 0,
         characters: [],
@@ -403,21 +363,29 @@ async function endGiveaway() {
         trophies: 200,
         messageCount: 0,
         lastDailyClaim: null,
-        mailbox: []
+        mailbox: [],
+        legendaryCrates: 0
       };
     }
 
-    const userData = data.users[winnerId];
+    const userData = sharedData.users[winnerId];
     
     if (!userData.legendaryCrates) {
       userData.legendaryCrates = 0;
     }
 
-    userData.gems = (userData.gems || 0) + activeGiveaway.prizes.gems;
-    userData.coins = (userData.coins || 0) + activeGiveaway.prizes.coins;
-    userData.legendaryCrates = (userData.legendaryCrates || 0) + activeGiveaway.prizes.crates.legendary;
+    const gemsToAdd = activeGiveaway.prizes.gems;
+    const coinsToAdd = activeGiveaway.prizes.coins;
+    const cratesToAdd = activeGiveaway.prizes.crates.legendary;
+
+    userData.gems = (userData.gems || 0) + gemsToAdd;
+    userData.coins = (userData.coins || 0) + coinsToAdd;
+    userData.legendaryCrates = (userData.legendaryCrates || 0) + cratesToAdd;
     
-    await saveDataImmediate(data);
+    console.log(`🎁 Giveaway: Granted ${gemsToAdd} gems, ${coinsToAdd} coins, ${cratesToAdd} legendary crates to ${winner.username} (${winnerId})`);
+    console.log(`🎁 Giveaway: User now has ${userData.gems} gems, ${userData.coins} coins, ${userData.legendaryCrates} legendary crates`);
+    
+    await saveDataImmediate(sharedData);
 
     const winnerEmbed = new EmbedBuilder()
       .setColor('#00FF00')
@@ -425,9 +393,9 @@ async function endGiveaway() {
       .setDescription(
         `**Winner:** ${winner.tag}\n\n` +
         `**Prizes Won:**\n` +
-        `💎 ${activeGiveaway.prizes.gems.toLocaleString()} Gems\n` +
-        `💰 ${activeGiveaway.prizes.coins.toLocaleString()} Coins\n` +
-        `📦 ${activeGiveaway.prizes.crates.legendary}x Legendary Crate\n\n` +
+        `💎 ${gemsToAdd.toLocaleString()} Gems\n` +
+        `💰 ${coinsToAdd.toLocaleString()} Coins\n` +
+        `📦 ${cratesToAdd}x Legendary Crate\n\n` +
         `Congratulations! 🎉\n` +
         `Total Participants: ${activeGiveaway.participants.length}`
       )
@@ -435,9 +403,13 @@ async function endGiveaway() {
       .setTimestamp();
 
     if (preservedChannelId && activeGiveaway.messageId) {
-      const channel = await activeClient.channels.fetch(preservedChannelId);
-      const message = await channel.messages.fetch(activeGiveaway.messageId);
-      await message.edit({ embeds: [winnerEmbed], components: [] });
+      try {
+        const channel = await activeClient.channels.fetch(preservedChannelId);
+        const message = await channel.messages.fetch(activeGiveaway.messageId);
+        await message.edit({ embeds: [winnerEmbed], components: [] });
+      } catch (editError) {
+        console.error('Error editing giveaway message:', editError);
+      }
     }
 
     activeGiveaway.active = false;
@@ -452,14 +424,7 @@ async function endGiveaway() {
       activeGiveaway.channelId = null;
     }
     
-    if (USE_MONGODB) {
-      await saveGiveawayToMongo();
-    } else {
-      const { loadData } = require('./dataManager.js');
-      const data = await loadData();
-      data.giveaway = activeGiveaway;
-      await saveDataImmediate(data);
-    }
+    await saveGiveawayState();
 
     return { 
       success: true, 
@@ -468,6 +433,7 @@ async function endGiveaway() {
     };
   } catch (error) {
     console.error('Error ending giveaway:', error);
+    
     activeGiveaway.active = false;
     activeGiveaway.messageId = null;
     activeGiveaway.participants = [];
@@ -480,14 +446,7 @@ async function endGiveaway() {
       activeGiveaway.channelId = null;
     }
     
-    if (USE_MONGODB) {
-      await saveGiveawayToMongo();
-    } else {
-      const { loadData } = require('./dataManager.js');
-      const data = await loadData();
-      data.giveaway = activeGiveaway;
-      await saveDataImmediate(data);
-    }
+    await saveGiveawayState();
 
     return { success: false, message: '❌ Error ending giveaway.' };
   }
@@ -517,6 +476,8 @@ module.exports = {
   getGiveawayStatus,
   getGiveawayData,
   setGiveawayData,
+  setSharedData,
+  getSharedData,
   enableAutoGiveaway,
   disableAutoGiveaway
 };
