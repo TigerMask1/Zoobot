@@ -3660,6 +3660,63 @@ client.on('messageCreate', async (message) => {
         
         await message.reply(grantMessage);
         break;
+      
+      case 'grantkeys':
+      case 'grantkey':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ This command is restricted to Super Admins only!');
+          return;
+        }
+        
+        const keyUser = message.mentions.users.first();
+        if (!keyUser) {
+          await message.reply('**Grant Character Keys**\n\nUsage: `!grantkeys @user <character name> <amount>`\n\nExamples:\n`!grantkeys @user Nix 100` - Grant 100 Nix keys\n`!grantkeys @user Bruce 50` - Grant 50 Bruce keys\n`!grantkeys @user Donna the Diva 100` - Works with multi-word names');
+          return;
+        }
+        
+        if (!data.users[keyUser.id]) {
+          await message.reply('❌ That user hasn\'t started yet!');
+          return;
+        }
+        
+        // Filter out mention tokens to handle character names with spaces correctly
+        const keyArgsFiltered = args.filter(arg => !arg.match(/^<@!?\d+>$/));
+        const keyAmount = parseInt(keyArgsFiltered[keyArgsFiltered.length - 1]);
+        
+        if (isNaN(keyAmount) || keyAmount < 1) {
+          await message.reply('❌ Please specify a valid amount!\n\nUsage: `!grantkeys @user <character name> <amount>`');
+          return;
+        }
+        
+        // Character name is everything except the last element (which is the amount)
+        const keyCharName = keyArgsFiltered.slice(0, -1).join(' ');
+        if (!keyCharName) {
+          await message.reply('❌ Please specify a character name!\n\nUsage: `!grantkeys @user <character name> <amount>`');
+          return;
+        }
+        
+        const foundKeyChar = characterManager.getCharacterByName(keyCharName);
+        if (!foundKeyChar) {
+          await message.reply(`❌ Character **${keyCharName}** not found!`);
+          return;
+        }
+        
+        const { addCharacterKeys, initializeCharacterKeys, getCharacterKeyCount } = require('./characterKeySystem.js');
+        initializeCharacterKeys(data.users[keyUser.id]);
+        addCharacterKeys(data.users[keyUser.id], foundKeyChar.name, keyAmount);
+        await saveDataImmediate(data);
+        
+        const newKeyCount = getCharacterKeyCount(data.users[keyUser.id], foundKeyChar.name);
+        
+        const grantKeyEmbed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle('🔑 Keys Granted!')
+          .setDescription(`**Granted:** ${keyAmount} ${foundKeyChar.emoji} **${foundKeyChar.name}** keys\n**To:** <@${keyUser.id}>\n\n**Their Total:** ${newKeyCount} ${foundKeyChar.name} keys`)
+          .setFooter({ text: `Granted by ${message.author.username}` })
+          .setTimestamp();
+        
+        await message.reply({ embeds: [grantKeyEmbed] });
+        break;
         
       case 'addskin':
         if (!isSuperAdmin(userId)) {
@@ -5995,8 +6052,8 @@ client.on('messageCreate', async (message) => {
         break;
       
       case 'keyrush':
-        if (!isZooAdmin(message, serverId)) {
-          await message.reply('❌ Only ZooAdmins can activate Key Rush!');
+        if (!isSuperAdmin(userId) && !isGlobalBotAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only Super Admins, Bot Admins, or ZooAdmins can activate Key Rush!');
           break;
         }
         

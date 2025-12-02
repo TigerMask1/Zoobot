@@ -29,11 +29,12 @@ const HUB_CATEGORIES = {
   rewards: {
     emoji: '🎁',
     name: 'Rewards',
-    description: 'Daily rewards, crates, quests, and mail',
+    description: 'Daily rewards, crates, quests, keys, and mail',
     color: 0xF39C12,
     features: [
       { id: 'daily', emoji: '📅', name: 'Daily', desc: 'Claim daily reward', command: '!daily' },
       { id: 'crates', emoji: '📦', name: 'Crates', desc: 'Open your crates', command: '!crate' },
+      { id: 'charkeys', emoji: '🔑', name: 'Character Keys', desc: 'Collect keys to unlock characters', command: '!charkeys' },
       { id: 'quests', emoji: '📋', name: 'Quests', desc: 'Complete tasks for rewards', command: '!quests' },
       { id: 'mail', emoji: '📬', name: 'Mail', desc: 'Check your mailbox', command: '!mail' }
     ],
@@ -43,6 +44,11 @@ const HUB_CATEGORIES = {
       { cmd: '!pickcrate <type>', desc: 'Select a crate to open' },
       { cmd: '!opencrate <type>', desc: 'Open a specific crate type' },
       { cmd: '!bulkopen <type> [qty]', desc: 'Open multiple crates at once' },
+      { cmd: '!charkeys', desc: 'View your character key collection and progress' },
+      { cmd: '!keyunlock <character>', desc: 'Unlock a character using 750 keys' },
+      { cmd: '!convertkeys', desc: 'Convert excess character keys to tokens' },
+      { cmd: '!keyrush', desc: 'Activate Key Rush event (ZooAdmin, 250 gems, 1 hour)' },
+      { cmd: '!keyrushstatus', desc: 'Check if Key Rush is active' },
       { cmd: '!quests [page]', desc: 'View available quests' },
       { cmd: '!quest <id>', desc: 'View quest details' },
       { cmd: '!claim <quest_id>', desc: 'Claim completed quest rewards' },
@@ -293,7 +299,9 @@ const SUPER_ADMIN_COMMANDS = {
     name: '🦁 Character Management',
     commands: [
       { cmd: '!grantchar @user <char> [ST]', desc: 'Grant a character to a user' },
+      { cmd: '!grantkeys @user <char> <amount>', desc: 'Grant character keys to a user' },
       { cmd: '!forcerelease @user <char>', desc: 'Force release a character from user' },
+      { cmd: '!grantkeyrush [serverID]', desc: 'Grant free Key Rush to a server' },
       { cmd: '!createchar / !addchar', desc: 'Create a new character' },
       { cmd: '!editchar <name> <field> <value>', desc: 'Edit character details' },
       { cmd: '!removechar <name>', desc: 'Delete a character permanently' },
