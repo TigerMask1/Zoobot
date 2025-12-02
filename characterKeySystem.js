@@ -717,6 +717,35 @@ async function grantKeyRush(serverId, grantedByUserId) {
   };
 }
 
+async function forceStopKeyRush(serverId, stoppedByUserId) {
+  if (!isSuperAdmin(stoppedByUserId)) {
+    return { success: false, message: '❌ Only Super Admins can force stop Key Rush!' };
+  }
+
+  if (!isKeyRushActive(serverId)) {
+    return { success: false, message: '❌ No active Key Rush to stop!' };
+  }
+
+  const config = getServerConfig(serverId);
+  if (!config) {
+    return { success: false, message: '❌ Server not configured!' };
+  }
+
+  // Clear the Key Rush state
+  config.keyRushUntil = null;
+  config.keyRushActivatedBy = null;
+  config.keyRushGranted = null;
+  await saveServerConfig(serverId, config);
+
+  // Stop the drops
+  stopKeyRushDrops(serverId, true);
+
+  return {
+    success: true,
+    message: `🔑 **KEY RUSH STOPPED!**\n\n✅ Key Rush has been manually stopped by a Super Admin.\n📍 Server: ${serverId}\n\n⏰ Automatic Key Rush schedule remains unchanged and will continue as normal.`
+  };
+}
+
 function startKeyRushDrops(serverId) {
   if (keyRushIntervals.has(serverId)) {
     clearInterval(keyRushIntervals.get(serverId));
@@ -1017,6 +1046,7 @@ module.exports = {
   activateKeyRush,
   activateKeyRushConfirmed,
   grantKeyRush,
+  forceStopKeyRush,
   startKeyRushDrops,
   stopKeyRushDrops,
   executeKeyDrop,

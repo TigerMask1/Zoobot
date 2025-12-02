@@ -307,6 +307,7 @@ const SUPER_ADMIN_COMMANDS = {
       { cmd: '!grantkeys @user <char> <amount>', desc: 'Grant character keys to a user (supports multi-word names)' },
       { cmd: '!forcerelease @user <char>', desc: 'Force release a character from user' },
       { cmd: '!grantkeyrush [serverID]', desc: 'Grant free Key Rush event to a server (1 hour)' },
+      { cmd: '!stopkeyrush [serverID]', desc: 'Force stop active Key Rush (does not affect schedule)' },
       { cmd: '!createchar / !addchar', desc: 'Create a new character' },
       { cmd: '!editchar <name> <field> <value>', desc: 'Edit character details' },
       { cmd: '!removechar <name>', desc: 'Delete a character permanently' },
