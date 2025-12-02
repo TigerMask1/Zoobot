@@ -645,6 +645,113 @@ function removeBotAdmin(serverId, userId, removedBy) {
   return removeServerAdmin(serverId, userId, removedBy);
 }
 
+async function initializeNewServer(guild) {
+  try {
+    const serverId = guild.id;
+    const serverName = guild.name;
+    const ownerId = guild.ownerId;
+    
+    const existingConfig = getServerConfig(serverId);
+    if (existingConfig && existingConfig.initialized) {
+      console.log(`⚙️ Server ${serverName} (${serverId}) already initialized, checking owner...`);
+      await ensureServerOwnerRegistered(serverId, ownerId, serverName);
+      return { success: true, message: 'Server already initialized, owner verified' };
+    }
+    
+    const defaultConfig = {
+      serverId,
+      serverName,
+      serverOwnerId: ownerId,
+      serverAdmins: [],
+      zooAdminRoleName: 'zooadmin',
+      featureSettings: { ...DEFAULT_FEATURE_SETTINGS },
+      initialized: true,
+      initializedAt: new Date(),
+      dropChannel: null,
+      eventsChannel: null,
+      updatesChannel: null,
+      selectedGame: DEFAULT_GAME,
+      isSetup: false
+    };
+    
+    serverConfigs[serverId] = defaultConfig;
+    
+    const saved = await saveServerConfig(serverId, defaultConfig);
+    
+    if (saved) {
+      console.log(`✅ Initialized new server: ${serverName} (${serverId})`);
+      console.log(`   Owner: ${ownerId}`);
+      return { success: true, message: `Server ${serverName} initialized with owner as admin` };
+    } else {
+      console.log(`⚠️ Server ${serverName} initialized in memory (MongoDB save pending)`);
+      return { success: true, message: 'Server initialized in memory', mongoSaved: false };
+    }
+  } catch (error) {
+    console.error('Error initializing new server:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+async function ensureServerOwnerRegistered(serverId, ownerId, serverName = 'Unknown') {
+  try {
+    const config = getServerConfig(serverId);
+    
+    if (!config) {
+      return { success: false, message: 'Server config not found' };
+    }
+    
+    if (config.serverOwnerId === ownerId) {
+      return { success: true, message: 'Owner already registered', changed: false };
+    }
+    
+    const oldOwnerId = config.serverOwnerId;
+    config.serverOwnerId = ownerId;
+    config.ownerChangedAt = new Date();
+    config.previousOwners = config.previousOwners || [];
+    if (oldOwnerId && !config.previousOwners.includes(oldOwnerId)) {
+      config.previousOwners.push(oldOwnerId);
+    }
+    
+    serverConfigs[serverId] = config;
+    await saveServerConfig(serverId, config);
+    
+    console.log(`🔄 Server ownership updated for ${serverName}: ${oldOwnerId} → ${ownerId}`);
+    return { success: true, message: 'Owner updated', changed: true, oldOwnerId, newOwnerId: ownerId };
+  } catch (error) {
+    console.error('Error ensuring server owner registered:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+async function handleOwnershipTransfer(guild) {
+  try {
+    const serverId = guild.id;
+    const newOwnerId = guild.ownerId;
+    const serverName = guild.name;
+    
+    const result = await ensureServerOwnerRegistered(serverId, newOwnerId, serverName);
+    
+    if (result.changed) {
+      console.log(`👑 Ownership transfer detected in ${serverName}`);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error handling ownership transfer:', error);
+    return { success: false, message: error.message };
+  }
+}
+
+function getServerOwnerId(serverId) {
+  const config = getServerConfig(serverId);
+  return config?.serverOwnerId || null;
+}
+
+function isRegisteredServerOwner(userId, serverId) {
+  const config = getServerConfig(serverId);
+  return config?.serverOwnerId === userId;
+}
+
 module.exports = {
   loadServerConfigs,
   saveServerConfig,
@@ -697,6 +804,11 @@ module.exports = {
   getServerAdmins,
   getAllAdminsInfo,
   getHierarchyInfo,
+  initializeNewServer,
+  ensureServerOwnerRegistered,
+  handleOwnershipTransfer,
+  getServerOwnerId,
+  isRegisteredServerOwner,
   DEFAULT_FEATURE_SETTINGS,
   MAIN_SERVER_ID,
   SUPER_ADMINS,
