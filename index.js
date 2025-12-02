@@ -270,6 +270,27 @@ const { ITEM_CATEGORIES, getItemInfo, listItemOnMarket, buyFromMarket, cancelLis
 const { createAuction, placeBid, getActiveAuctions, forceEndAuction, clearAllAuctions, createAuctionEmbed, createAuctionButtons } = auctionSystem;
 const antiCheatSystem = require('./antiCheatSystem.js');
 const moderationSystem = require('./moderationSystem.js');
+const {
+  openHub,
+  openQuickStart,
+  createMainHubEmbed,
+  createHubCategoryButtons,
+  HUB_CATEGORIES
+} = require('./hubSystem.js');
+const {
+  createFirstTimeWelcome,
+  shouldShowOnboarding,
+  initializeOnboarding
+} = require('./onboardingSystem.js');
+const {
+  trackFeatureUse,
+  initializeDiscovery
+} = require('./discoverySystem.js');
+const {
+  handleHubInteraction,
+  isHubInteraction,
+  initializeUserHubData
+} = require('./hubInteractionHandler.js');
 
 const PREFIX = '!';
 let data;
@@ -1089,6 +1110,11 @@ client.on('interactionCreate', async (interaction) => {
   if (!data) return;
   
   try {
+    if (isHubInteraction(interaction.customId)) {
+      const handled = await handleHubInteraction(interaction, data, saveData);
+      if (handled) return;
+    }
+    
     if (interaction.customId === 'join_giveaway') {
       const { handleButtonJoin } = require('./giveawaySystem.js');
       await handleButtonJoin(interaction);
@@ -5218,14 +5244,59 @@ client.on('messageCreate', async (message) => {
         
         await message.reply({ embeds: [permEmbed] });
         break;
+      
+      case 'hub':
+      case 'menu':
+      case 'home':
+        const hubUser = data.users[userId];
+        initializeUserHubData(hubUser);
+        initializeDiscovery(hubUser);
+        trackFeatureUse(hubUser, 'hub');
         
+        if (shouldShowOnboarding(hubUser) && (!hubUser.characters || hubUser.characters.length === 0)) {
+          const { embed, components } = createFirstTimeWelcome(message.author);
+          await message.reply({ embeds: [embed], components });
+        } else {
+          const embed = createMainHubEmbed(message.author, hubUser, hubUser.discovery);
+          const buttons = createHubCategoryButtons();
+          await message.reply({ embeds: [embed], components: buttons });
+        }
+        await saveData(data);
+        break;
+      
+      case 'guide':
+      case 'tutorial':
+      case 'quickstart':
+        const guideUser = data.users[userId];
+        initializeUserHubData(guideUser);
+        trackFeatureUse(guideUser, 'guide');
+        await openQuickStart(message, data, guideUser, 0);
+        await saveData(data);
+        break;
         
+      case 'discovery':
+      case 'explore':
+        const discUser = data.users[userId];
+        initializeUserHubData(discUser);
+        const { createDiscoveryEmbed } = require('./discoverySystem.js');
+        const discEmbed = createDiscoveryEmbed(message.author, discUser);
+        const discRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('hub_main')
+            .setLabel('Open Game Hub')
+            .setEmoji('🏠')
+            .setStyle(ButtonStyle.Primary)
+        );
+        await message.reply({ embeds: [discEmbed], components: [discRow] });
+        break;
+      
       case 'help':
         const helpEmbed = new EmbedBuilder()
           .setColor('#3498DB')
           .setTitle('🎮 ZooBot - Complete Command Guide')
-          .setDescription('Use `!overview` to see all game systems\n\n**📚 Command Categories:**')
+          .setDescription('**🏠 NEW: Use `!hub` for an interactive menu with all features!**\n\nUse `!overview` to see all game systems\n\n**📚 Command Categories:**')
           .addFields(
+            { name: '🏠 Interactive Hub (NEW!)', value: '`!hub` - Open interactive game menu\n`!guide` - Quick start tutorial\n`!discovery` - See feature progress' },
             { name: '🎯 Getting Started', value: '`!start` - Begin your journey\n`!select <character>` - Choose starter character' },
             { name: '🎰 Minigames (NEW!)', value: '`!coinduel <h/t> <bet>` - Coin flip (×2, rare ×5)\n`!diceclash <bet>` - Progressive dice rolling\n`!dooroffate <bet>` - Pick 1 of 3 doors\n`!almostwin <bet>` - Roll 1-100 for prizes\n`!rps <r/p/s> <bet>` - Rock Paper Scissors\n💡 **1.5× rewards on main server!**' },
             { name: '👤 Profile & Characters', value: '`!profile [page]` - View your profile\n`!char <name>` - View character details\n`!info <name>` - View any character info (even if you don\'t own)\n`!I <name>` - View battle info\n`!setpfp <name>` - Set profile picture\n`!levelup <name>` - Level up character\n`!release <name>` - Release character (lvl 10+)' },
