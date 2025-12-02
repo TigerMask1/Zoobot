@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { initializeUserData, formatNumber, parseUserMention } = require('../../utils/shared.js');
 const { calculateLevel, getLevelRequirements } = require('../../levelSystem.js');
 const { getAccountLevelDisplay } = require('../../accountLevelSystem.js');
@@ -86,9 +86,27 @@ module.exports = {
     const createdDate = userData.createdAt 
       ? new Date(userData.createdAt).toLocaleDateString()
       : 'Unknown';
-    embed.setFooter({ text: `Playing since ${createdDate}` });
+    embed.setFooter({ text: `Playing since ${createdDate} | Use !hub for game menu` });
     embed.setTimestamp();
     
-    return message.reply({ embeds: [embed] });
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('hub_main')
+        .setLabel('Game Hub')
+        .setEmoji('🏠')
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('feature_collection')
+        .setLabel('Collection')
+        .setEmoji('🦁')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId('feature_achievements')
+        .setLabel('Achievements')
+        .setEmoji('🏅')
+        .setStyle(ButtonStyle.Primary)
+    );
+    
+    return message.reply({ embeds: [embed], components: [row] });
   }
 };

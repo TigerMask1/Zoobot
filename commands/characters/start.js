@@ -63,7 +63,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(0x00FF00)
       .setTitle('🎉 Welcome to the Zoo!')
-      .setDescription(`Congratulations, **${message.author.username}**! Your adventure begins now!`)
+      .setDescription(`Congratulations, **${message.author.username}**! Your adventure begins now!\n\n**Tip:** Use \`!hub\` to access our interactive menu - no commands to memorize!`)
       .addFields(
         { 
           name: '🦁 Your Starter Character', 
@@ -76,30 +76,30 @@ module.exports = {
           inline: true
         },
         {
-          name: '🚀 Quick Start',
-          value: '`!collection` - View characters\n`!battle @user` - Fight others\n`!work` - Earn rewards\n`!daily` - Claim daily bonus',
+          name: '🚀 What\'s Next?',
+          value: 'Click **Open Hub** below for an easy way to explore all features!',
           inline: true
         }
       )
       .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
-      .setFooter({ text: 'Use !help for a full list of commands' })
+      .setFooter({ text: 'Use !hub for the interactive menu or !help for all commands' })
       .setTimestamp();
     
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId('view_collection')
-        .setLabel('View Collection')
-        .setEmoji('🦁')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId('open_crate')
-        .setLabel('Open Crate')
-        .setEmoji('📦')
+        .setCustomId('hub_main')
+        .setLabel('Open Hub')
+        .setEmoji('🏠')
         .setStyle(ButtonStyle.Success),
       new ButtonBuilder()
-        .setCustomId('view_help')
-        .setLabel('Help')
-        .setEmoji('❓')
+        .setCustomId('hub_guide')
+        .setLabel('Quick Tutorial')
+        .setEmoji('📚')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId('feature_crates')
+        .setLabel('Open Crates')
+        .setEmoji('📦')
         .setStyle(ButtonStyle.Secondary)
     );
     

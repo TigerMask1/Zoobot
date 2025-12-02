@@ -26,7 +26,7 @@ const {
   trackFeatureUse,
   createDiscoveryEmbed
 } = require('./discoverySystem.js');
-const { formatNumber } = require('./utils/formatters.js');
+const { formatNumber } = require('./utils/shared.js');
 
 function initializeUserHubData(userData) {
   if (!userData.discovery) {

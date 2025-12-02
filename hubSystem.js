@@ -1,5 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
-const { formatNumber } = require('./utils/formatters.js');
+const { formatNumber } = require('./utils/shared.js');
 
 const HUB_CATEGORIES = {
   play: {
