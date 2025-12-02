@@ -26,7 +26,7 @@ let activeGiveaway = {
 };
 
 let activeClient = null;
-let sharedData = null;
+let sharedData = null; // THIS WILL BE THE SHARED REFERENCE FROM index.js
 let autoScheduleTimeout = null;
 
 function getGiveawayData() {
@@ -149,7 +149,9 @@ async function startAutomaticGiveaway(channelId) {
 
 async function initializeGiveawaySystem(client, data) {
   activeClient = client;
-  sharedData = data;
+  sharedData = data; // Store the reference to the main bot's data object
+  
+  console.log('📊 Giveaway system: sharedData reference established');
   
   if (USE_MONGODB) {
     const mongoData = await loadGiveawayFromMongo();
@@ -346,11 +348,15 @@ async function endGiveaway() {
   try {
     const winner = await activeClient.users.fetch(winnerId);
     
+    // CRITICAL FIX: Use the shared data reference from index.js
     if (!sharedData) {
-      console.error('Error: sharedData is not available in giveaway system');
+      console.error('❌ CRITICAL: sharedData reference is null in giveaway system!');
       return { success: false, message: '❌ Internal error: Data not available.' };
     }
 
+    console.log('✅ Using shared data reference for giveaway rewards');
+
+    // Initialize user if they don't exist
     if (!sharedData.users[winnerId]) {
       sharedData.users[winnerId] = {
         username: winner.username,
@@ -364,28 +370,39 @@ async function endGiveaway() {
         messageCount: 0,
         lastDailyClaim: null,
         mailbox: [],
-        legendaryCrates: 0
+        legendaryCrates: 0,
+        emeraldCrates: 0,
+        goldCrates: 0,
+        silverCrates: 0,
+        bronzeCrates: 0,
+        tyrantCrates: 0
       };
     }
 
     const userData = sharedData.users[winnerId];
     
-    if (!userData.legendaryCrates) {
-      userData.legendaryCrates = 0;
-    }
+    // Ensure all crate types exist
+    if (!userData.legendaryCrates) userData.legendaryCrates = 0;
+    if (!userData.emeraldCrates) userData.emeraldCrates = 0;
+    if (!userData.goldCrates) userData.goldCrates = 0;
 
-    const gemsToAdd = activeGiveaway.prizes.gems;
-    const coinsToAdd = activeGiveaway.prizes.coins;
-    const cratesToAdd = activeGiveaway.prizes.crates.legendary;
+    // Grant rewards directly to the shared data object
+    const gemsToAdd = activeGiveaway.prizes.gems || 5000;
+    const coinsToAdd = activeGiveaway.prizes.coins || 10000;
+    const cratesToAdd = activeGiveaway.prizes.crates?.legendary || 2;
 
     userData.gems = (userData.gems || 0) + gemsToAdd;
     userData.coins = (userData.coins || 0) + coinsToAdd;
     userData.legendaryCrates = (userData.legendaryCrates || 0) + cratesToAdd;
     
-    console.log(`🎁 Giveaway: Granted ${gemsToAdd} gems, ${coinsToAdd} coins, ${cratesToAdd} legendary crates to ${winner.username} (${winnerId})`);
-    console.log(`🎁 Giveaway: User now has ${userData.gems} gems, ${userData.coins} coins, ${userData.legendaryCrates} legendary crates`);
+    console.log(`🎁 Giveaway: Granted rewards to ${winner.username} (${winnerId})`);
+    console.log(`   💎 Gems: ${gemsToAdd} (new total: ${userData.gems})`);
+    console.log(`   💰 Coins: ${coinsToAdd} (new total: ${userData.coins})`);
+    console.log(`   📦 Legendary Crates: ${cratesToAdd} (new total: ${userData.legendaryCrates})`);
     
+    // Save the shared data immediately
     await saveDataImmediate(sharedData);
+    console.log('💾 Giveaway rewards saved to shared data');
 
     const winnerEmbed = new EmbedBuilder()
       .setColor('#00FF00')
@@ -412,6 +429,7 @@ async function endGiveaway() {
       }
     }
 
+    // Reset giveaway state
     activeGiveaway.active = false;
     activeGiveaway.messageId = null;
     activeGiveaway.participants = [];
