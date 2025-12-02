@@ -5965,7 +5965,7 @@ client.on('messageCreate', async (message) => {
           await message.reply(`❌ Please specify a character! Usage: \`!keyunlock <character name>\`\n\nCollect ${KEYS_TO_UNLOCK} keys to unlock a character. Use \`!charkeys\` to view your collection.`);
           break;
         }
-        const keyUnlockResult = await unlockCharacterWithKeys(data.users[userId], keyUnlockCharName, data);
+        const keyUnlockResult = await unlockCharacterWithKeys(data.users[userId], keyUnlockCharName, data, serverId);
         if (keyUnlockResult.success) {
           const unlockEmbed = new EmbedBuilder()
             .setColor('#00FF00')

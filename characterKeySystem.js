@@ -70,9 +70,33 @@ function canUnlockCharacter(userData, characterName) {
   return keys >= KEYS_TO_UNLOCK && !hasCharacter(userData, characterName);
 }
 
-async function unlockCharacterWithKeys(userData, characterName, data) {
+function isCharacterInBundle(characterName, serverId) {
+  const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+  const bundleChars = characterManager.getCharactersByGame(serverGame);
+  return bundleChars.some(c => c.name.toLowerCase() === characterName.toLowerCase());
+}
+
+function getBundleCharacters(serverId) {
+  const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+  return characterManager.getCharactersByGame(serverGame);
+}
+
+async function unlockCharacterWithKeys(userData, characterName, data, serverId) {
+  if (!serverId) {
+    return { success: false, message: '❌ Server ID required for key unlocks!' };
+  }
+  
+  if (!isCharacterInBundle(characterName, serverId)) {
+    const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+    return { success: false, message: `❌ **${characterName}** is not available in this server's bundle (**${serverGame}**)!\n\nYou can only unlock characters from your server's selected game.` };
+  }
+  
   if (!canUnlockCharacter(userData, characterName)) {
-    return { success: false, message: '❌ Cannot unlock this character!' };
+    const keys = getCharacterKeyCount(userData, characterName);
+    if (hasCharacter(userData, characterName)) {
+      return { success: false, message: `❌ You already own **${characterName}**!` };
+    }
+    return { success: false, message: `❌ You need ${KEYS_TO_UNLOCK} keys to unlock **${characterName}**!\n\n📊 You have: ${keys}/${KEYS_TO_UNLOCK} keys` };
   }
   
   const char = characterManager.getCharacterByName(characterName);
@@ -188,6 +212,7 @@ function createProgressBar(current, max, length = 20) {
 
 async function displayCharacterKeysMenu(message, data, userId, page = 1) {
   const userData = data.users[userId];
+  const serverId = message.guild?.id;
   
   if (!userData || !userData.started) {
     return message.reply('❌ You need to use `!start` first!');
@@ -195,10 +220,11 @@ async function displayCharacterKeysMenu(message, data, userId, page = 1) {
   
   initializeCharacterKeys(userData);
   
-  const allChars = characterManager.getCharacters();
+  const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+  const bundleChars = getBundleCharacters(serverId);
   const keysData = [];
   
-  for (const char of allChars) {
+  for (const char of bundleChars) {
     const keyCount = userData.characterKeys[char.name] || 0;
     const owned = hasCharacter(userData, char.name);
     const emoji = getCharacterKeyEmoji(char.name);
@@ -251,17 +277,20 @@ async function displayCharacterKeysMenu(message, data, userId, page = 1) {
     description = '*No character keys collected yet!*\n\nCollect keys from drops during Key Rush events!';
   }
   
-  const totalKeys = Object.values(userData.characterKeys).reduce((sum, k) => sum + k, 0);
+  const bundleCharNames = new Set(bundleChars.map(c => c.name));
+  const totalKeys = Object.entries(userData.characterKeys)
+    .filter(([name, _]) => bundleCharNames.has(name))
+    .reduce((sum, [_, count]) => sum + count, 0);
   const unlocksReady = keysData.filter(k => k.canUnlock).length;
   
   const embed = new EmbedBuilder()
     .setColor('#FFD700')
-    .setTitle('🔑 Character Keys Collection')
+    .setTitle(`🔑 Character Keys Collection (${serverGame})`)
     .setDescription(description)
     .addFields(
       { 
         name: '📊 Summary', 
-        value: `**Total Keys:** ${totalKeys}\n**Ready to Unlock:** ${unlocksReady} characters\n**Keys Needed:** ${KEYS_TO_UNLOCK} per character`, 
+        value: `**Total Keys:** ${totalKeys}\n**Ready to Unlock:** ${unlocksReady} characters\n**Keys Needed:** ${KEYS_TO_UNLOCK} per character\n**Bundle:** ${serverGame}`, 
         inline: false 
       }
     )
@@ -366,6 +395,7 @@ async function handleCharacterKeysSelect(interaction, data) {
   const userId = interaction.user.id;
   const userData = data.users[userId];
   const selected = interaction.values[0];
+  const serverId = interaction.guild?.id;
   
   if (!userData) {
     return interaction.reply({ content: '❌ You need to start the game first!', ephemeral: true });
@@ -373,7 +403,7 @@ async function handleCharacterKeysSelect(interaction, data) {
   
   if (selected.startsWith('unlock_')) {
     const charName = selected.replace('unlock_', '');
-    const result = await unlockCharacterWithKeys(userData, charName, data);
+    const result = await unlockCharacterWithKeys(userData, charName, data, serverId);
     
     if (result.success) {
       const embed = new EmbedBuilder()
@@ -391,6 +421,7 @@ async function handleCharacterKeysSelect(interaction, data) {
 
 async function displayCharacterKeysMenuUpdate(interaction, data, userId, page) {
   const userData = data.users[userId];
+  const serverId = interaction.guild?.id;
   
   if (!userData || !userData.started) {
     return interaction.reply({ content: '❌ You need to use `!start` first!', ephemeral: true });
@@ -398,10 +429,11 @@ async function displayCharacterKeysMenuUpdate(interaction, data, userId, page) {
   
   initializeCharacterKeys(userData);
   
-  const allChars = characterManager.getCharacters();
+  const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+  const bundleChars = getBundleCharacters(serverId);
   const keysData = [];
   
-  for (const char of allChars) {
+  for (const char of bundleChars) {
     const keyCount = userData.characterKeys[char.name] || 0;
     const owned = hasCharacter(userData, char.name);
     const emoji = getCharacterKeyEmoji(char.name);
@@ -454,17 +486,20 @@ async function displayCharacterKeysMenuUpdate(interaction, data, userId, page) {
     description = '*No character keys collected yet!*\n\nCollect keys from drops during Key Rush events!';
   }
   
-  const totalKeys = Object.values(userData.characterKeys).reduce((sum, k) => sum + k, 0);
+  const bundleCharNames = new Set(bundleChars.map(c => c.name));
+  const totalKeys = Object.entries(userData.characterKeys)
+    .filter(([name, _]) => bundleCharNames.has(name))
+    .reduce((sum, [_, count]) => sum + count, 0);
   const unlocksReady = keysData.filter(k => k.canUnlock).length;
   
   const embed = new EmbedBuilder()
     .setColor('#FFD700')
-    .setTitle('🔑 Character Keys Collection')
+    .setTitle(`🔑 Character Keys Collection (${serverGame})`)
     .setDescription(description)
     .addFields(
       { 
         name: '📊 Summary', 
-        value: `**Total Keys:** ${totalKeys}\n**Ready to Unlock:** ${unlocksReady} characters\n**Keys Needed:** ${KEYS_TO_UNLOCK} per character`, 
+        value: `**Total Keys:** ${totalKeys}\n**Ready to Unlock:** ${unlocksReady} characters\n**Keys Needed:** ${KEYS_TO_UNLOCK} per character\n**Bundle:** ${serverGame}`, 
         inline: false 
       }
     )
@@ -830,13 +865,20 @@ async function catchKeyDrop(userId, serverId, data) {
   
   initializeCharacterKeys(userData);
   
-  const characterName = drop.characterName || 'Unknown Character';
-  const characterEmoji = drop.characterEmoji || '🔑';
+  const bundleChars = getBundleCharacters(serverId);
+  if (bundleChars.length === 0) {
+    delete data.serverDrops[serverId];
+    return { success: false, message: '❌ No characters available in this bundle!' };
+  }
+  
+  let characterName = drop.characterName || '';
+  let characterEmoji = drop.characterEmoji || '🔑';
   const amount = drop.amount || 1;
   
-  if (!characterName || characterName === 'Unknown Character') {
-    delete data.serverDrops[serverId];
-    return { success: false, message: '❌ Invalid key drop data!' };
+  if (!characterName || !isCharacterInBundle(characterName, serverId)) {
+    const randomChar = bundleChars[Math.floor(Math.random() * bundleChars.length)];
+    characterName = randomChar.name;
+    characterEmoji = randomChar.emoji;
   }
   
   const newTotal = addCharacterKeys(userData, characterName, amount);
@@ -930,6 +972,8 @@ module.exports = {
   getCharacterKeyCount,
   hasCharacter,
   canUnlockCharacter,
+  isCharacterInBundle,
+  getBundleCharacters,
   unlockCharacterWithKeys,
   convertExcessKeysToTokens,
   convertAllExcessKeysToTokens,
