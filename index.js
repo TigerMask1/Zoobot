@@ -2397,6 +2397,90 @@ client.on('messageCreate', async (message) => {
         
         pfpsEmbed.setFooter({ text: 'Use !equippfp <id> to equip | !unequippfp to remove' });
         
+
+
+      case 'lotteryschedule':
+      case 'nextlottery':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        
+        const { getLotteryScheduleInfo } = require('./lotterySystem.js');
+        const lotteryInfo = getLotteryScheduleInfo(serverId);
+        
+        if (!lotteryInfo.exists) {
+          await message.reply(lotteryInfo.message);
+          return;
+        }
+        
+        const lotteryScheduleEmbed = new EmbedBuilder()
+          .setColor('#9B59B6')
+          .setTitle('🎰 Lottery Schedule');
+        
+        if (!lotteryInfo.autoEnabled) {
+          lotteryScheduleEmbed.setDescription('❌ Auto lottery is **disabled** for this server.\n\nUse `!autolottery enable <fee> <coins/gems>` to enable it.');
+        } else {
+          let description = '✅ Auto lottery is **enabled**\n\n';
+          
+          if (lotteryInfo.currentlyActive) {
+            description += `**🎲 Current Lottery:**\n`;
+            description += `👥 Participants: ${lotteryInfo.participants}\n`;
+            description += `💰 Prize Pool: ${lotteryInfo.prizePool.toLocaleString()} ${lotteryInfo.currency === 'gems' ? '💎 Gems' : '💰 Coins'}\n`;
+            description += `⏰ Ends: <t:${Math.floor(lotteryInfo.currentEndTime / 1000)}:R> (${lotteryInfo.timeUntilEnd})\n\n`;
+          }
+          
+          description += `**⏰ Next Auto Lottery:**\n`;
+          description += `📅 Starts: <t:${Math.floor(lotteryInfo.nextRunTime / 1000)}:F>\n`;
+          description += `⏱️ Time Until Start: ${lotteryInfo.timeUntilNext}\n\n`;
+          description += `**⚙️ Settings:**\n`;
+          description += `💵 Entry Fee: ${lotteryInfo.entryFee} ${lotteryInfo.currency === 'gems' ? '💎 Gems' : '💰 Coins'}\n`;
+          description += `⏳ Duration: 12 hours\n`;
+          description += `🕛 Schedule: Every 12 hours at **00:00 UTC** and **12:00 UTC**`;
+          
+          lotteryScheduleEmbed.setDescription(description);
+        }
+        
+        await message.reply({ embeds: [lotteryScheduleEmbed] });
+        break;
+        
+      case 'giveawayschedule':
+      case 'nextgiveaway':
+        const { getGiveawayScheduleInfo } = require('./giveawaySystem.js');
+        const giveawayInfo = getGiveawayScheduleInfo();
+        
+        const giveawayScheduleEmbed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle('🎉 Giveaway Schedule');
+        
+        if (!giveawayInfo.autoEnabled) {
+          giveawayScheduleEmbed.setDescription('❌ Auto giveaway is **disabled**.\n\nUse `!autogiveaway enable` to enable it.');
+        } else {
+          let description = '✅ Auto giveaway is **enabled**\n\n';
+          
+          if (giveawayInfo.currentlyActive) {
+            description += `**🎁 Current Giveaway:**\n`;
+            description += `👥 Participants: ${giveawayInfo.participants}\n`;
+            description += `⏰ Ends: <t:${Math.floor(giveawayInfo.currentEndTime / 1000)}:R> (${giveawayInfo.timeUntilEnd})\n\n`;
+          }
+          
+          description += `**⏰ Next Auto Giveaway:**\n`;
+          description += `📅 Starts: <t:${Math.floor(giveawayInfo.nextRunTime / 1000)}:F>\n`;
+          description += `⏱️ Time Until Start: ${giveawayInfo.timeUntilNext}\n\n`;
+          description += `**🎁 Prizes:**\n`;
+          description += `💎 500 Gems\n`;
+          description += `💰 10,000 Coins\n`;
+          description += `📦 2x Legendary Crates\n\n`;
+          description += `**⚙️ Settings:**\n`;
+          description += `⏳ Duration: 24 hours\n`;
+          description += `🕛 Schedule: Daily at **00:00 UTC**`;
+          
+          giveawayScheduleEmbed.setDescription(description);
+        }
+        
+        await message.reply({ embeds: [giveawayScheduleEmbed] });
+        break;
+
         await message.reply({ embeds: [pfpsEmbed] });
         break;
         

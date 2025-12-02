@@ -12,6 +12,30 @@ let activeLotteries = {};
 let activeClient = null;
 let autoScheduleTimeouts = {};
 
+function getNextUTCMidnight() {
+  const now = new Date();
+  const tomorrow = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + 1,
+    0, 0, 0, 0
+  ));
+  return tomorrow.getTime();
+}
+
+function formatTimeUntil(timestamp) {
+  const diff = timestamp - Date.now();
+  if (diff <= 0) return 'Starting soon...';
+  
+  const hours = Math.floor(diff / (60 * 60 * 1000));
+  const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
+}
+
 function getLotteryData() {
   return activeLotteries;
 }
@@ -68,6 +92,8 @@ async function loadLotteryFromMongo() {
 }
 
 async function enableAutoLottery(serverId, entryFee, currency, channelId) {
+  const nextMidnight = getNextUTCMidnight();
+  
   if (!activeLotteries[serverId]) {
     activeLotteries[serverId] = {
       active: false,
@@ -83,14 +109,18 @@ async function enableAutoLottery(serverId, entryFee, currency, channelId) {
       autoSchedule: {
         enabled: true,
         interval: 12 * 60 * 60 * 1000,
-        nextRunTime: Date.now() + (12 * 60 * 60 * 1000)
+        nextRunTime: nextMidnight,
+        startHourUTC: 0,
+        startMinuteUTC: 0
       }
     };
   } else {
     activeLotteries[serverId].autoSchedule = {
       enabled: true,
       interval: 12 * 60 * 60 * 1000,
-      nextRunTime: Date.now() + (12 * 60 * 60 * 1000)
+      nextRunTime: nextMidnight,
+      startHourUTC: 0,
+      startMinuteUTC: 0
     };
     activeLotteries[serverId].entryFee = entryFee;
     activeLotteries[serverId].currency = currency;
@@ -108,7 +138,10 @@ async function enableAutoLottery(serverId, entryFee, currency, channelId) {
   
   scheduleNextAutoLottery(serverId);
   
-  return { success: true, message: '✅ Auto lottery enabled! A lottery will run every 12 hours.' };
+  return { 
+    success: true, 
+    message: `✅ Auto lottery enabled!\n🕛 Starts every 12 hours at **00:00 UTC** and **12:00 UTC**\n⏰ Next lottery: <t:${Math.floor(nextMidnight / 1000)}:F> (${formatTimeUntil(nextMidnight)})`
+  };
 }
 
 async function disableAutoLottery(serverId) {
@@ -144,16 +177,41 @@ function scheduleNextAutoLottery(serverId) {
     clearTimeout(autoScheduleTimeouts[serverId]);
   }
   
-  const timeUntilNext = lottery.autoSchedule.nextRunTime - Date.now();
+  const now = Date.now();
+  let nextRunTime = lottery.autoSchedule.nextRunTime;
+  
+  // If past scheduled time, calculate next 00:00 or 12:00 UTC
+  if (nextRunTime <= now) {
+    const currentDate = new Date();
+    const currentHour = currentDate.getUTCHours();
+    
+    if (currentHour < 12) {
+      // Next is 12:00 UTC today
+      nextRunTime = new Date(Date.UTC(
+        currentDate.getUTCFullYear(),
+        currentDate.getUTCMonth(),
+        currentDate.getUTCDate(),
+        12, 0, 0, 0
+      )).getTime();
+    } else {
+      // Next is 00:00 UTC tomorrow
+      nextRunTime = getNextUTCMidnight();
+    }
+    
+    lottery.autoSchedule.nextRunTime = nextRunTime;
+  }
+  
+  const timeUntilNext = nextRunTime - now;
   
   if (timeUntilNext <= 0) {
     startAutomaticLottery(serverId);
   } else {
     autoScheduleTimeouts[serverId] = setTimeout(() => {
       startAutomaticLottery(serverId);
-    }, timeUntilNext);
+    }, Math.min(timeUntilNext, 2147483647));
     
-    console.log(`⏰ Next auto lottery for server ${serverId} scheduled in ${Math.floor(timeUntilNext / 1000 / 60 / 60)} hours`);
+    const nextDate = new Date(nextRunTime);
+    console.log(`⏰ Next auto lottery for ${serverId}: ${nextDate.toUTCString()} (in ${formatTimeUntil(nextRunTime)})`);
   }
 }
 
@@ -201,10 +259,10 @@ async function startAutomaticLottery(serverId) {
   const lottery = activeLotteries[serverId];
   if (!lottery) return;
   
+  // If manual lottery is running, force end it first
   if (lottery.active) {
-    lottery.autoSchedule.nextRunTime = Date.now() + (12 * 60 * 60 * 1000);
-    scheduleNextAutoLottery(serverId);
-    return;
+    console.log(`⚠️ Manual lottery running during auto schedule for ${serverId} - ending it`);
+    await performLotteryDraw(serverId);
   }
   
   await startLottery(serverId, 12, lottery.entryFee, lottery.currency, lottery.channelId);
@@ -239,7 +297,22 @@ async function startAutomaticLottery(serverId) {
     }
   }
   
-  lottery.autoSchedule.nextRunTime = Date.now() + (12 * 60 * 60 * 1000);
+  // Calculate next run time (either 12:00 UTC today or 00:00 UTC tomorrow)
+  const currentDate = new Date();
+  const currentHour = currentDate.getUTCHours();
+  
+  if (currentHour < 12) {
+    lottery.autoSchedule.nextRunTime = new Date(Date.UTC(
+      currentDate.getUTCFullYear(),
+      currentDate.getUTCMonth(),
+      currentDate.getUTCDate(),
+      12, 0, 0, 0
+    )).getTime();
+  } else {
+    lottery.autoSchedule.nextRunTime = getNextUTCMidnight();
+  }
+  
+  console.log(`✅ Auto lottery started at ${new Date().toUTCString()}`);
   
   if (USE_MONGODB) {
     await saveLotteryToMongo();
@@ -647,6 +720,41 @@ async function getLotteryInfo(serverId, userId) {
   };
 }
 
+function getLotteryScheduleInfo(serverId) {
+  const lottery = activeLotteries[serverId];
+  
+  if (!lottery) {
+    return {
+      exists: false,
+      message: '❌ No lottery configured for this server!'
+    };
+  }
+  
+  const info = {
+    exists: true,
+    autoEnabled: lottery.autoSchedule?.enabled || false,
+    currentlyActive: lottery.active,
+    participants: lottery.participants?.length || 0,
+    prizePool: lottery.prizePool || 0,
+    currency: lottery.currency,
+    entryFee: lottery.entryFee,
+    nextRunTime: lottery.autoSchedule?.nextRunTime,
+    timeUntilNext: null,
+    currentEndTime: lottery.endTime,
+    timeUntilEnd: null
+  };
+  
+  if (info.nextRunTime) {
+    info.timeUntilNext = formatTimeUntil(info.nextRunTime);
+  }
+  
+  if (info.currentEndTime) {
+    info.timeUntilEnd = formatTimeUntil(info.currentEndTime);
+  }
+  
+  return info;
+}
+
 module.exports = {
   initializeLotterySystem,
   startLottery,
@@ -657,5 +765,6 @@ module.exports = {
   getLotteryData,
   setLotteryData,
   enableAutoLottery,
-  disableAutoLottery
+  disableAutoLottery,
+  getLotteryScheduleInfo
 };
