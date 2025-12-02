@@ -211,6 +211,34 @@ async function startAutomaticLottery(serverId) {
   
   await sendLotteryDMsToAllPlayers();
   
+  // Send announcement to specific channel
+  const LOTTERY_ANNOUNCEMENT_CHANNEL = '1445441639064801322';
+  if (activeClient) {
+    try {
+      const announcementChannel = await activeClient.channels.fetch(LOTTERY_ANNOUNCEMENT_CHANNEL);
+      if (announcementChannel) {
+        const announcementEmbed = new EmbedBuilder()
+          .setColor('#9B59B6')
+          .setTitle('🎰 NEW LOTTERY STARTED!')
+          .setDescription(
+            `A new 12-hour lottery has just begun!\n\n` +
+            `**Entry Fee:** ${lottery.entryFee} ${lottery.currency === 'gems' ? '💎 Gems' : '💰 Coins'}\n` +
+            `**Duration:** 12 hours\n` +
+            `**Winners:** Top 3 participants\n` +
+            `**Prize Distribution:** 50%, 30%, 20%\n\n` +
+            `Use \`!lottery join <tickets>\` to participate!\n` +
+            `Ends: <t:${Math.floor((Date.now() + 12 * 60 * 60 * 1000) / 1000)}:R>`
+          )
+          .setTimestamp();
+        
+        await announcementChannel.send({ embeds: [announcementEmbed] });
+        console.log(`📢 Lottery announcement sent to channel ${LOTTERY_ANNOUNCEMENT_CHANNEL}`);
+      }
+    } catch (error) {
+      console.error('Error sending lottery announcement:', error);
+    }
+  }
+  
   lottery.autoSchedule.nextRunTime = Date.now() + (12 * 60 * 60 * 1000);
   
   if (USE_MONGODB) {

@@ -420,6 +420,26 @@ async function endGiveaway() {
       )
       .setFooter({ text: 'Thanks everyone for participating!' })
       .setTimestamp();
+    
+    const mainServerInviteEmbed = new EmbedBuilder()
+      .setColor('#FFD700')
+      .setTitle('🎊 GIVEAWAY WINNER ANNOUNCEMENT!')
+      .setDescription(
+        `**Congratulations to ${winnerTag}!** 🎉\n\n` +
+        `**Prizes Won:**\n` +
+        `💎 ${gemsToAdd.toLocaleString()} Gems\n` +
+        `💰 ${coinsToAdd.toLocaleString()} Coins\n` +
+        `📦 ${cratesToAdd}x Legendary Crate\n\n` +
+        `**Want to participate in future giveaways?**\n` +
+        `Join our main server where giveaways happen regularly!\n\n` +
+        `🎁 Regular giveaways with amazing prizes\n` +
+        `🌟 Exclusive events and drops\n` +
+        `👥 Active community of players\n` +
+        `⚡ Faster drops (20s vs 30s)\n\n` +
+        `Use \`!servers\` to find the main server invite!`
+      )
+      .setFooter({ text: 'Don\'t miss out on the next giveaway!' })
+      .setTimestamp();
 
     if (preservedChannelId && activeGiveaway.messageId) {
       try {
@@ -429,6 +449,29 @@ async function endGiveaway() {
       } catch (editError) {
         console.error('Error editing giveaway message:', editError);
       }
+    }
+    
+    // Broadcast winner to all servers' events channels
+    if (activeClient) {
+      const { getEventsChannel } = require('./serverConfigManager.js');
+      let broadcastCount = 0;
+      
+      for (const guild of activeClient.guilds.cache.values()) {
+        try {
+          const eventsChannelId = getEventsChannel(guild.id);
+          if (eventsChannelId) {
+            const channel = await activeClient.channels.fetch(eventsChannelId).catch(() => null);
+            if (channel) {
+              await channel.send({ embeds: [mainServerInviteEmbed] });
+              broadcastCount++;
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to broadcast giveaway winner to ${guild.name}:`, error.message);
+        }
+      }
+      
+      console.log(`📢 Giveaway winner broadcasted to ${broadcastCount} servers`);
     }
 
     // Reset giveaway state
