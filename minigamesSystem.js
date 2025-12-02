@@ -7,17 +7,6 @@ const activeGames = new Map();
 const COOLDOWNS = new Map();
 const COOLDOWN_TIME = 10000; // 10 seconds between games
 
-function getBalanceFactor(betAmount) {
-  if (betAmount <= 100) return 0;
-  if (betAmount <= 500) return 0.03;
-  if (betAmount <= 1000) return 0.07;
-  if (betAmount <= 5000) return 0.12;
-  if (betAmount <= 10000) return 0.18;
-  if (betAmount <= 50000) return 0.25;
-  if (betAmount <= 100000) return 0.32;
-  return 0.40;
-}
-
 function applyMainServerBonus(profit, serverId) {
   if (isMainServer(serverId)) {
     return Math.floor(profit * 1.3); // 30% bonus to profit only

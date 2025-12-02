@@ -166,6 +166,21 @@ const { getCharacterAbility, getAbilityDescription } = require('./characterAbili
 const characterManager = require('./characterManager.js');
 const eventSystem = require('./eventSystem.js');
 const { viewKeys, unlockCharacter, openRandomCage } = require('./keySystem.js');
+const {
+  displayCharacterKeysMenu,
+  handleCharacterKeysButton,
+  handleCharacterKeysSelect,
+  isKeyRushActive,
+  getKeyRushTimeRemaining,
+  activateKeyRush,
+  activateKeyRushConfirmed,
+  grantKeyRush,
+  catchKeyDrop,
+  initKeyRushScheduler,
+  convertAllExcessKeysToTokens,
+  unlockCharacterWithKeys,
+  KEYS_TO_UNLOCK
+} = require('./characterKeySystem.js');
 const { 
   loadServerConfigs, 
   isMainServer, 
@@ -499,6 +514,12 @@ client.on('clientReady', async () => {
     await startDropSystem(client, data);
   } catch (error) {
     console.warn('⚠️ Drop system init error:', error.message);
+  }
+  
+  try {
+    initKeyRushScheduler(client, data);
+  } catch (error) {
+    console.warn('⚠️ Key Rush scheduler init error:', error.message);
   }
   
   startPromotionSystem(client);
@@ -1255,9 +1276,27 @@ client.on('interactionCreate', async (interaction) => {
       const filterButtons = createMarketFilterButtons(newFilter);
       
       await interaction.update({ embeds: [embed], components: [navButtons, filterButtons] });
+    } else if (interaction.customId.startsWith('charkeys_')) {
+      await handleCharacterKeysButton(interaction, data);
     }
   } catch (error) {
     console.error('Error handling button interaction:', error);
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({ content: '❌ An error occurred!', ephemeral: true }).catch(() => {});
+    }
+  }
+});
+
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isStringSelectMenu()) return;
+  if (!data) return;
+  
+  try {
+    if (interaction.customId.startsWith('charkeys_select')) {
+      await handleCharacterKeysSelect(interaction, data);
+    }
+  } catch (error) {
+    console.error('Error handling select menu interaction:', error);
     if (!interaction.replied && !interaction.deferred) {
       await interaction.reply({ content: '❌ An error occurred!', ephemeral: true }).catch(() => {});
     }
@@ -3257,7 +3296,30 @@ client.on('messageCreate', async (message) => {
         if (data.serverDrops[serverId] && data.serverDrops[serverId].code === code) {
           const drop = data.serverDrops[serverId];
           
-          if (drop.type === 'tokens') {
+          if (drop.type === 'characterKey') {
+            const keyResult = await catchKeyDrop(userId, serverId, data);
+            
+            if (keyResult && keyResult.success) {
+              if (!data.users[userId].questProgress) data.users[userId].questProgress = {};
+              data.users[userId].questProgress.dropsCaught = (data.users[userId].questProgress.dropsCaught || 0) + 1;
+              data.users[userId].lastActivity = Date.now();
+              
+              trackChallengeProgress(data.users[userId], 'dropsCaught', 1);
+              checkAchievements(data.users[userId]);
+              updateTaskProgress(data.users[userId], 'dropsCaught', 1);
+              if (message.guild) {
+                recordEvent(data, message.guild.id, 'dropsClaimed', 1, userId);
+              }
+              
+              const keyEmbed = new EmbedBuilder()
+                .setColor('#FFD700')
+                .setTitle('🔑 CHARACTER KEY CAUGHT!')
+                .setDescription(`<@${userId}> caught the key!\n\n**Reward:** ${keyResult.amount} ${keyResult.characterEmoji} ${keyResult.characterName} Key${keyResult.amount > 1 ? 's' : ''}${keyResult.bonusMessage}`)
+                .setFooter({ text: 'Use !charkeys to view your collection!' });
+              
+              await message.reply({ embeds: [keyEmbed] });
+            }
+          } else if (drop.type === 'tokens') {
             const charToReward = data.users[userId].characters.find(c => 
               c.name.toLowerCase() === drop.characterName.toLowerCase()
             );
@@ -5888,6 +5950,99 @@ client.on('messageCreate', async (message) => {
       case 'unlock':
         const unlockCharName = args.join(' ');
         await unlockCharacter(message, data, userId, unlockCharName);
+        break;
+      
+      case 'charkeys':
+      case 'characterkeys':
+      case 'ck':
+        const ckPage = parseInt(args[0]) || 1;
+        await displayCharacterKeysMenu(message, data, userId, ckPage);
+        break;
+      
+      case 'keyunlock':
+        const keyUnlockCharName = args.join(' ');
+        if (!keyUnlockCharName) {
+          await message.reply(`❌ Please specify a character! Usage: \`!keyunlock <character name>\`\n\nCollect ${KEYS_TO_UNLOCK} keys to unlock a character. Use \`!charkeys\` to view your collection.`);
+          break;
+        }
+        const keyUnlockResult = await unlockCharacterWithKeys(data.users[userId], keyUnlockCharName, data);
+        if (keyUnlockResult.success) {
+          const unlockEmbed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle('🎉 CHARACTER UNLOCKED!')
+            .setDescription(`You unlocked **${keyUnlockResult.character.emoji} ${keyUnlockResult.character.name}**!\n\n**ST:** ${keyUnlockResult.st}%\n**Level:** 1\n\nUsed ${KEYS_TO_UNLOCK} keys!`)
+            .setFooter({ text: 'Use !profile to view your characters!' });
+          await message.reply({ embeds: [unlockEmbed] });
+        } else {
+          await message.reply(keyUnlockResult.message);
+        }
+        break;
+      
+      case 'convertkeys':
+        const convResult = convertAllExcessKeysToTokens(data.users[userId]);
+        await saveDataImmediate(data);
+        if (convResult.totalConverted > 0) {
+          const convList = convResult.conversions.map(c => `${c.character}: +${c.amount} tokens`).join('\n');
+          const convEmbed = new EmbedBuilder()
+            .setColor('#00FF00')
+            .setTitle('🔄 Keys Converted!')
+            .setDescription(`**Conversions:**\n${convList}\n\n**Total:** ${convResult.totalConverted} keys converted to tokens`)
+            .setFooter({ text: 'Keys for owned characters are automatically converted!' });
+          await message.reply({ embeds: [convEmbed] });
+        } else {
+          await message.reply('❌ No excess keys to convert! Keys for owned characters can be converted.');
+        }
+        break;
+      
+      case 'keyrush':
+        if (!isZooAdmin(message, serverId)) {
+          await message.reply('❌ Only ZooAdmins can activate Key Rush!');
+          break;
+        }
+        
+        if (args[0]?.toLowerCase() === 'confirm') {
+          const krConfirmResult = await activateKeyRushConfirmed(serverId, userId, data);
+          const krConfirmEmbed = new EmbedBuilder()
+            .setColor(krConfirmResult.success ? '#FFD700' : '#FF0000')
+            .setDescription(krConfirmResult.message);
+          await message.reply({ embeds: [krConfirmEmbed] });
+        } else {
+          const krResult = await activateKeyRush(serverId, userId, data);
+          if (krResult.needsConfirmation) {
+            const warnEmbed = new EmbedBuilder()
+              .setColor('#FFA500')
+              .setTitle('⚠️ Confirmation Required')
+              .setDescription(krResult.message);
+            await message.reply({ embeds: [warnEmbed] });
+          } else {
+            const krEmbed = new EmbedBuilder()
+              .setColor(krResult.success ? '#FFD700' : '#FF0000')
+              .setDescription(krResult.message);
+            await message.reply({ embeds: [krEmbed] });
+          }
+        }
+        break;
+      
+      case 'keyrushstatus':
+        if (isKeyRushActive(serverId)) {
+          const timeLeft = getKeyRushTimeRemaining(serverId);
+          await message.reply(`🔑 **Key Rush is ACTIVE!**\n⏰ Time Remaining: ${timeLeft}\n\n🎁 All drops are character keys during Key Rush!`);
+        } else {
+          await message.reply('❌ Key Rush is not currently active. Use `!keyrush` to activate it (costs 250 gems).');
+        }
+        break;
+      
+      case 'grantkeyrush':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can grant Key Rush!');
+          break;
+        }
+        const gkrServerId = args[0] || serverId;
+        const gkrResult = await grantKeyRush(gkrServerId, userId);
+        const gkrEmbed = new EmbedBuilder()
+          .setColor(gkrResult.success ? '#FFD700' : '#FF0000')
+          .setDescription(gkrResult.message);
+        await message.reply({ embeds: [gkrEmbed] });
         break;
         
       case 'cage':

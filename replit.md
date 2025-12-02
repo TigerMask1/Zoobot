@@ -17,7 +17,8 @@ The bot is built on Discord.js v14 and Node.js 20, using a dual-mode data storag
 **Technical Implementations:**
 - **Character System:** 50+ unique characters with tokens, traits, moves, HP scaling, levels, and skins, with dynamic character creation and a player submission system.
 - **Economy & Currency:** Multiple currencies (Coins, Gems, Trophies, Character Tokens, UST) with various reward mechanisms.
-- **Interactive Systems:** Multi-tiered crate system, random token/coin/gem drops, secure player trading, universal marketplace, and a time-based auction system.
+- **Interactive Systems:** Multi-tiered crate system, random token/coin/gem drops, secure player trading, universal marketplace, time-based auction system, and character key collection system.
+- **Character Key System:** Players collect keys for specific characters (750 keys to unlock). Includes Key Rush events (1-hour key-only drops), auto-conversion of excess keys to tokens for owned characters, and scheduled daily Key Rush hours in the main server.
 - **Battle System:** Turn-based combat with energy management, passive abilities, critical hits, status effects, consumables, and an AI battle system with dynamic difficulty.
 - **Seasonal Events:** A rotating season pass system with daily tasks, milestone rewards, and themed content.
 - **Interactive Hub System:** Button-based navigation for all bot features, categorized player and admin panels, onboarding tutorials, and feature discovery.
@@ -45,3 +46,29 @@ The bot is built on Discord.js v14 and Node.js 20, using a dual-mode data storag
 - **Node.js 20**: JavaScript runtime environment.
 - **Express**: Lightweight HTTP server for health checks.
 - **MongoDB**: Production data persistence.
+
+## Recent Changes (December 2025)
+
+### Character Key System Implementation
+Added a new character key collection system as an alternative way to unlock characters:
+
+**New Commands:**
+- `!charkeys` / `!ck` - View your character key collection with progress bars
+- `!keyunlock <character>` - Unlock a character using 750 keys
+- `!convertkeys` - Convert excess keys for owned characters to tokens (1:1)
+- `!keyrush` - Activate Key Rush event (250 gems, 1 hour) - ZooAdmin only
+- `!keyrushstatus` - Check if Key Rush is currently active
+- `!grantkeyrush [serverId]` - Grant free Key Rush - Super Admin only
+
+**Key Features:**
+- Character keys drop during Key Rush events (all drops become keys)
+- 750 keys required to unlock any character
+- Keys follow server's selected game bundle
+- Auto-conversion of excess keys to tokens when catching key drops for owned chars
+- Scheduled daily Key Rush hours at 10:00, 16:00, and 22:00 in the main server
+- Interactive paginated menu with select dropdown for character details
+
+**Files Modified:**
+- `characterKeySystem.js` - New file with all key system logic
+- `dropSystem.js` - Added Key Rush drop type support
+- `index.js` - Integrated commands, handlers, and scheduler initialization

@@ -3,6 +3,7 @@ const { saveData, saveDataImmediate } = require('./dataManager.js');
 const characterManager = require('./characterManager.js');
 const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerGame, hasSelectedGame, DEFAULT_GAME } = require('./serverConfigManager.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
+const { isKeyRushActive, getKeyRushTimeRemaining } = require('./characterKeySystem.js');
 
 let dropIntervals = new Map();
 let activeClient = null;
@@ -273,8 +274,21 @@ async function executeDrop(serverId) {
     // ===== PHASE 2: Create a new drop =====
     const dropTypeRoll = Math.random();
     let selectedDrop, characterName = '';
-
-    if (dropTypeRoll < 0.02) {
+    
+    const keyRushActive = isKeyRushActive(serverId);
+    
+    if (keyRushActive) {
+      const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+      const gameChars = characterManager.getCharactersByGame(serverGame);
+      
+      if (gameChars.length > 0) {
+        const randomChar = gameChars[Math.floor(Math.random() * gameChars.length)];
+        characterName = randomChar.name;
+        selectedDrop = { type: 'characterKey', min: 1, max: 1, emoji: '🔑', characterName, characterEmoji: randomChar.emoji };
+      } else {
+        selectedDrop = { type: 'coins', min: 1, max: 10, emoji: '💰' };
+      }
+    } else if (dropTypeRoll < 0.02) {
       selectedDrop = { type: 'shards', min: 1, max: 2, emoji: '🔷' };
     } else if (dropTypeRoll < 0.62) {
       const serverGame = getServerGame(serverId) || DEFAULT_GAME;
@@ -306,18 +320,31 @@ async function executeDrop(serverId) {
     const amount = Math.floor(Math.random() * (selectedDrop.max - selectedDrop.min + 1)) + selectedDrop.min;
     const code = DROP_CODES[Math.floor(Math.random() * DROP_CODES.length)];
 
-    const rewardText = selectedDrop.type === 'tokens'
-      ? `**Reward:** ${amount} ${characterName} tokens ${selectedDrop.emoji}`
-      : `**Reward:** ${amount} ${selectedDrop.type} ${selectedDrop.emoji}`;
+    let rewardText;
+    if (selectedDrop.type === 'characterKey') {
+      const charEmoji = selectedDrop.characterEmoji || '🔑';
+      rewardText = `**Reward:** ${charEmoji} ${characterName} Key ${selectedDrop.emoji}`;
+    } else if (selectedDrop.type === 'tokens') {
+      rewardText = `**Reward:** ${amount} ${characterName} tokens ${selectedDrop.emoji}`;
+    } else {
+      rewardText = `**Reward:** ${amount} ${selectedDrop.type} ${selectedDrop.emoji}`;
+    }
 
     const timeRemaining = getDropsTimeRemaining(serverId);
-    const footerText = isMainServer(serverId) 
-      ? 'First person to type the command gets it!'
-      : `⏰ Drops expire in: ${timeRemaining} | First person to catch wins!`;
+    const keyRushTimeRemaining = keyRushActive ? getKeyRushTimeRemaining(serverId) : '';
+    
+    let footerText;
+    if (keyRushActive) {
+      footerText = `🔑 KEY RUSH ACTIVE! ⏰ ${keyRushTimeRemaining} remaining | First to catch wins!`;
+    } else if (isMainServer(serverId)) {
+      footerText = 'First person to type the command gets it!';
+    } else {
+      footerText = `⏰ Drops expire in: ${timeRemaining} | First person to catch wins!`;
+    }
 
     const dropEmbed = new EmbedBuilder()
-      .setColor('#FFD700')
-      .setTitle('🎁 DROP APPEARED!')
+      .setColor(keyRushActive ? '#FF6B00' : '#FFD700')
+      .setTitle(keyRushActive ? '🔑 KEY DROP!' : '🎁 DROP APPEARED!')
       .setDescription(`A wild drop appeared!\n\n${rewardText}\n\nType \`!c ${code}\` to catch it!`)
       .setFooter({ text: footerText })
       .setTimestamp();
@@ -330,6 +357,7 @@ async function executeDrop(serverId) {
       amount,
       code,
       characterName,
+      characterEmoji: selectedDrop.characterEmoji || '',
       messageId: dropMessage.id,
       serverId,
       spawnedAt: Date.now()
