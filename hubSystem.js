@@ -171,10 +171,42 @@ const HUB_CATEGORIES = {
 };
 
 const ADMIN_CATEGORIES = {
+  hierarchy: {
+    emoji: '📊',
+    name: 'Role Hierarchy',
+    description: 'View and manage bot roles and permissions',
+    color: 0xFFD700,
+    commands: [
+      { cmd: '!hierarchy', desc: 'View the complete role hierarchy and permissions' },
+      { cmd: '!myrole', desc: 'Check your current role and what you can do' },
+      { cmd: '!admins', desc: 'View all bot admins (super, global, server)' },
+      { cmd: '!addbotadmin @user', desc: 'Add a global bot admin (Super Admin only)' },
+      { cmd: '!removebotadmin @user', desc: 'Remove a global bot admin (Super Admin only)' },
+      { cmd: '!addserveradmin @user', desc: 'Add a server admin (Owner/Bot Admin)' },
+      { cmd: '!removeserveradmin @user', desc: 'Remove a server admin (Owner/Bot Admin)' },
+      { cmd: '!setzoorole <name>', desc: 'Set the ZooAdmin role name for this server' }
+    ]
+  },
+  settings: {
+    emoji: '🔧',
+    name: 'Server Settings',
+    description: 'Configure features and notifications for your server',
+    color: 0x3498DB,
+    commands: [
+      { cmd: '!settings', desc: 'View all current server settings' },
+      { cmd: '!toggle <feature>', desc: 'Toggle a feature on/off (see list below)' },
+      { cmd: '!toggle pingdrops', desc: 'Toggle ping on character drops' },
+      { cmd: '!toggle pingevents', desc: 'Toggle ping on events' },
+      { cmd: '!toggle pinggiveaways', desc: 'Toggle ping on giveaways' },
+      { cmd: '!toggle battles', desc: 'Toggle battle system' },
+      { cmd: '!toggle minigames', desc: 'Toggle minigames' },
+      { cmd: '!setpingrole <type> @role', desc: 'Set which role gets pinged (drops/events/giveaways/lottery/updates)' }
+    ]
+  },
   server: {
     emoji: '⚙️',
     name: 'Server Setup',
-    description: 'Configure ZooBot for your server',
+    description: 'Configure ZooBot channels and game selection',
     color: 0xFF6B6B,
     commands: [
       { cmd: '!setup', desc: 'Start the interactive server setup wizard' },
@@ -195,13 +227,13 @@ const ADMIN_CATEGORIES = {
     description: 'Manage users and maintain order',
     color: 0xE67E22,
     commands: [
-      { cmd: '!warn @user [reason]', desc: 'Issue a warning to a user' },
+      { cmd: '!warn @user [reason]', desc: 'Issue a warning to a user (ZooAdmin+)' },
       { cmd: '!warnings [@user]', desc: 'View warnings for a user' },
-      { cmd: '!clearwarnings @user', desc: 'Clear all warnings for a user' },
-      { cmd: '!botban @user [reason]', desc: 'Ban a user from using bot commands' },
-      { cmd: '!unbotban @user', desc: 'Unban a user from bot commands' },
-      { cmd: '!mute @user [duration] [reason]', desc: 'Mute user from bot commands' },
-      { cmd: '!unmute @user', desc: 'Unmute a user' },
+      { cmd: '!clearwarnings @user', desc: 'Clear all warnings for a user (Server Admin+)' },
+      { cmd: '!botban @user [reason]', desc: 'Ban user from bot in this server (Server Admin+)' },
+      { cmd: '!unbotban @user', desc: 'Unban a user from bot commands (Server Admin+)' },
+      { cmd: '!mute @user [duration] [reason]', desc: 'Mute user from bot commands (ZooAdmin+)' },
+      { cmd: '!unmute @user', desc: 'Unmute a user (ZooAdmin+)' },
       { cmd: '!clear <count> [@user]', desc: 'Purge messages from the channel' },
       { cmd: '!announce <message>', desc: 'Send a server announcement' },
       { cmd: '!modlogs', desc: 'View moderation action logs' },
@@ -211,11 +243,11 @@ const ADMIN_CATEGORIES = {
   management: {
     emoji: '👑',
     name: 'Bot Management',
-    description: 'Admin-level bot controls',
+    description: 'Server Owner and Admin controls',
     color: 0x9B59B6,
     commands: [
-      { cmd: '!addadmin @user', desc: 'Add a bot admin for this server' },
-      { cmd: '!removeadmin @user', desc: 'Remove a bot admin' },
+      { cmd: '!addadmin @user', desc: 'Add a server admin (legacy command)' },
+      { cmd: '!removeadmin @user', desc: 'Remove a server admin (legacy command)' },
       { cmd: '!setemoji <char> <emoji>', desc: 'Set custom character emoji' },
       { cmd: '!setchestgif <type> <url>', desc: 'Set custom crate opening GIF' },
       { cmd: '!serverstats / !stats', desc: 'View server analytics' },
@@ -240,8 +272,8 @@ const ADMIN_CATEGORIES = {
       { cmd: '!qedit <key> | <message>', desc: 'Edit a Q&A entry' },
       { cmd: '!qdel <key>', desc: 'Delete a Q&A entry' },
       { cmd: '!pendingqa', desc: 'View pending Q&A submissions' },
-      { cmd: '!approveqa <ID>', desc: 'Approve a Q&A submission' },
-      { cmd: '!rejectqa <ID> [reason]', desc: 'Reject a Q&A submission' }
+      { cmd: '!approveqa <ID>', desc: 'Approve a Q&A submission (Bot Admin+)' },
+      { cmd: '!rejectqa <ID> [reason]', desc: 'Reject a Q&A submission (Bot Admin+)' }
     ]
   }
 };

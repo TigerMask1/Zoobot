@@ -166,7 +166,56 @@ const { getCharacterAbility, getAbilityDescription } = require('./characterAbili
 const characterManager = require('./characterManager.js');
 const eventSystem = require('./eventSystem.js');
 const { viewKeys, unlockCharacter, openRandomCage } = require('./keySystem.js');
-const { loadServerConfigs, isMainServer, isSuperAdmin, isBotAdmin, isZooAdmin, addBotAdmin, removeBotAdmin, setupServer, isServerSetup, isServerFullySetup, hasSelectedGame, getServerGame, getSetupStatus, setDropChannel, setEventsChannel, setUpdatesChannel, getUpdatesChannel, DEFAULT_GAME } = require('./serverConfigManager.js');
+const { 
+  loadServerConfigs, 
+  isMainServer, 
+  isSuperAdmin, 
+  isGlobalBotAdmin,
+  isServerOwner,
+  isServerAdmin,
+  isBotAdmin, 
+  isZooAdmin, 
+  canManageBot,
+  canModerate,
+  canManageEconomy,
+  canApproveContent,
+  canBanGlobally,
+  canBanInServer,
+  canMuteInServer,
+  canToggleFeatures,
+  canSetupServer,
+  getUserRole,
+  addGlobalBotAdmin,
+  removeGlobalBotAdmin,
+  addServerAdmin,
+  removeServerAdmin,
+  addBotAdmin, 
+  removeBotAdmin, 
+  getFeatureSettings,
+  updateFeatureSetting,
+  updateMultipleFeatures,
+  isFeatureEnabled,
+  getPingSettings,
+  formatPingMention,
+  setZooAdminRole,
+  setupServer, 
+  isServerSetup, 
+  isServerFullySetup, 
+  hasSelectedGame, 
+  getServerGame, 
+  getSetupStatus, 
+  setDropChannel, 
+  setEventsChannel, 
+  setUpdatesChannel, 
+  getUpdatesChannel,
+  getSuperAdminIds,
+  getGlobalBotAdmins,
+  getServerAdmins,
+  getAllAdminsInfo,
+  getHierarchyInfo,
+  DEFAULT_FEATURE_SETTINGS,
+  DEFAULT_GAME 
+} = require('./serverConfigManager.js');
 const gameSystem = require('./gameSystem.js');
 const charSubmissionSystem = require('./characterSubmissionSystem.js');
 const { startPromotionSystem } = require('./promotionSystem.js');
@@ -1432,6 +1481,388 @@ client.on('messageCreate', async (message) => {
         
         const removeResult = await removeBotAdmin(serverId, userToRemove.id, userId);
         await message.reply(removeResult.message);
+        break;
+      
+      case 'admins':
+      case 'botadmins':
+      case 'viewadmins':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        
+        const adminsInfo = getAllAdminsInfo(serverId);
+        const superAdminsList = adminsInfo.superAdmins.map(id => `<@${id}>`).join('\n') || 'None';
+        const globalBotAdminsList = adminsInfo.globalBotAdmins.map(id => `<@${id}>`).join('\n') || 'None';
+        const serverAdminsList = adminsInfo.serverAdmins.map(id => `<@${id}>`).join('\n') || 'None';
+        
+        const adminsEmbed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle('👑 Bot Administration')
+          .setDescription('Here are all the users who can manage ZooBot:')
+          .addFields(
+            { name: '👑 Super Admins', value: superAdminsList, inline: true },
+            { name: '⚡ Global Bot Admins', value: globalBotAdminsList, inline: true },
+            { name: '🛡️ Server Admins', value: serverAdminsList, inline: true }
+          )
+          .setFooter({ text: 'Use !hierarchy to see what each role can do' })
+          .setTimestamp();
+        
+        await message.reply({ embeds: [adminsEmbed] });
+        break;
+      
+      case 'hierarchy':
+      case 'roles':
+      case 'roleinfo':
+        const hierarchyInfo = getHierarchyInfo();
+        
+        const hierarchyEmbed = new EmbedBuilder()
+          .setColor(0xFFD700)
+          .setTitle('📊 ZooBot Role Hierarchy')
+          .setDescription('Understanding who can do what in ZooBot:')
+          .setTimestamp();
+        
+        for (const role of hierarchyInfo) {
+          hierarchyEmbed.addFields({
+            name: `${role.emoji} ${role.name} (Level ${role.level})`,
+            value: role.description,
+            inline: false
+          });
+        }
+        
+        hierarchyEmbed.setFooter({ text: 'Use !myrole to see your current role' });
+        
+        await message.reply({ embeds: [hierarchyEmbed] });
+        break;
+      
+      case 'myrole':
+      case 'myrank':
+        const myRole = getUserRole(userId, serverId, message.member);
+        
+        const myRoleEmbed = new EmbedBuilder()
+          .setColor(myRole.color)
+          .setTitle(`${myRole.emoji} Your Role: ${myRole.name}`)
+          .setDescription(`You are a **Level ${myRole.level} ${myRole.name}** in ZooBot.`)
+          .addFields({
+            name: 'What you can do:',
+            value: getHierarchyInfo().find(r => r.level === myRole.level)?.description || 'Play and enjoy ZooBot!',
+            inline: false
+          })
+          .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))
+          .setTimestamp();
+        
+        await message.reply({ embeds: [myRoleEmbed] });
+        break;
+      
+      case 'addbotadmin':
+      case 'addglobaladmin':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only **Super Admins** can add global Bot Admins!');
+          return;
+        }
+        
+        const userToAddGlobal = message.mentions.users.first();
+        if (!userToAddGlobal) {
+          await message.reply('❌ Please mention a user! Usage: `!addbotadmin @user`');
+          return;
+        }
+        
+        const addGlobalResult = await addGlobalBotAdmin(userToAddGlobal.id, userId);
+        await message.reply(addGlobalResult.message);
+        break;
+      
+      case 'removebotadmin':
+      case 'removeglobaladmin':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only **Super Admins** can remove global Bot Admins!');
+          return;
+        }
+        
+        const userToRemoveGlobal = message.mentions.users.first();
+        if (!userToRemoveGlobal) {
+          await message.reply('❌ Please mention a user! Usage: `!removebotadmin @user`');
+          return;
+        }
+        
+        const removeGlobalResult = await removeGlobalBotAdmin(userToRemoveGlobal.id, userId);
+        await message.reply(removeGlobalResult.message);
+        break;
+      
+      case 'addserveradmin':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        
+        const userToAddServer = message.mentions.users.first();
+        if (!userToAddServer) {
+          await message.reply('❌ Please mention a user! Usage: `!addserveradmin @user`');
+          return;
+        }
+        
+        const addServerResult = await addServerAdmin(serverId, userToAddServer.id, userId, message.member);
+        await message.reply(addServerResult.message);
+        break;
+      
+      case 'removeserveradmin':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        
+        const userToRemoveServer = message.mentions.users.first();
+        if (!userToRemoveServer) {
+          await message.reply('❌ Please mention a user! Usage: `!removeserveradmin @user`');
+          return;
+        }
+        
+        const removeServerResult = await removeServerAdmin(serverId, userToRemoveServer.id, userId, message.member);
+        await message.reply(removeServerResult.message);
+        break;
+      
+      case 'settings':
+      case 'serversettings':
+      case 'botsettings':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        
+        const featureSettings = getFeatureSettings(serverId);
+        
+        const settingsEmbed = new EmbedBuilder()
+          .setColor(0x3498DB)
+          .setTitle('⚙️ Server Settings')
+          .setDescription('Current feature settings for this server:')
+          .addFields(
+            { 
+              name: '🔔 Ping Settings', 
+              value: `Drops: ${featureSettings.pingOnDrops ? '✅' : '❌'}\nEvents: ${featureSettings.pingOnEvents ? '✅' : '❌'}\nGiveaways: ${featureSettings.pingOnGiveaways ? '✅' : '❌'}\nLottery: ${featureSettings.pingOnLottery ? '✅' : '❌'}\nUpdates: ${featureSettings.pingOnUpdates ? '✅' : '❌'}`,
+              inline: true 
+            },
+            { 
+              name: '🎮 Game Features', 
+              value: `Drops: ${featureSettings.dropsEnabled ? '✅' : '❌'}\nEvents: ${featureSettings.eventsEnabled ? '✅' : '❌'}\nBattles: ${featureSettings.battlesEnabled ? '✅' : '❌'}\nMinigames: ${featureSettings.minigamesEnabled ? '✅' : '❌'}\nTrivia: ${featureSettings.triviaEnabled ? '✅' : '❌'}`,
+              inline: true 
+            },
+            { 
+              name: '💰 Economy Features', 
+              value: `Trading: ${featureSettings.tradingEnabled ? '✅' : '❌'}\nMarket: ${featureSettings.marketEnabled ? '✅' : '❌'}\nGiveaways: ${featureSettings.giveawaysEnabled ? '✅' : '❌'}\nLottery: ${featureSettings.lotteryEnabled ? '✅' : '❌'}\nWork: ${featureSettings.workSystemEnabled ? '✅' : '❌'}`,
+              inline: true 
+            },
+            {
+              name: '🛡️ Moderation',
+              value: `Profanity Filter: ${featureSettings.profanityFilter ? '✅' : '❌'}\nAuto-Mod: ${featureSettings.autoModEnabled ? '✅' : '❌'}\nMax Warnings: ${featureSettings.maxWarningsBeforeBan}`,
+              inline: true
+            },
+            {
+              name: '🎓 New Player',
+              value: `Welcome Messages: ${featureSettings.welcomeNewPlayers ? '✅' : '❌'}\nTutorial Hints: ${featureSettings.showTutorialHints ? '✅' : '❌'}`,
+              inline: true
+            }
+          )
+          .setFooter({ text: 'Use !toggle <feature> to change settings | Server Owner/Admins only' })
+          .setTimestamp();
+        
+        await message.reply({ embeds: [settingsEmbed] });
+        break;
+      
+      case 'toggle':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        
+        if (!canToggleFeatures(userId, serverId, message.member)) {
+          await message.reply('❌ Only **Server Owners** or **Server Admins** can toggle features!');
+          return;
+        }
+        
+        const featureToToggle = args[0]?.toLowerCase();
+        if (!featureToToggle) {
+          const toggleHelpEmbed = new EmbedBuilder()
+            .setColor(0x3498DB)
+            .setTitle('⚙️ Feature Toggle Help')
+            .setDescription('Toggle features on or off for your server.')
+            .addFields(
+              { 
+                name: '🔔 Ping Settings', 
+                value: '`!toggle pingdrops` - Ping on drops\n`!toggle pingevents` - Ping on events\n`!toggle pinggiveaways` - Ping on giveaways\n`!toggle pinglottery` - Ping on lottery\n`!toggle pingupdates` - Ping on updates',
+                inline: false 
+              },
+              { 
+                name: '🎮 Game Features', 
+                value: '`!toggle drops` - Character drops\n`!toggle events` - Events system\n`!toggle battles` - Battle system\n`!toggle minigames` - Minigames\n`!toggle trivia` - Trivia',
+                inline: false 
+              },
+              { 
+                name: '💰 Economy Features', 
+                value: '`!toggle trading` - Player trading\n`!toggle market` - Marketplace\n`!toggle giveaways` - Giveaways\n`!toggle lottery` - Lottery\n`!toggle work` - Work system',
+                inline: false 
+              },
+              {
+                name: '🛡️ Moderation',
+                value: '`!toggle profanity` - Profanity filter\n`!toggle automod` - Auto moderation\n`!toggle welcome` - Welcome messages\n`!toggle hints` - Tutorial hints',
+                inline: false
+              }
+            )
+            .setFooter({ text: 'Example: !toggle drops to toggle the drops feature' });
+          
+          await message.reply({ embeds: [toggleHelpEmbed] });
+          return;
+        }
+        
+        const featureMap = {
+          'pingdrops': 'pingOnDrops',
+          'pingevents': 'pingOnEvents',
+          'pinggiveaways': 'pingOnGiveaways',
+          'pinglottery': 'pingOnLottery',
+          'pingupdates': 'pingOnUpdates',
+          'drops': 'dropsEnabled',
+          'events': 'eventsEnabled',
+          'giveaways': 'giveawaysEnabled',
+          'lottery': 'lotteryEnabled',
+          'trading': 'tradingEnabled',
+          'market': 'marketEnabled',
+          'battles': 'battlesEnabled',
+          'minigames': 'minigamesEnabled',
+          'trivia': 'triviaEnabled',
+          'clans': 'clanSystemEnabled',
+          'leaderboards': 'leaderboardsEnabled',
+          'work': 'workSystemEnabled',
+          'quests': 'questsEnabled',
+          'daily': 'dailyRewardsEnabled',
+          'profanity': 'profanityFilter',
+          'automod': 'autoModEnabled',
+          'welcome': 'welcomeNewPlayers',
+          'hints': 'showTutorialHints'
+        };
+        
+        const actualFeatureName = featureMap[featureToToggle];
+        if (!actualFeatureName) {
+          await message.reply(`❌ Unknown feature: \`${featureToToggle}\`. Use \`!toggle\` to see available features.`);
+          return;
+        }
+        
+        const currentSettings = getFeatureSettings(serverId);
+        const newValue = !currentSettings[actualFeatureName];
+        
+        const toggleResult = await updateFeatureSetting(serverId, actualFeatureName, newValue, userId, message.member);
+        
+        if (toggleResult.success) {
+          await message.reply(`${newValue ? '✅' : '❌'} **${featureToToggle}** has been ${newValue ? 'enabled' : 'disabled'}!`);
+        } else {
+          await message.reply(toggleResult.message);
+        }
+        break;
+      
+      case 'setpingrole':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        
+        if (!canToggleFeatures(userId, serverId, message.member)) {
+          await message.reply('❌ Only **Server Owners** or **Server Admins** can set ping roles!');
+          return;
+        }
+        
+        const pingType = args[0]?.toLowerCase();
+        const mentionedRole = message.mentions.roles.first();
+        const roleArg = args[1]?.toLowerCase();
+        
+        if (!pingType) {
+          const pingRoleHelp = new EmbedBuilder()
+            .setColor(0x3498DB)
+            .setTitle('🔔 Set Ping Role')
+            .setDescription('Set which role gets pinged for different events.')
+            .addFields(
+              { 
+                name: 'Usage', 
+                value: '`!setpingrole <type> @role` - Set role to ping\n`!setpingrole <type> everyone` - Ping everyone\n`!setpingrole <type> here` - Ping here\n`!setpingrole <type> none` - Disable pings',
+                inline: false 
+              },
+              { 
+                name: 'Types', 
+                value: '`drops` - Character drops\n`events` - Events\n`giveaways` - Giveaways\n`lottery` - Lottery\n`updates` - Bot updates',
+                inline: false 
+              }
+            )
+            .setFooter({ text: 'Example: !setpingrole giveaways @Members' });
+          
+          await message.reply({ embeds: [pingRoleHelp] });
+          return;
+        }
+        
+        const pingRoleMap = {
+          'drops': ['dropPingRole', 'pingOnDrops'],
+          'events': ['eventPingRole', 'pingOnEvents'],
+          'giveaways': ['giveawayPingRole', 'pingOnGiveaways'],
+          'lottery': ['lotteryPingRole', 'pingOnLottery'],
+          'updates': ['updatePingRole', 'pingOnUpdates']
+        };
+        
+        if (!pingRoleMap[pingType]) {
+          await message.reply('❌ Invalid ping type! Use: drops, events, giveaways, lottery, or updates');
+          return;
+        }
+        
+        const [roleSettingName, enableSettingName] = pingRoleMap[pingType];
+        let roleValue = null;
+        let enablePing = true;
+        
+        if (mentionedRole) {
+          roleValue = mentionedRole.id;
+        } else if (roleArg === 'everyone') {
+          roleValue = 'everyone';
+        } else if (roleArg === 'here') {
+          roleValue = 'here';
+        } else if (roleArg === 'none' || roleArg === 'disable' || roleArg === 'off') {
+          roleValue = null;
+          enablePing = false;
+        } else {
+          await message.reply('❌ Please mention a role, or use `everyone`, `here`, or `none`');
+          return;
+        }
+        
+        const features = {};
+        features[roleSettingName] = roleValue;
+        features[enableSettingName] = enablePing;
+        
+        const pingRoleResult = await updateMultipleFeatures(serverId, features, userId, message.member);
+        
+        if (pingRoleResult.success) {
+          if (enablePing) {
+            const roleDisplay = mentionedRole ? `<@&${mentionedRole.id}>` : (roleValue === 'everyone' ? '@everyone' : '@here');
+            await message.reply(`✅ **${pingType}** pings will now mention ${roleDisplay}!`);
+          } else {
+            await message.reply(`✅ **${pingType}** pings have been disabled.`);
+          }
+        } else {
+          await message.reply(pingRoleResult.message);
+        }
+        break;
+      
+      case 'setzoorole':
+      case 'setzooadminrole':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+        
+        if (!canSetupServer(userId, serverId, message.member)) {
+          await message.reply('❌ Only **Server Owners** or **Server Admins** can set the ZooAdmin role!');
+          return;
+        }
+        
+        const zooRoleName = args.join(' ');
+        if (!zooRoleName) {
+          await message.reply('❌ Please provide a role name! Usage: `!setzoorole <role name>`\nExample: `!setzoorole Bot Managers`');
+          return;
+        }
+        
+        const zooRoleResult = await setZooAdminRole(serverId, zooRoleName, userId, message.member);
+        await message.reply(zooRoleResult.message);
         break;
         
       case 'setupdateschannel':
@@ -7219,8 +7650,8 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const toggleResult = await gameSystem.toggleGameStatus(userId, toggleGameName);
-        await message.reply(toggleResult.message);
+        const gameToggleResult = await gameSystem.toggleGameStatus(userId, toggleGameName);
+        await message.reply(gameToggleResult.message);
         break;
 
       case 'gamestats':
@@ -7252,8 +7683,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
-          await message.reply('❌ Only Bot Admins can warn users!');
+        if (!canMuteInServer(userId, serverId, message.member)) {
+          await message.reply('❌ Only **ZooAdmins** and above can warn users!');
           return;
         }
         
@@ -7268,8 +7699,10 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        if (isSuperAdmin(warnTarget.id)) {
-          await message.reply('❌ Cannot warn a Super Admin!');
+        const warnTargetRole = getUserRole(warnTarget.id, serverId, message.guild.members.cache.get(warnTarget.id));
+        const warnerRole = getUserRole(userId, serverId, message.member);
+        if (warnTargetRole.level >= warnerRole.level) {
+          await message.reply('❌ You cannot warn someone with an equal or higher role!');
           return;
         }
         
@@ -7312,8 +7745,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
-          await message.reply('❌ Only Bot Admins can clear warnings!');
+        if (!canBanInServer(userId, serverId, message.member)) {
+          await message.reply('❌ Only **Server Admins** and above can clear warnings!');
           return;
         }
         
@@ -7332,8 +7765,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
-          await message.reply('❌ Only Bot Admins can ban users from bot commands!');
+        if (!canBanInServer(userId, serverId, message.member)) {
+          await message.reply('❌ Only **Server Admins** and above can ban users from bot commands!');
           return;
         }
         
@@ -7348,8 +7781,10 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        if (isSuperAdmin(banTarget.id)) {
-          await message.reply('❌ Cannot ban a Super Admin!');
+        const banTargetRole = getUserRole(banTarget.id, serverId, message.guild.members.cache.get(banTarget.id));
+        const bannerRole = getUserRole(userId, serverId, message.member);
+        if (banTargetRole.level >= bannerRole.level) {
+          await message.reply('❌ You cannot ban someone with an equal or higher role!');
           return;
         }
         
@@ -7375,8 +7810,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
-          await message.reply('❌ Only Bot Admins can unban users!');
+        if (!canBanInServer(userId, serverId, message.member)) {
+          await message.reply('❌ Only **Server Admins** and above can unban users!');
           return;
         }
         
@@ -7399,8 +7834,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
-          await message.reply('❌ Only Bot Admins can mute users!');
+        if (!canMuteInServer(userId, serverId, message.member)) {
+          await message.reply('❌ Only **ZooAdmins** and above can mute users!');
           return;
         }
         
@@ -7415,8 +7850,10 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        if (isSuperAdmin(muteTarget.id)) {
-          await message.reply('❌ Cannot mute a Super Admin!');
+        const muteTargetRole = getUserRole(muteTarget.id, serverId, message.guild.members.cache.get(muteTarget.id));
+        const muterRole = getUserRole(userId, serverId, message.member);
+        if (muteTargetRole.level >= muterRole.level) {
+          await message.reply('❌ You cannot mute someone with an equal or higher role!');
           return;
         }
         
@@ -7455,8 +7892,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
-          await message.reply('❌ Only Bot Admins can unmute users!');
+        if (!canMuteInServer(userId, serverId, message.member)) {
+          await message.reply('❌ Only **ZooAdmins** and above can unmute users!');
           return;
         }
         
@@ -7480,8 +7917,8 @@ client.on('messageCreate', async (message) => {
           await message.reply('❌ This command can only be used in a server!');
           return;
         }
-        if (!isSuperAdmin(userId) && !isBotAdmin(userId)) {
-          await message.reply('❌ Only Bot Admins can clear messages!');
+        if (!canModerate(userId, serverId, message.member)) {
+          await message.reply('❌ Only **ZooAdmins** and above can clear messages!');
           return;
         }
         

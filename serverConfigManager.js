@@ -1,10 +1,43 @@
 const { getCollection } = require('./mongoManager.js');
 
 const MAIN_SERVER_ID = '1430516117851340893';
-const SUPER_ADMINS = ['1296110901057032202', '1296109674361520146','1178728978488504400'];
+const SUPER_ADMINS = ['1296110901057032202', '1296109674361520146', '1178728978488504400'];
 const DEFAULT_GAME = 'ZooBot';
 
 let serverConfigs = {};
+let globalBotAdmins = [];
+
+const DEFAULT_FEATURE_SETTINGS = {
+  pingOnDrops: false,
+  pingOnEvents: false,
+  pingOnGiveaways: true,
+  pingOnLottery: true,
+  pingOnUpdates: false,
+  dropPingRole: null,
+  eventPingRole: null,
+  giveawayPingRole: null,
+  lotteryPingRole: null,
+  updatePingRole: null,
+  dropsEnabled: true,
+  eventsEnabled: true,
+  giveawaysEnabled: true,
+  lotteryEnabled: true,
+  tradingEnabled: true,
+  marketEnabled: true,
+  battlesEnabled: true,
+  minigamesEnabled: true,
+  triviaEnabled: true,
+  clanSystemEnabled: true,
+  leaderboardsEnabled: true,
+  workSystemEnabled: true,
+  questsEnabled: true,
+  dailyRewardsEnabled: true,
+  profanityFilter: false,
+  autoModEnabled: false,
+  maxWarningsBeforeBan: 5,
+  welcomeNewPlayers: true,
+  showTutorialHints: true
+};
 
 async function loadServerConfigs() {
   try {
@@ -16,10 +49,17 @@ async function loadServerConfigs() {
       serverConfigs[config.serverId] = config;
     }
     
+    const globalConfig = await collection.findOne({ _id: 'global_bot_admins' });
+    if (globalConfig && globalConfig.admins) {
+      globalBotAdmins = globalConfig.admins;
+    }
+    
     console.log(`✅ Loaded ${configs.length} server configurations`);
+    console.log(`✅ Loaded ${globalBotAdmins.length} global bot admins`);
   } catch (error) {
     console.error('Error loading server configs:', error);
     serverConfigs = {};
+    globalBotAdmins = [];
   }
 }
 
@@ -40,6 +80,21 @@ async function saveServerConfig(serverId, config) {
   }
 }
 
+async function saveGlobalBotAdmins() {
+  try {
+    const collection = await getCollection('serverConfigs');
+    await collection.updateOne(
+      { _id: 'global_bot_admins' },
+      { $set: { admins: globalBotAdmins, updatedAt: new Date() } },
+      { upsert: true }
+    );
+    return true;
+  } catch (error) {
+    console.error('Error saving global bot admins:', error);
+    return false;
+  }
+}
+
 function getServerConfig(serverId) {
   return serverConfigs[serverId] || null;
 }
@@ -52,67 +107,282 @@ function isSuperAdmin(userId) {
   return SUPER_ADMINS.includes(userId);
 }
 
-function isBotAdmin(userId, serverId) {
+function isGlobalBotAdmin(userId) {
   if (isSuperAdmin(userId)) return true;
+  return globalBotAdmins.includes(userId);
+}
+
+function isServerOwner(member) {
+  if (!member || !member.guild) return false;
+  return member.guild.ownerId === member.id;
+}
+
+function isServerAdmin(userId, serverId, member = null) {
+  if (isSuperAdmin(userId)) return true;
+  if (isGlobalBotAdmin(userId)) return true;
+  
+  if (member && isServerOwner(member)) return true;
   
   const config = getServerConfig(serverId);
-  if (!config || !config.botAdmins) return false;
+  if (config && config.serverAdmins && config.serverAdmins.includes(userId)) {
+    return true;
+  }
   
-  return config.botAdmins.includes(userId);
+  return false;
 }
 
 function isZooAdmin(member) {
   if (!member || !member.roles) return false;
   
+  const config = getServerConfig(member.guild?.id);
+  const zooAdminRoleName = config?.zooAdminRoleName || 'zooadmin';
+  
   return member.roles.cache.some(role => 
-    role.name.toLowerCase() === 'zooadmin'
+    role.name.toLowerCase() === zooAdminRoleName.toLowerCase()
   );
 }
 
-async function addBotAdmin(serverId, userId, addedBy) {
-  if (!isSuperAdmin(addedBy) && !isBotAdmin(addedBy, serverId)) {
-    return { success: false, message: '❌ Only bot admins can add other admins!' };
-  }
-  
-  const config = getServerConfig(serverId) || { serverId, botAdmins: [] };
-  
-  if (!config.botAdmins) {
-    config.botAdmins = [];
-  }
-  
-  if (config.botAdmins.includes(userId)) {
-    return { success: false, message: '❌ This user is already a bot admin!' };
-  }
-  
-  config.botAdmins.push(userId);
-  await saveServerConfig(serverId, config);
-  
-  return { success: true, message: `✅ <@${userId}> is now a bot admin!` };
+function isBotAdmin(userId, serverId = null) {
+  return isGlobalBotAdmin(userId);
 }
 
-async function removeBotAdmin(serverId, userId, removedBy) {
-  if (!isSuperAdmin(removedBy)) {
-    return { success: false, message: '❌ Only super admins can remove bot admins!' };
+function canManageBot(userId, serverId, member = null) {
+  if (isSuperAdmin(userId)) return true;
+  if (isGlobalBotAdmin(userId)) return true;
+  if (member && isServerOwner(member)) return true;
+  if (isServerAdmin(userId, serverId, member)) return true;
+  if (member && isZooAdmin(member)) return true;
+  return false;
+}
+
+function canModerate(userId, serverId, member = null) {
+  if (isSuperAdmin(userId)) return true;
+  if (isGlobalBotAdmin(userId)) return true;
+  if (member && isServerOwner(member)) return true;
+  if (isServerAdmin(userId, serverId, member)) return true;
+  if (member && isZooAdmin(member)) return true;
+  return false;
+}
+
+function canManageEconomy(userId) {
+  return isSuperAdmin(userId);
+}
+
+function canApproveContent(userId) {
+  return isSuperAdmin(userId) || isGlobalBotAdmin(userId);
+}
+
+function canBanGlobally(userId) {
+  return isSuperAdmin(userId) || isGlobalBotAdmin(userId);
+}
+
+function canBanInServer(userId, serverId, member = null) {
+  if (isSuperAdmin(userId)) return true;
+  if (isGlobalBotAdmin(userId)) return true;
+  if (member && isServerOwner(member)) return true;
+  if (isServerAdmin(userId, serverId, member)) return true;
+  return false;
+}
+
+function canMuteInServer(userId, serverId, member = null) {
+  if (isSuperAdmin(userId)) return true;
+  if (isGlobalBotAdmin(userId)) return true;
+  if (member && isServerOwner(member)) return true;
+  if (isServerAdmin(userId, serverId, member)) return true;
+  if (member && isZooAdmin(member)) return true;
+  return false;
+}
+
+function canToggleFeatures(userId, serverId, member = null) {
+  if (isSuperAdmin(userId)) return true;
+  if (member && isServerOwner(member)) return true;
+  if (isServerAdmin(userId, serverId, member)) return true;
+  return false;
+}
+
+function canSetupServer(userId, serverId, member = null) {
+  if (isSuperAdmin(userId)) return true;
+  if (member && isServerOwner(member)) return true;
+  if (isServerAdmin(userId, serverId, member)) return true;
+  return false;
+}
+
+function getUserRole(userId, serverId, member = null) {
+  if (isSuperAdmin(userId)) return { level: 5, name: 'Super Admin', emoji: '👑', color: 0xFFD700 };
+  if (isGlobalBotAdmin(userId)) return { level: 4, name: 'Bot Admin', emoji: '⚡', color: 0xFF6B6B };
+  if (member && isServerOwner(member)) return { level: 3, name: 'Server Owner', emoji: '🏠', color: 0x9B59B6 };
+  if (isServerAdmin(userId, serverId, member)) return { level: 2, name: 'Server Admin', emoji: '🛡️', color: 0x3498DB };
+  if (member && isZooAdmin(member)) return { level: 1, name: 'ZooAdmin', emoji: '🔧', color: 0x2ECC71 };
+  return { level: 0, name: 'Player', emoji: '🎮', color: 0x95A5A6 };
+}
+
+async function addGlobalBotAdmin(userId, addedBy) {
+  if (!isSuperAdmin(addedBy)) {
+    return { success: false, message: '❌ Only **Super Admins** can add global Bot Admins!' };
   }
   
   if (isSuperAdmin(userId)) {
-    return { success: false, message: '❌ Cannot remove a super admin!' };
+    return { success: false, message: '❌ This user is already a Super Admin!' };
+  }
+  
+  if (globalBotAdmins.includes(userId)) {
+    return { success: false, message: '❌ This user is already a Bot Admin!' };
+  }
+  
+  globalBotAdmins.push(userId);
+  await saveGlobalBotAdmins();
+  
+  return { success: true, message: `✅ <@${userId}> is now a **Global Bot Admin**!` };
+}
+
+async function removeGlobalBotAdmin(userId, removedBy) {
+  if (!isSuperAdmin(removedBy)) {
+    return { success: false, message: '❌ Only **Super Admins** can remove global Bot Admins!' };
+  }
+  
+  const index = globalBotAdmins.indexOf(userId);
+  if (index === -1) {
+    return { success: false, message: '❌ This user is not a Bot Admin!' };
+  }
+  
+  globalBotAdmins.splice(index, 1);
+  await saveGlobalBotAdmins();
+  
+  return { success: true, message: `✅ <@${userId}> is no longer a Bot Admin.` };
+}
+
+async function addServerAdmin(serverId, userId, addedBy, member = null) {
+  if (!isSuperAdmin(addedBy) && !isGlobalBotAdmin(addedBy) && !(member && isServerOwner(member))) {
+    return { success: false, message: '❌ Only **Super Admins**, **Bot Admins**, or the **Server Owner** can add Server Admins!' };
+  }
+  
+  const config = getServerConfig(serverId) || { serverId, serverAdmins: [] };
+  
+  if (!config.serverAdmins) {
+    config.serverAdmins = [];
+  }
+  
+  if (config.serverAdmins.includes(userId)) {
+    return { success: false, message: '❌ This user is already a Server Admin!' };
+  }
+  
+  config.serverAdmins.push(userId);
+  await saveServerConfig(serverId, config);
+  
+  return { success: true, message: `✅ <@${userId}> is now a **Server Admin** for this server!` };
+}
+
+async function removeServerAdmin(serverId, userId, removedBy, member = null) {
+  if (!isSuperAdmin(removedBy) && !isGlobalBotAdmin(removedBy) && !(member && isServerOwner(member))) {
+    return { success: false, message: '❌ Only **Super Admins**, **Bot Admins**, or the **Server Owner** can remove Server Admins!' };
   }
   
   const config = getServerConfig(serverId);
-  if (!config || !config.botAdmins) {
-    return { success: false, message: '❌ This user is not a bot admin!' };
+  if (!config || !config.serverAdmins) {
+    return { success: false, message: '❌ This user is not a Server Admin!' };
   }
   
-  const index = config.botAdmins.indexOf(userId);
+  const index = config.serverAdmins.indexOf(userId);
   if (index === -1) {
-    return { success: false, message: '❌ This user is not a bot admin!' };
+    return { success: false, message: '❌ This user is not a Server Admin!' };
   }
   
-  config.botAdmins.splice(index, 1);
+  config.serverAdmins.splice(index, 1);
   await saveServerConfig(serverId, config);
   
-  return { success: true, message: `✅ <@${userId}> is no longer a bot admin!` };
+  return { success: true, message: `✅ <@${userId}> is no longer a Server Admin.` };
+}
+
+function getFeatureSettings(serverId) {
+  const config = getServerConfig(serverId);
+  if (!config || !config.features) {
+    return { ...DEFAULT_FEATURE_SETTINGS };
+  }
+  return { ...DEFAULT_FEATURE_SETTINGS, ...config.features };
+}
+
+async function updateFeatureSetting(serverId, featureName, value, updatedBy, member = null) {
+  if (!canToggleFeatures(updatedBy, serverId, member)) {
+    return { success: false, message: '❌ Only **Server Owners** or **Server Admins** can change feature settings!' };
+  }
+  
+  if (!(featureName in DEFAULT_FEATURE_SETTINGS)) {
+    return { success: false, message: `❌ Unknown feature: ${featureName}` };
+  }
+  
+  const config = getServerConfig(serverId) || { serverId };
+  if (!config.features) {
+    config.features = { ...DEFAULT_FEATURE_SETTINGS };
+  }
+  
+  config.features[featureName] = value;
+  await saveServerConfig(serverId, config);
+  
+  return { success: true, message: `✅ Feature **${featureName}** has been ${typeof value === 'boolean' ? (value ? 'enabled' : 'disabled') : `set to ${value}`}!` };
+}
+
+async function updateMultipleFeatures(serverId, features, updatedBy, member = null) {
+  if (!canToggleFeatures(updatedBy, serverId, member)) {
+    return { success: false, message: '❌ Only **Server Owners** or **Server Admins** can change feature settings!' };
+  }
+  
+  const config = getServerConfig(serverId) || { serverId };
+  if (!config.features) {
+    config.features = { ...DEFAULT_FEATURE_SETTINGS };
+  }
+  
+  for (const [key, value] of Object.entries(features)) {
+    if (key in DEFAULT_FEATURE_SETTINGS) {
+      config.features[key] = value;
+    }
+  }
+  
+  await saveServerConfig(serverId, config);
+  
+  return { success: true, message: '✅ Feature settings have been updated!' };
+}
+
+function isFeatureEnabled(serverId, featureName) {
+  const settings = getFeatureSettings(serverId);
+  return settings[featureName] !== false;
+}
+
+function getPingSettings(serverId, eventType) {
+  const settings = getFeatureSettings(serverId);
+  
+  const pingMap = {
+    drops: { enabled: settings.pingOnDrops, role: settings.dropPingRole },
+    events: { enabled: settings.pingOnEvents, role: settings.eventPingRole },
+    giveaways: { enabled: settings.pingOnGiveaways, role: settings.giveawayPingRole },
+    lottery: { enabled: settings.pingOnLottery, role: settings.lotteryPingRole },
+    updates: { enabled: settings.pingOnUpdates, role: settings.updatePingRole }
+  };
+  
+  return pingMap[eventType] || { enabled: false, role: null };
+}
+
+function formatPingMention(serverId, eventType) {
+  const pingSettings = getPingSettings(serverId, eventType);
+  
+  if (!pingSettings.enabled) return '';
+  
+  if (pingSettings.role === 'everyone') return '@everyone';
+  if (pingSettings.role === 'here') return '@here';
+  if (pingSettings.role) return `<@&${pingSettings.role}>`;
+  
+  return '';
+}
+
+async function setZooAdminRole(serverId, roleName, setBy, member = null) {
+  if (!canSetupServer(setBy, serverId, member)) {
+    return { success: false, message: '❌ Only **Server Owners** or **Server Admins** can set the ZooAdmin role!' };
+  }
+  
+  const config = getServerConfig(serverId) || { serverId };
+  config.zooAdminRoleName = roleName;
+  await saveServerConfig(serverId, config);
+  
+  return { success: true, message: `✅ ZooAdmin role name set to **${roleName}**!` };
 }
 
 async function setupServer(serverId, dropChannelId, eventsChannelId, updatesChannelId) {
@@ -124,7 +394,8 @@ async function setupServer(serverId, dropChannelId, eventsChannelId, updatesChan
     dropInterval: isMainServer(serverId) ? 20000 : 30000,
     setupComplete: true,
     setupDate: new Date().toISOString(),
-    botAdmins: []
+    serverAdmins: [],
+    features: { ...DEFAULT_FEATURE_SETTINGS }
   };
   
   await saveServerConfig(serverId, config);
@@ -240,11 +511,11 @@ async function setDropChannel(serverId, channelId, setBy, member) {
     return { success: false, message: '❌ Cannot change drop channel on main server!' };
   }
   
-  if (!isSuperAdmin(setBy) && !isZooAdmin(member)) {
-    return { success: false, message: '❌ Only users with the **ZooAdmin** role can set the drop channel!' };
+  if (!canSetupServer(setBy, serverId, member)) {
+    return { success: false, message: '❌ Only **Server Owners**, **Server Admins**, or users with the **ZooAdmin** role can set the drop channel!' };
   }
   
-  const config = getServerConfig(serverId) || { serverId, botAdmins: [] };
+  const config = getServerConfig(serverId) || { serverId, serverAdmins: [] };
   config.dropChannelId = channelId;
   config.dropInterval = 30000;
   
@@ -275,11 +546,11 @@ async function setEventsChannel(serverId, channelId, setBy, member) {
     return { success: false, message: '❌ Cannot change events channel on main server!' };
   }
   
-  if (!isSuperAdmin(setBy) && !isZooAdmin(member)) {
-    return { success: false, message: '❌ Only users with the **ZooAdmin** role can set the events channel!' };
+  if (!canSetupServer(setBy, serverId, member)) {
+    return { success: false, message: '❌ Only **Server Owners**, **Server Admins**, or users with the **ZooAdmin** role can set the events channel!' };
   }
   
-  const config = getServerConfig(serverId) || { serverId, botAdmins: [] };
+  const config = getServerConfig(serverId) || { serverId, serverAdmins: [] };
   config.eventsChannelId = channelId;
   
   if (config.dropChannelId && config.eventsChannelId && config.updatesChannelId && !config.setupComplete) {
@@ -305,11 +576,11 @@ async function setEventsChannel(serverId, channelId, setBy, member) {
 }
 
 async function setUpdatesChannel(serverId, channelId, setBy, member) {
-  if (!isSuperAdmin(setBy) && !isZooAdmin(member)) {
-    return { success: false, message: '❌ Only users with the **ZooAdmin** role can set the updates channel!' };
+  if (!canSetupServer(setBy, serverId, member)) {
+    return { success: false, message: '❌ Only **Server Owners**, **Server Admins**, or users with the **ZooAdmin** role can set the updates channel!' };
   }
   
-  const config = getServerConfig(serverId) || { serverId, botAdmins: [] };
+  const config = getServerConfig(serverId) || { serverId, serverAdmins: [] };
   config.updatesChannelId = channelId;
   
   if (config.dropChannelId && config.eventsChannelId && config.updatesChannelId && !config.setupComplete) {
@@ -338,16 +609,76 @@ function getSuperAdminIds() {
   return SUPER_ADMINS;
 }
 
+function getGlobalBotAdmins() {
+  return globalBotAdmins;
+}
+
+function getServerAdmins(serverId) {
+  const config = getServerConfig(serverId);
+  return config?.serverAdmins || [];
+}
+
+function getAllAdminsInfo(serverId) {
+  return {
+    superAdmins: SUPER_ADMINS,
+    globalBotAdmins: globalBotAdmins,
+    serverAdmins: getServerAdmins(serverId)
+  };
+}
+
+function getHierarchyInfo() {
+  return [
+    { level: 5, name: 'Super Admin', emoji: '👑', description: 'Full control over the entire bot, can manage economy and all settings globally', color: 0xFFD700 },
+    { level: 4, name: 'Bot Admin', emoji: '⚡', description: 'Global bot management, can approve content and moderate globally, but cannot modify economy', color: 0xFF6B6B },
+    { level: 3, name: 'Server Owner', emoji: '🏠', description: 'Full control over bot settings in their server, can ban/mute users and toggle features', color: 0x9B59B6 },
+    { level: 2, name: 'Server Admin', emoji: '🛡️', description: 'Manage bot settings in this server, can moderate users and configure features', color: 0x3498DB },
+    { level: 1, name: 'ZooAdmin', emoji: '🔧', description: 'Help manage the bot in this server, can warn/mute users and assist with moderation', color: 0x2ECC71 },
+    { level: 0, name: 'Player', emoji: '🎮', description: 'Regular player who can use all gameplay features', color: 0x95A5A6 }
+  ];
+}
+
+function addBotAdmin(serverId, userId, addedBy) {
+  return addServerAdmin(serverId, userId, addedBy);
+}
+
+function removeBotAdmin(serverId, userId, removedBy) {
+  return removeServerAdmin(serverId, userId, removedBy);
+}
+
 module.exports = {
   loadServerConfigs,
   saveServerConfig,
   getServerConfig,
   isMainServer,
   isSuperAdmin,
-  isBotAdmin,
+  isGlobalBotAdmin,
+  isServerOwner,
+  isServerAdmin,
   isZooAdmin,
+  isBotAdmin,
+  canManageBot,
+  canModerate,
+  canManageEconomy,
+  canApproveContent,
+  canBanGlobally,
+  canBanInServer,
+  canMuteInServer,
+  canToggleFeatures,
+  canSetupServer,
+  getUserRole,
+  addGlobalBotAdmin,
+  removeGlobalBotAdmin,
+  addServerAdmin,
+  removeServerAdmin,
   addBotAdmin,
   removeBotAdmin,
+  getFeatureSettings,
+  updateFeatureSetting,
+  updateMultipleFeatures,
+  isFeatureEnabled,
+  getPingSettings,
+  formatPingMention,
+  setZooAdminRole,
   setupServer,
   isServerSetup,
   isServerFullySetup,
@@ -362,6 +693,11 @@ module.exports = {
   setEventsChannel,
   setUpdatesChannel,
   getSuperAdminIds,
+  getGlobalBotAdmins,
+  getServerAdmins,
+  getAllAdminsInfo,
+  getHierarchyInfo,
+  DEFAULT_FEATURE_SETTINGS,
   MAIN_SERVER_ID,
   SUPER_ADMINS,
   DEFAULT_GAME

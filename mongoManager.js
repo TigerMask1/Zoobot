@@ -56,6 +56,20 @@ async function getCollection(collectionName) {
   return db.collection(collectionName);
 }
 
+function getDb() {
+  if (!connected || !db) {
+    return null;
+  }
+  return db;
+}
+
+async function ensureConnected() {
+  if (!connected) {
+    await connect();
+  }
+  return db;
+}
+
 async function loadData() {
   try {
     const usersCollection = await getCollection('users');
@@ -657,6 +671,8 @@ module.exports = {
   getUserData,
   clearAllData,
   getCollection,
+  getDb,
+  ensureConnected,
   getCurrentEvent,
   createEvent,
   updateEvent,

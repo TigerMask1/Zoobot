@@ -1,4 +1,15 @@
 const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { 
+  isSuperAdmin, 
+  isGlobalBotAdmin, 
+  isServerAdmin, 
+  isZooAdmin, 
+  canModerate,
+  canBanInServer,
+  canMuteInServer,
+  getUserRole,
+  getFeatureSettings
+} = require('./serverConfigManager.js');
 
 const USE_MONGODB = process.env.USE_MONGODB === 'true';
 let mongoManager = null;
@@ -21,6 +32,27 @@ const CONFIG = {
 function initModeration(superAdmins = []) {
   CONFIG.SUPER_ADMINS = superAdmins;
   console.log('🛡️ Moderation System initialized');
+}
+
+function canWarnUser(userId, guildId, member = null) {
+  return canMuteInServer(userId, guildId, member);
+}
+
+function canClearWarnings(userId, guildId, member = null) {
+  return canBanInServer(userId, guildId, member);
+}
+
+function canBotBanUser(userId, guildId, member = null) {
+  return canBanInServer(userId, guildId, member);
+}
+
+function canBotMuteUser(userId, guildId, member = null) {
+  return canMuteInServer(userId, guildId, member);
+}
+
+function getMaxWarningsForServer(guildId) {
+  const settings = getFeatureSettings(guildId);
+  return settings.maxWarningsBeforeBan || CONFIG.MAX_WARNINGS_BEFORE_AUTO_BAN;
 }
 
 async function loadModerationData() {
@@ -674,5 +706,10 @@ module.exports = {
   createMuteInfoEmbed,
   formatDuration,
   getModerationStats,
+  canWarnUser,
+  canClearWarnings,
+  canBotBanUser,
+  canBotMuteUser,
+  getMaxWarningsForServer,
   CONFIG
 };
