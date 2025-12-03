@@ -182,3 +182,32 @@ Added a new character key collection system as an alternative way to unlock char
 - Added `resetInactivityStatus()` function to properly handle state transitions
 - Updated functions: `checkScheduledKeyRush()`, `activateKeyRush()`, `activateKeyRushConfirmed()`, `grantKeyRush()`
 - Files modified: `dropSystem.js`, `characterKeySystem.js`
+
+### Comprehensive All Commands List in Hub (December 2025)
+Added a complete, filterable command reference to the `!hub` system with 226 commands across 38 categories:
+
+**Features:**
+- Click "All Commands" button in `!hub` to access the complete command list
+- Filter buttons: All (226), Player (109), Admin (62), Super Admin (55)
+- Paginated display (4 categories per page) with navigation buttons
+- Categories organized by system type with emoji indicators
+
+**Player Command Categories:**
+- Getting Started, Profile & Collection, Battles, Drops & Catching
+- Character Keys, Crates, Daily & Rewards, Quests & Tasks
+- Season Pass, Challenges & Achievements, Leaderboards
+- Economy & Trading, UST & Cosmetics, ST Boosters
+- Work System, Minigames, Clans, Trivia & Q&A
+- Giveaways, Lottery, Events, History & Stats
+
+**Admin Command Categories:**
+- Role Hierarchy, Server Settings, Server Setup, Moderation
+- Bot Management, Trivia & Q&A Management, Events, Personalized Tasks
+
+**Super Admin Command Categories:**
+- Economy Management, Character Management, Skins & PFPs
+- Game Bundles, Work System, Cosmetics, Anti-Cheat, System
+
+**Files Modified:**
+- `hubSystem.js` - Added ALL_COMMANDS object with 226 commands, filter functions, and embed creators
+- `hubInteractionHandler.js` - Added button handlers for cmdfilter_*, cmdpage_*, viewcat_*
