@@ -327,7 +327,7 @@ const SUPER_ADMIN_COMMANDS = {
       { cmd: '!deleteskin <char> <skin>', desc: 'Delete a skin from shop' },
       { cmd: '!uploadskin <char> <skin> <rarity> [cost] [url]', desc: 'Upload skin to UST shop' },
       { cmd: '!uploadpfp <name> <rarity> [cost] [url]', desc: 'Upload PFP to shop' },
-      { cmd: '!grantpfp <name> @user', desc: 'Grant a PFP to user' },
+      { cmd: '!grantpfp <name> @user', desc: 'Grant PFP to user' },
       { cmd: '!grantpfptoclan <name>', desc: 'Grant PFP to entire clan' },
       { cmd: '!listpfps', desc: 'List all available PFPs' }
     ]
@@ -914,7 +914,7 @@ const PLAYER_JOURNEY = {
 function getPlayerJourneyStage(userData) {
   const charCount = (userData.characters || []).length;
   const accountLevel = userData.accountLevel || 1;
-  
+
   if (charCount >= 30 || accountLevel >= 10) return 'advanced';
   if (charCount >= 15 || accountLevel >= 5) return 'intermediate';
   return 'beginner';
@@ -930,11 +930,11 @@ function createMainHubEmbed(user, userData, discoveryData) {
   const charCount = (userData.characters || []).length;
   const stage = getPlayerJourneyStage(userData);
   const tip = getRandomTip(userData);
-  
+
   const completedFeatures = discoveryData?.featuresUsed?.length || 0;
   const totalFeatures = Object.values(HUB_CATEGORIES).reduce((acc, cat) => acc + cat.features.length, 0);
   const discoveryPercent = Math.round((completedFeatures / totalFeatures) * 100);
-  
+
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
     .setTitle('🎮 ZooBot Game Hub')
@@ -959,7 +959,7 @@ function createMainHubEmbed(user, userData, discoveryData) {
     .setThumbnail(user.displayAvatarURL({ dynamic: true }))
     .setFooter({ text: `Player Stage: ${stage.charAt(0).toUpperCase() + stage.slice(1)} | Use the buttons below to navigate` })
     .setTimestamp();
-  
+
   return embed;
 }
 
@@ -981,7 +981,7 @@ function createHubCategoryButtons() {
       .setEmoji('🦁')
       .setStyle(ButtonStyle.Primary)
   );
-  
+
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('hub_economy')
@@ -999,7 +999,7 @@ function createHubCategoryButtons() {
       .setEmoji('🏰')
       .setStyle(ButtonStyle.Success)
   );
-  
+
   const row3 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('hub_guide')
@@ -1017,18 +1017,18 @@ function createHubCategoryButtons() {
       .setEmoji('⚙️')
       .setStyle(ButtonStyle.Danger)
   );
-  
+
   return [row1, row2, row3];
 }
 
 function createCategoryEmbed(categoryId, user, userData) {
   const category = HUB_CATEGORIES[categoryId];
   if (!category) return null;
-  
+
   const featureList = category.features.map(f => 
     `${f.emoji} **${f.name}**\n└ ${f.desc}${f.command ? ` — \`${f.command}\`` : ''}`
   ).join('\n\n');
-  
+
   const embed = new EmbedBuilder()
     .setColor(category.color)
     .setTitle(`${category.emoji} ${category.name}`)
@@ -1040,21 +1040,21 @@ function createCategoryEmbed(categoryId, user, userData) {
     })
     .setFooter({ text: 'Click a button below to use that feature or learn more!' })
     .setTimestamp();
-  
+
   return embed;
 }
 
 function createCategoryButtons(categoryId) {
   const category = HUB_CATEGORIES[categoryId];
   if (!category) return [];
-  
+
   const rows = [];
   const features = category.features;
-  
+
   for (let i = 0; i < features.length; i += 3) {
     const row = new ActionRowBuilder();
     const slice = features.slice(i, i + 3);
-    
+
     for (const feature of slice) {
       row.addComponents(
         new ButtonBuilder()
@@ -1066,7 +1066,7 @@ function createCategoryButtons(categoryId) {
     }
     rows.push(row);
   }
-  
+
   rows.push(
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -1081,25 +1081,25 @@ function createCategoryButtons(categoryId) {
         .setStyle(ButtonStyle.Secondary)
     )
   );
-  
+
   return rows;
 }
 
 function createKnowMoreEmbed(categoryId) {
   const category = HUB_CATEGORIES[categoryId];
   if (!category || !category.allCommands) return null;
-  
+
   const commandList = category.allCommands.map(c => 
     `\`${c.cmd}\`\n└ ${c.desc}`
   ).join('\n\n');
-  
+
   const embed = new EmbedBuilder()
     .setColor(category.color)
     .setTitle(`📖 ${category.emoji} ${category.name} — Complete Command List`)
     .setDescription(`Here are ALL the commands for **${category.name}**:\n\n${commandList}`)
     .setFooter({ text: `Total: ${category.allCommands.length} commands | Type any command in chat to use it!` })
     .setTimestamp();
-  
+
   return embed;
 }
 
@@ -1149,7 +1149,7 @@ function createAdminHubEmbed(user, serverConfig) {
     )
     .setFooter({ text: 'Select a category below to view commands' })
     .setTimestamp();
-  
+
   return embed;
 }
 
@@ -1171,7 +1171,7 @@ function createAdminCategoryButtons() {
       .setEmoji('👑')
       .setStyle(ButtonStyle.Secondary)
   );
-  
+
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('admin_trivia')
@@ -1184,7 +1184,7 @@ function createAdminCategoryButtons() {
       .setEmoji('🔒')
       .setStyle(ButtonStyle.Danger)
   );
-  
+
   const row3 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('hub_back')
@@ -1192,25 +1192,25 @@ function createAdminCategoryButtons() {
       .setEmoji('🏠')
       .setStyle(ButtonStyle.Secondary)
   );
-  
+
   return [row1, row2, row3];
 }
 
 function createAdminCategoryEmbed(categoryId) {
   const category = ADMIN_CATEGORIES[categoryId];
   if (!category) return null;
-  
+
   const commandList = category.commands.map(c => 
     `\`${c.cmd}\`\n└ ${c.desc}`
   ).join('\n\n');
-  
+
   const embed = new EmbedBuilder()
     .setColor(category.color)
     .setTitle(`${category.emoji} ${category.name}`)
     .setDescription(`${category.description}\n\n${commandList}`)
     .setFooter({ text: `Total: ${category.commands.length} commands | Requires ZooAdmin role or server owner` })
     .setTimestamp();
-  
+
   return embed;
 }
 
@@ -1233,13 +1233,13 @@ function createAdminCategoryBackButtons(categoryId) {
 
 function createSuperAdminEmbed() {
   let description = '🔒 **Super Admin Commands** are only available to bot owners/super admins.\n\nThese commands manage the entire bot across all servers.\n\n';
-  
+
   for (const [key, section] of Object.entries(SUPER_ADMIN_COMMANDS)) {
     description += `**${section.name}**\n`;
     description += section.commands.slice(0, 3).map(c => `\`${c.cmd}\``).join(', ');
     description += ` *...and ${Math.max(0, section.commands.length - 3)} more*\n\n`;
   }
-  
+
   const embed = new EmbedBuilder()
     .setColor(0xFF0000)
     .setTitle('🔒 Super Admin Commands')
@@ -1251,7 +1251,7 @@ function createSuperAdminEmbed() {
     })
     .setFooter({ text: 'Select a category below for full command list' })
     .setTimestamp();
-  
+
   return embed;
 }
 
@@ -1273,7 +1273,7 @@ function createSuperAdminCategoryButtons() {
       .setEmoji('🎨')
       .setStyle(ButtonStyle.Danger)
   );
-  
+
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('superadmin_games')
@@ -1291,7 +1291,7 @@ function createSuperAdminCategoryButtons() {
       .setEmoji('🛡️')
       .setStyle(ButtonStyle.Danger)
   );
-  
+
   const row3 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('superadmin_system')
@@ -1304,25 +1304,25 @@ function createSuperAdminCategoryButtons() {
       .setEmoji('⬅️')
       .setStyle(ButtonStyle.Secondary)
   );
-  
+
   return [row1, row2, row3];
 }
 
 function createSuperAdminCategoryEmbed(categoryId) {
   const category = SUPER_ADMIN_COMMANDS[categoryId];
   if (!category) return null;
-  
+
   const commandList = category.commands.map(c => 
     `\`${c.cmd}\`\n└ ${c.desc}`
   ).join('\n\n');
-  
+
   const embed = new EmbedBuilder()
     .setColor(0xFF0000)
     .setTitle(`🔒 ${category.name}`)
     .setDescription(`**Super Admin Only**\n\n${commandList}`)
     .setFooter({ text: `Total: ${category.commands.length} commands | SUPER ADMIN ONLY` })
     .setTimestamp();
-  
+
   return embed;
 }
 
@@ -1350,7 +1350,7 @@ function createSuperAdminBackButtons() {
 
 function createQuickStartEmbed(user, userData, step = 0) {
   const isNewPlayer = !userData.characters || userData.characters.length === 0;
-  
+
   const steps = [
     {
       title: '👋 Welcome to ZooBot!',
@@ -1400,9 +1400,9 @@ function createQuickStartEmbed(user, userData, step = 0) {
       buttonLabel: 'Open Game Hub'
     }
   ];
-  
+
   const currentStep = steps[step] || steps[0];
-  
+
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
     .setTitle(`📚 Quick Start Guide - Step ${step + 1}/${steps.length}`)
@@ -1410,15 +1410,16 @@ function createQuickStartEmbed(user, userData, step = 0) {
     .addFields(currentStep.fields)
     .setThumbnail(user.displayAvatarURL({ dynamic: true }))
     .setFooter({ text: `Step ${step + 1} of ${steps.length}` });
-  
+
   return { embed, buttonLabel: currentStep.buttonLabel, isLast: step >= steps.length - 1 };
 }
 
 function createQuickStartButtons(step, isLast) {
-  const row = new ActionRowBuilder();
-  
+  const row1 = new ActionRowBuilder();
+  const row2 = new ActionRowBuilder();
+
   if (step > 0) {
-    row.addComponents(
+    row1.addComponents(
       new ButtonBuilder()
         .setCustomId(`guide_step_${step - 1}`)
         .setLabel('Previous')
@@ -1426,33 +1427,39 @@ function createQuickStartButtons(step, isLast) {
         .setStyle(ButtonStyle.Secondary)
     );
   }
-  
-  if (isLast) {
-    row.addComponents(
-      new ButtonBuilder()
-        .setCustomId('guide_finish')
-        .setLabel('Open Game Hub')
-        .setEmoji('🏠')
-        .setStyle(ButtonStyle.Success)
-    );
-  } else {
-    row.addComponents(
+
+  if (!isLast) {
+    row1.addComponents(
       new ButtonBuilder()
         .setCustomId(`guide_step_${step + 1}`)
-        .setLabel(step === 0 ? 'Get Started' : 'Next')
+        .setLabel('Next')
         .setEmoji('➡️')
         .setStyle(ButtonStyle.Primary)
     );
+  } else {
+    row1.addComponents(
+      new ButtonBuilder()
+        .setCustomId('guide_finish')
+        .setLabel('Finish')
+        .setEmoji('✅')
+        .setStyle(ButtonStyle.Success)
+    );
   }
-  
-  row.addComponents(
+
+  row2.addComponents(
+    new ButtonBuilder()
+      .setCustomId('hub_back')
+      .setLabel('Back to Hub')
+      .setEmoji('🏠')
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('guide_skip')
-      .setLabel('Skip to Hub')
-      .setStyle(ButtonStyle.Secondary)
+      .setLabel('Skip Tutorial')
+      .setEmoji('⏭️')
+      .setStyle(ButtonStyle.Danger)
   );
-  
-  return [row];
+
+  return [row1, row2];
 }
 
 function createMinigamesEmbed() {
@@ -1468,7 +1475,7 @@ function createMinigamesEmbed() {
       { name: '🔢 Almost Win', value: '`!almostwin <bet>`\nNumber guessing game', inline: true }
     )
     .setFooter({ text: 'Gamble responsibly! All bets use your coins.' });
-  
+
   return embed;
 }
 
@@ -1490,7 +1497,7 @@ function createMinigameButtons() {
       .setEmoji('✊')
       .setStyle(ButtonStyle.Primary)
   );
-  
+
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('hub_back')
@@ -1498,7 +1505,7 @@ function createMinigameButtons() {
       .setEmoji('🏠')
       .setStyle(ButtonStyle.Secondary)
   );
-  
+
   return [row1, row2];
 }
 
@@ -1506,32 +1513,32 @@ async function openHub(message, data, userData) {
   const discoveryData = userData.discovery || { featuresUsed: [] };
   const embed = createMainHubEmbed(message.author, userData, discoveryData);
   const buttons = createHubCategoryButtons();
-  
+
   return message.reply({ embeds: [embed], components: buttons });
 }
 
 async function openCategory(interaction, categoryId, data, userData) {
   const embed = createCategoryEmbed(categoryId, interaction.user, userData);
   const buttons = createCategoryButtons(categoryId);
-  
+
   if (!embed) {
     return interaction.reply({ content: 'Category not found!', ephemeral: true });
   }
-  
+
   return interaction.update({ embeds: [embed], components: buttons });
 }
 
 async function openQuickStart(message, data, userData, step = 0) {
   const { embed, buttonLabel, isLast } = createQuickStartEmbed(message.author, userData, step);
   const buttons = createQuickStartButtons(step, isLast);
-  
+
   return message.reply({ embeds: [embed], components: buttons });
 }
 
 async function handleGuideStep(interaction, step, data, userData) {
   const { embed, buttonLabel, isLast } = createQuickStartEmbed(interaction.user, userData, step);
   const buttons = createQuickStartButtons(step, isLast);
-  
+
   return interaction.update({ embeds: [embed], components: buttons });
 }
 
@@ -1542,17 +1549,17 @@ function getFilteredCategories(filter) {
     'leaderboards', 'economy_trading', 'ust_cosmetics', 'st_boosters', 'work_system',
     'minigames', 'clans', 'trivia_qa', 'giveaways', 'lottery', 'events', 'history'
   ];
-  
+
   const adminCategories = [
     'admin_hierarchy', 'admin_settings', 'admin_setup', 'admin_moderation',
     'admin_management', 'admin_trivia', 'admin_events', 'admin_tasks'
   ];
-  
+
   const superCategories = [
     'super_economy', 'super_characters', 'super_skins', 'super_games',
     'super_work', 'super_cosmetics', 'super_anticheat', 'super_system'
   ];
-  
+
   switch (filter) {
     case 'player':
       return playerCategories;
@@ -1579,26 +1586,26 @@ function createAllCommandsEmbed(filter = 'all', page = 0) {
   const itemsPerPage = 4;
   const totalPages = Math.ceil(categories.length / itemsPerPage);
   const currentPage = Math.max(0, Math.min(page, totalPages - 1));
-  
+
   const startIdx = currentPage * itemsPerPage;
   const pageCategories = categories.slice(startIdx, startIdx + itemsPerPage);
-  
+
   const filterInfo = ALL_COMMANDS_FILTERS.find(f => f.id === filter) || ALL_COMMANDS_FILTERS[0];
   const totalCommands = countTotalCommands(filter);
-  
+
   let description = `📋 **${filterInfo.name}** — ${totalCommands} commands total\n\n`;
-  
+
   for (const catId of pageCategories) {
     const cat = ALL_COMMANDS[catId];
     if (!cat) continue;
-    
+
     description += `**${cat.emoji} ${cat.name}** (${cat.commands.length} commands)\n`;
     for (const cmd of cat.commands) {
       description += `\`${cmd.cmd}\` — ${cmd.desc}\n`;
     }
     description += '\n';
   }
-  
+
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
     .setTitle(`📖 Complete Command List`)
@@ -1607,13 +1614,13 @@ function createAllCommandsEmbed(filter = 'all', page = 0) {
       text: `Page ${currentPage + 1}/${totalPages} | ${totalCommands} commands | Filter: ${filterInfo.name}` 
     })
     .setTimestamp();
-  
+
   return { embed, currentPage, totalPages };
 }
 
 function createAllCommandsButtons(filter = 'all', page = 0, totalPages = 1) {
   const rows = [];
-  
+
   const filterRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('cmdfilter_all')
@@ -1637,7 +1644,7 @@ function createAllCommandsButtons(filter = 'all', page = 0, totalPages = 1) {
       .setStyle(filter === 'super' ? ButtonStyle.Primary : ButtonStyle.Secondary)
   );
   rows.push(filterRow);
-  
+
   if (totalPages > 1) {
     const navRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -1667,7 +1674,7 @@ function createAllCommandsButtons(filter = 'all', page = 0, totalPages = 1) {
     );
     rows.push(navRow);
   }
-  
+
   const backRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('hub_back')
@@ -1676,13 +1683,13 @@ function createAllCommandsButtons(filter = 'all', page = 0, totalPages = 1) {
       .setStyle(ButtonStyle.Danger)
   );
   rows.push(backRow);
-  
+
   return rows;
 }
 
 function createCategorySelectMenu(filter = 'all') {
   const categories = getFilteredCategories(filter);
-  
+
   const options = categories.slice(0, 25).map(catId => {
     const cat = ALL_COMMANDS[catId];
     return {
@@ -1692,7 +1699,7 @@ function createCategorySelectMenu(filter = 'all') {
       emoji: cat.emoji
     };
   });
-  
+
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId('allcmds_category')
@@ -1704,19 +1711,19 @@ function createCategorySelectMenu(filter = 'all') {
 function createSingleCategoryEmbed(categoryId) {
   const cat = ALL_COMMANDS[categoryId];
   if (!cat) return null;
-  
+
   let description = '';
   for (const cmd of cat.commands) {
     description += `\`${cmd.cmd}\`\n└ ${cmd.desc}\n\n`;
   }
-  
+
   const embed = new EmbedBuilder()
     .setColor(cat.color)
     .setTitle(`${cat.emoji} ${cat.name}`)
     .setDescription(description)
     .setFooter({ text: `${cat.commands.length} commands in this category` })
     .setTimestamp();
-  
+
   return embed;
 }
 
@@ -1725,7 +1732,7 @@ function createSingleCategoryButtons(categoryId) {
   if (categoryId.startsWith('admin_')) filter = 'admin';
   else if (categoryId.startsWith('super_')) filter = 'super';
   else filter = 'player';
-  
+
   return [
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
