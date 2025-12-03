@@ -1,15 +1,42 @@
-// ZooBot Web Server + Discord Bot
+// ZooBot Web Server + Discord Bot + Dashboard
 const express = require('express');
 const http = require('http');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
+const crypto = require('crypto');
+const fs = require('fs');
+
 const PORT = process.env.PORT || 5000;
-const WEBSITE_URL = process.env.WEBSITE_URL || process.env.RENDER_EXTERNAL_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+
+function getWebsiteUrl() {
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  if (process.env.REPLIT_DOMAINS) {
+    return `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+  }
+  if (process.env.WEBSITE_URL) {
+    return process.env.WEBSITE_URL;
+  }
+  return `http://localhost:${PORT}`;
+}
+
+const WEBSITE_URL = getWebsiteUrl();
+const REDIRECT_URI = `${WEBSITE_URL}/auth/discord/callback`;
+
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
+const COOKIE_SECRET = process.env.COOKIE_SECRET || crypto.randomBytes(32).toString('hex');
+
+const sessions = new Map();
 
 const app = express();
 
 app.set('trust proxy', 1);
+
+app.use(cookieParser(COOKIE_SECRET));
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -19,7 +46,7 @@ app.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:", "cdn.discordapp.com"],
-      connectSrc: ["'self'", "discord.com"]
+      connectSrc: ["'self'", "discord.com", "https://discord.com"]
     }
   },
   crossOriginEmbedderPolicy: false
@@ -41,10 +68,330 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: '1h',
-  etag: true
-}));
+function generateState() {
+  return crypto.randomBytes(16).toString('hex');
+}
+
+function generateCodeVerifier() {
+  return crypto.randomBytes(32).toString('base64url');
+}
+
+function generateCodeChallenge(verifier) {
+  return crypto.createHash('sha256').update(verifier).digest('base64url');
+}
+
+function getSession(req) {
+  const sessionId = req.signedCookies.session;
+  if (!sessionId) return null;
+  return sessions.get(sessionId) || null;
+}
+
+function createSession(sessionData) {
+  const sessionId = crypto.randomBytes(32).toString('hex');
+  sessions.set(sessionId, {
+    ...sessionData,
+    createdAt: Date.now(),
+  });
+  setTimeout(() => {
+    sessions.delete(sessionId);
+  }, 7 * 24 * 60 * 60 * 1000);
+  return sessionId;
+}
+
+function destroySession(sessionId) {
+  sessions.delete(sessionId);
+}
+
+function requireAuth(req, res, next) {
+  const session = getSession(req);
+  if (!session || !session.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  req.session = session;
+  next();
+}
+
+app.get('/auth/discord', (req, res) => {
+  if (!DISCORD_CLIENT_ID) {
+    console.error('[OAuth] DISCORD_CLIENT_ID not configured');
+    return res.status(500).json({ error: 'Discord OAuth not configured. Please set DISCORD_CLIENT_ID.' });
+  }
+
+  const state = generateState();
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = generateCodeChallenge(codeVerifier);
+  
+  const isSecure = WEBSITE_URL.startsWith('https');
+  
+  res.cookie('oauth_state', state, {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: 'lax',
+    maxAge: 10 * 60 * 1000,
+    signed: true,
+  });
+  
+  res.cookie('code_verifier', codeVerifier, {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: 'lax',
+    maxAge: 10 * 60 * 1000,
+    signed: true,
+  });
+
+  const params = new URLSearchParams({
+    client_id: DISCORD_CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'code',
+    scope: 'identify guilds',
+    state: state,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+  });
+
+  console.log(`[OAuth] Initiating Discord login`);
+  console.log(`[OAuth] Redirect URI: ${REDIRECT_URI}`);
+  res.redirect(`https://discord.com/oauth2/authorize?${params.toString()}`);
+});
+
+app.get('/auth/discord/callback', async (req, res) => {
+  const { code, state, error } = req.query;
+  
+  if (error) {
+    console.error(`[OAuth] Discord returned error: ${error}`);
+    return res.redirect('/login?error=oauth_denied');
+  }
+  
+  if (!code) {
+    console.error('[OAuth] No code received');
+    return res.redirect('/login?error=no_code');
+  }
+
+  const savedState = req.signedCookies.oauth_state;
+  const codeVerifier = req.signedCookies.code_verifier;
+  
+  if (!savedState || savedState !== state) {
+    console.error('[OAuth] State mismatch - possible CSRF attack');
+    return res.redirect('/login?error=invalid_state');
+  }
+  
+  if (!codeVerifier) {
+    console.error('[OAuth] No code verifier found in cookies');
+    return res.redirect('/login?error=missing_verifier');
+  }
+
+  res.clearCookie('oauth_state');
+  res.clearCookie('code_verifier');
+
+  try {
+    const tokenParams = new URLSearchParams({
+      client_id: DISCORD_CLIENT_ID,
+      client_secret: DISCORD_CLIENT_SECRET,
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: REDIRECT_URI,
+      code_verifier: codeVerifier,
+    });
+
+    const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: tokenParams.toString(),
+    });
+
+    if (!tokenResponse.ok) {
+      const errorData = await tokenResponse.text();
+      console.error('[OAuth] Token exchange failed:', errorData);
+      return res.redirect('/login?error=token_exchange_failed');
+    }
+
+    const tokens = await tokenResponse.json();
+
+    const userResponse = await fetch('https://discord.com/api/users/@me', {
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+    });
+
+    if (!userResponse.ok) {
+      console.error('[OAuth] Failed to fetch user info');
+      return res.redirect('/login?error=user_fetch_failed');
+    }
+
+    const user = await userResponse.json();
+
+    const guildsResponse = await fetch('https://discord.com/api/users/@me/guilds', {
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+    });
+
+    let guilds = [];
+    if (guildsResponse.ok) {
+      guilds = await guildsResponse.json();
+    }
+
+    const isSecure = WEBSITE_URL.startsWith('https');
+    const sessionId = createSession({
+      user,
+      guilds,
+      tokens: {
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expires_at: Date.now() + (tokens.expires_in * 1000),
+      },
+    });
+
+    res.cookie('session', sessionId, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      signed: true,
+    });
+
+    console.log(`[OAuth] Login successful for ${user.username}#${user.discriminator || '0'}`);
+    res.redirect('/dashboard');
+    
+  } catch (err) {
+    console.error('[OAuth] Callback error:', err);
+    res.redirect('/login?error=callback_failed');
+  }
+});
+
+app.post('/auth/logout', (req, res) => {
+  const sessionId = req.signedCookies.session;
+  if (sessionId) {
+    destroySession(sessionId);
+  }
+  res.clearCookie('session');
+  res.json({ success: true });
+});
+
+app.get('/api/me', (req, res) => {
+  const session = getSession(req);
+  if (!session || !session.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  
+  res.json({
+    user: session.user,
+    guilds: session.guilds || [],
+  });
+});
+
+app.get('/api/guilds', requireAuth, (req, res) => {
+  res.json({
+    guilds: req.session.guilds || [],
+  });
+});
+
+app.get('/api/servers/:serverId/config', requireAuth, async (req, res) => {
+  const { serverId } = req.params;
+  
+  const hasAccess = req.session.guilds?.some(g => 
+    g.id === serverId && ((parseInt(g.permissions) & 0x20) === 0x20 || g.owner)
+  );
+  
+  if (!hasAccess) {
+    return res.status(403).json({ error: 'No access to this server' });
+  }
+  
+  res.json({
+    game: 'default',
+    dropChannelId: '',
+    dropPing: false,
+    eventPing: false,
+    giveawayPing: false,
+    lotteryPing: false,
+  });
+});
+
+app.patch('/api/servers/:serverId/config', requireAuth, async (req, res) => {
+  const { serverId } = req.params;
+  
+  const hasAccess = req.session.guilds?.some(g => 
+    g.id === serverId && ((parseInt(g.permissions) & 0x20) === 0x20 || g.owner)
+  );
+  
+  if (!hasAccess) {
+    return res.status(403).json({ error: 'No access to this server' });
+  }
+  
+  console.log(`[Config] Updating server ${serverId}:`, req.body);
+  
+  res.json({ success: true, ...req.body });
+});
+
+app.get('/api/bundles', requireAuth, (req, res) => {
+  res.json({
+    bundles: [
+      { id: 'default', name: 'Default Bundle', description: 'The original character collection.', characterCount: 50 },
+      { id: 'animals', name: 'Animal Kingdom', description: 'Cute and wild animals.', characterCount: 35 },
+      { id: 'fantasy', name: 'Fantasy Realm', description: 'Dragons and mythical creatures.', characterCount: 40 },
+      { id: 'scifi', name: 'Sci-Fi Universe', description: 'Robots and aliens.', characterCount: 30 },
+    ],
+  });
+});
+
+app.get('/api/bundles/:bundleId/characters', requireAuth, (req, res) => {
+  res.json({
+    characters: [],
+  });
+});
+
+const dashboardSubmissions = new Map();
+
+app.get('/api/submissions', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  const userSubmissions = [];
+  
+  dashboardSubmissions.forEach((sub, id) => {
+    if (sub.userId === userId) {
+      userSubmissions.push({ id, ...sub });
+    }
+  });
+  
+  userSubmissions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+  res.json({ submissions: userSubmissions });
+});
+
+app.post('/api/submissions', requireAuth, (req, res) => {
+  const { characterName, description, abilities, rarity, imageUrl, notes } = req.body;
+  
+  if (!characterName || !characterName.trim()) {
+    return res.status(400).json({ error: 'Character name is required' });
+  }
+  
+  const id = crypto.randomBytes(8).toString('hex');
+  const submission = {
+    characterName: characterName.trim(),
+    description: description || '',
+    abilities: abilities || '',
+    rarity: rarity || 'common',
+    imageUrl: imageUrl || '',
+    notes: notes || '',
+    userId: req.session.user.id,
+    username: req.session.user.username,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    feedback: null,
+  };
+  
+  dashboardSubmissions.set(id, submission);
+  
+  console.log(`[Submissions] New submission from ${req.session.user.username}: ${characterName}`);
+  
+  res.json({ success: true, id, ...submission });
+});
+
+app.put('/api/account/preferences', requireAuth, (req, res) => {
+  console.log(`[Account] Updating preferences for ${req.session.user.username}:`, req.body);
+  res.json({ success: true });
+});
 
 app.get('/api/stats', apiLimiter, (req, res) => {
   res.json({
@@ -76,8 +423,48 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Bot is alive!', timestamp: new Date().toISOString() });
 });
 
+const dashboardDistPath = path.join(__dirname, 'website', 'dist');
+const hasDashboardBuild = fs.existsSync(dashboardDistPath);
+
+if (hasDashboardBuild) {
+  app.use(express.static(dashboardDistPath));
+}
+
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '1h',
+  etag: true
+}));
+
+app.use('/dashboard', (req, res, next) => {
+  if (hasDashboardBuild) {
+    res.sendFile(path.join(dashboardDistPath, 'index.html'));
+  } else {
+    res.redirect('/');
+  }
+});
+
+app.get('/login', (req, res) => {
+  if (hasDashboardBuild) {
+    res.sendFile(path.join(dashboardDistPath, 'index.html'));
+  } else {
+    res.redirect('/');
+  }
+});
+
+app.get('/features', (req, res) => {
+  if (hasDashboardBuild) {
+    res.sendFile(path.join(dashboardDistPath, 'index.html'));
+  } else {
+    res.sendFile(path.join(__dirname, 'public', 'features.html'));
+  }
+});
+
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  if (hasDashboardBuild) {
+    res.sendFile(path.join(dashboardDistPath, 'index.html'));
+  } else {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
 });
 
 app.get('/:page.html', (req, res, next) => {
@@ -96,7 +483,11 @@ app.use((err, req, res, next) => {
 
 app.use((req, res) => {
   if (req.accepts('html')) {
-    res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
+    if (hasDashboardBuild) {
+      res.sendFile(path.join(dashboardDistPath, 'index.html'));
+    } else {
+      res.status(404).sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
   } else {
     res.status(404).json({ success: false, message: 'Not found' });
   }
@@ -117,10 +508,17 @@ server.on('error', (err) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🌐 Server running on port ${PORT}`);
+  console.log(`🔗 Website URL: ${WEBSITE_URL}`);
+  console.log(`🔗 OAuth Redirect URI: ${REDIRECT_URI}`);
+  console.log(`🔐 Discord OAuth configured: ${!!DISCORD_CLIENT_ID}`);
+  if (hasDashboardBuild) {
+    console.log(`📊 Dashboard: Enabled (built)`);
+  } else {
+    console.log(`📊 Dashboard: Not built (run 'npm run build' in website folder)`);
+  }
 });
 
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits, StringSelectMenuBuilder } = require('discord.js');
-const fs = require('fs');
 
 const client = new Client({
   intents: [
@@ -6380,27 +6778,27 @@ console.log(`📊 Environment: ${USE_MONGODB ? 'MongoDB' : 'JSON-only'}`);
 const DISCORD_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN;
 
 if (!DISCORD_TOKEN) {
-  console.error('❌ FATAL: DISCORD_BOT_TOKEN environment variable is not set!');
-  console.error('Please set the DISCORD_BOT_TOKEN in your environment variables.');
-  process.exit(1);
-}
-
-if (USE_MONGODB && !process.env.MONGODB_URI) {
-  console.error('❌ FATAL: USE_MONGODB is true but MONGODB_URI is not set!');
-  console.error('Please set the MONGODB_URI or set USE_MONGODB to false.');
-  process.exit(1);
-}
-
-// Connect to Discord
-console.log('🔌 Connecting to Discord...');
-client.login(DISCORD_TOKEN)
-  .then(() => {
-    console.log('✅ Discord login initiated successfully!');
-  })
-  .catch((error) => {
-    console.error('❌ FATAL: Failed to login to Discord:', error.message);
+  console.warn('⚠️ WARNING: DISCORD_BOT_TOKEN not set - Discord bot is DISABLED');
+  console.warn('📝 The web dashboard is still running. Set DISCORD_BOT_TOKEN to enable the bot.');
+  console.log('🌐 Web server is active at: ' + WEBSITE_URL);
+} else {
+  if (USE_MONGODB && !process.env.MONGODB_URI) {
+    console.error('❌ FATAL: USE_MONGODB is true but MONGODB_URI is not set!');
+    console.error('Please set the MONGODB_URI or set USE_MONGODB to false.');
     process.exit(1);
-  });
+  }
+
+  // Connect to Discord
+  console.log('🔌 Connecting to Discord...');
+  client.login(DISCORD_TOKEN)
+    .then(() => {
+      console.log('✅ Discord login initiated successfully!');
+    })
+    .catch((error) => {
+      console.error('❌ Failed to login to Discord:', error.message);
+      console.warn('📝 The web dashboard is still running. Check your DISCORD_BOT_TOKEN.');
+    });
+}
 
 // Handle graceful shutdown
 process.on('SIGTERM', async () => {

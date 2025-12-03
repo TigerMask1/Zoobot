@@ -44,10 +44,47 @@ The bot is built on Discord.js v14 and Node.js 20, using a dual-mode data storag
 ## External Dependencies
 - **Discord.js v14**: Discord API interactions.
 - **Node.js 20**: JavaScript runtime environment.
-- **Express**: Lightweight HTTP server for health checks.
+- **Express**: Lightweight HTTP server for health checks and web dashboard.
 - **MongoDB**: Production data persistence.
+- **React + Vite**: Web dashboard frontend.
+- **Tailwind CSS v3**: Dashboard styling.
+
+## Web Dashboard
+
+The project includes a modern web dashboard for managing bot settings without typing commands.
+
+**Dashboard Features:**
+- Discord OAuth2 login with PKCE security
+- Server management (for Discord server admins)
+- Character bundle selection
+- Character submission system
+- Account preferences
+
+**Dashboard Setup:**
+1. Set `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` environment variables
+2. Add the OAuth2 redirect URI to your Discord app: `https://your-domain/auth/discord/callback`
+3. The dashboard is served automatically at the root URL
+
+**Dashboard Files:**
+- `website/` - React frontend source code
+- `website/dist/` - Built dashboard files (auto-served)
+- OAuth2 routes integrated in `index.js`
+
+**Environment Variables for Dashboard:**
+- `DISCORD_CLIENT_ID` - Discord application client ID
+- `DISCORD_CLIENT_SECRET` - Discord application client secret
+- `COOKIE_SECRET` (optional) - Secret for signing cookies
 
 ## Recent Changes (December 2025)
+
+### Web Dashboard Implementation
+Added a modern React-based web dashboard with Discord OAuth2 authentication:
+- Clean, responsive UI built with React and Tailwind CSS
+- Secure Discord OAuth2 with PKCE flow
+- OAuth2 redirect URI correctly uses REPLIT_DEV_DOMAIN for reliable redirects
+- Integrated into main server on port 5000 (no separate server needed)
+- Server management, bundles, and character submissions
+- Works independently even if Discord bot token is not set
 
 ### Character Key System Implementation
 Added a new character key collection system as an alternative way to unlock characters:
