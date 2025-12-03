@@ -454,7 +454,7 @@ function startPersonalizedTaskSystem(client, data) {
   console.log('✅ Personalized Task System started!');
 }
 
-client.on('clientReady', async () => {
+client.on('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}!`);
   console.log(`🎮 Bot is ready to serve ${client.guilds.cache.size} servers!`);
 
@@ -6367,4 +6367,80 @@ client.on('messageCreate', async (message) => {
     console.error('Error handling message:', error);
     await message.reply('❌ An error occurred while processing your command. Please try again later.');
   }
+});
+
+// ============================================
+// STARTUP VALIDATION AND DISCORD LOGIN
+// ============================================
+
+console.log('🚀 Starting ZooBot...');
+console.log(`📊 Environment: ${USE_MONGODB ? 'MongoDB' : 'JSON-only'}`);
+
+// Validate required environment variables
+const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+
+if (!DISCORD_TOKEN) {
+  console.error('❌ FATAL: DISCORD_TOKEN environment variable is not set!');
+  console.error('Please set the DISCORD_TOKEN in your environment variables.');
+  process.exit(1);
+}
+
+if (USE_MONGODB && !process.env.MONGODB_URI) {
+  console.error('❌ FATAL: USE_MONGODB is true but MONGODB_URI is not set!');
+  console.error('Please set the MONGODB_URI or set USE_MONGODB to false.');
+  process.exit(1);
+}
+
+// Connect to Discord
+console.log('🔌 Connecting to Discord...');
+client.login(DISCORD_TOKEN)
+  .then(() => {
+    console.log('✅ Discord login initiated successfully!');
+  })
+  .catch((error) => {
+    console.error('❌ FATAL: Failed to login to Discord:', error.message);
+    process.exit(1);
+  });
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('📤 Received SIGTERM, shutting down gracefully...');
+  try {
+    if (data) {
+      await saveDataImmediate(data);
+      console.log('✅ Data saved before shutdown');
+    }
+    client.destroy();
+    console.log('✅ Discord client destroyed');
+    process.exit(0);
+  } catch (error) {
+    console.error('Error during shutdown:', error);
+    process.exit(1);
+  }
+});
+
+process.on('SIGINT', async () => {
+  console.log('📤 Received SIGINT, shutting down gracefully...');
+  try {
+    if (data) {
+      await saveDataImmediate(data);
+      console.log('✅ Data saved before shutdown');
+    }
+    client.destroy();
+    console.log('✅ Discord client destroyed');
+    process.exit(0);
+  } catch (error) {
+    console.error('Error during shutdown:', error);
+    process.exit(1);
+  }
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('⚠️ Unhandled Promise Rejection:', reason);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('⚠️ Uncaught Exception:', error);
 });
