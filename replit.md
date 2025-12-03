@@ -93,6 +93,18 @@ Added a new character key collection system as an alternative way to unlock char
 - Fixed critical bug where rewards weren't being saved properly
 - Changed incorrect `saveData.giveaway` to `data.giveaway`
 
+**Critical Giveaway Scheduling Fix (December 2025):**
+- Fixed `TypeError: now.getUTCFullYear is not a function` crash
+- Root cause: `Date.now()` returns a number, but code was calling Date methods on it
+- Fixed all occurrences in `scheduleNextAutoGiveaway()`, `startAutomaticGiveaway()`, and `initializeGiveawaySystem()`
+- Changed `const now = Date.now()` to `const nowDate = new Date()` where Date methods are needed
+- This fix prevents the crash loop that was causing duplicate giveaways
+
+**Index.js Syntax Fixes:**
+- Fixed unescaped backtick in template string (line ~4292)
+- Renamed duplicate variable `stopResult` to `stopEventResult`
+- Fixed corrupted code at end of file
+
 **Hub Documentation Updated:**
 - Added character keys information to rewards section
 - Added `!grantkeys` and `!grantkeyrush` to admin commands
