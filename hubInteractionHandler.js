@@ -3,6 +3,7 @@ const {
   HUB_CATEGORIES,
   ADMIN_CATEGORIES,
   SUPER_ADMIN_COMMANDS,
+  ALL_COMMANDS,
   createMainHubEmbed,
   createHubCategoryButtons,
   createCategoryEmbed,
@@ -21,6 +22,10 @@ const {
   createQuickStartButtons,
   createMinigamesEmbed,
   createMinigameButtons,
+  createAllCommandsEmbed,
+  createAllCommandsButtons,
+  createSingleCategoryEmbed,
+  createSingleCategoryButtons,
   getPlayerJourneyStage
 } = require('./hubSystem.js');
 const {
@@ -151,15 +156,35 @@ async function handleHubInteraction(interaction, data, saveData) {
     }
     else if (customId === 'hub_help') {
       trackFeatureUse(userData, 'help');
-      const helpEmbed = createHelpEmbed(interaction.user);
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('hub_back')
-          .setLabel('Back to Hub')
-          .setEmoji('🏠')
-          .setStyle(ButtonStyle.Secondary)
-      );
-      await interaction.update({ embeds: [helpEmbed], components: [row] });
+      const { embed, currentPage, totalPages } = createAllCommandsEmbed('all', 0);
+      const buttons = createAllCommandsButtons('all', currentPage, totalPages);
+      await interaction.update({ embeds: [embed], components: buttons });
+    }
+    else if (customId.startsWith('cmdfilter_')) {
+      const filter = customId.replace('cmdfilter_', '');
+      trackFeatureUse(userData, `cmdfilter_${filter}`);
+      const { embed, currentPage, totalPages } = createAllCommandsEmbed(filter, 0);
+      const buttons = createAllCommandsButtons(filter, currentPage, totalPages);
+      await interaction.update({ embeds: [embed], components: buttons });
+    }
+    else if (customId.startsWith('cmdpage_')) {
+      const parts = customId.split('_');
+      const filter = parts[1];
+      const page = parseInt(parts[2]) || 0;
+      const { embed, currentPage, totalPages } = createAllCommandsEmbed(filter, page);
+      const buttons = createAllCommandsButtons(filter, currentPage, totalPages);
+      await interaction.update({ embeds: [embed], components: buttons });
+    }
+    else if (customId.startsWith('viewcat_')) {
+      const categoryId = customId.replace('viewcat_', '');
+      trackFeatureUse(userData, `viewcat_${categoryId}`);
+      const embed = createSingleCategoryEmbed(categoryId);
+      const buttons = createSingleCategoryButtons(categoryId);
+      if (embed) {
+        await interaction.update({ embeds: [embed], components: buttons });
+      } else {
+        await interaction.reply({ content: '❌ Category not found!', ephemeral: true });
+      }
     }
     else if (customId.startsWith('guide_step_')) {
       const step = parseInt(customId.replace('guide_step_', ''));
@@ -389,7 +414,7 @@ function createActionHelpEmbed(action) {
 }
 
 function isHubInteraction(customId) {
-  const hubPrefixes = ['hub_', 'guide_', 'feature_', 'onboard_', 'minigame_', 'knowmore_', 'admin_', 'superadmin_'];
+  const hubPrefixes = ['hub_', 'guide_', 'feature_', 'onboard_', 'minigame_', 'knowmore_', 'admin_', 'superadmin_', 'cmdfilter_', 'cmdpage_', 'viewcat_'];
   return hubPrefixes.some(prefix => customId.startsWith(prefix));
 }
 
