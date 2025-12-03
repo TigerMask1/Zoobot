@@ -171,10 +171,11 @@ function scheduleNextAutoGiveaway(channelId) {
     console.log('Cleared existing auto giveaway timeout.');
   }
 
-  const now = Date.now();
-  let timeUntilNext = activeGiveaway.autoSchedule.nextRunTime - now;
+  const nowTimestamp = Date.now();
+  const nowDate = new Date(nowTimestamp);
+  let timeUntilNext = activeGiveaway.autoSchedule.nextRunTime - nowTimestamp;
 
-  console.log(`Current time: ${new Date(now).toISOString()}`);
+  console.log(`Current time: ${nowDate.toISOString()}`);
   console.log(`Next scheduled run: ${new Date(activeGiveaway.autoSchedule.nextRunTime).toISOString()}`);
   console.log(`Time until next auto giveaway: ${formatTimeUntil(activeGiveaway.autoSchedule.nextRunTime)}`);
 
@@ -185,9 +186,9 @@ function scheduleNextAutoGiveaway(channelId) {
     // Ensure nextRunTime is set for the *following* day's scheduled time
     const { startHourUTC, startMinuteUTC } = activeGiveaway.autoSchedule;
     activeGiveaway.autoSchedule.nextRunTime = new Date(Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate() + 1, // Schedule for tomorrow
+      nowDate.getUTCFullYear(),
+      nowDate.getUTCMonth(),
+      nowDate.getUTCDate() + 1, // Schedule for tomorrow
       startHourUTC,
       startMinuteUTC
     )).getTime();
@@ -220,14 +221,14 @@ async function startAutomaticGiveaway(channelId) {
   const result = await startGiveaway(channelId, giveawayDurationMinutes);
 
   if (result.success) {
-    const now = Date.now();
+    const nowDate = new Date();
     const { startHourUTC, startMinuteUTC } = activeGiveaway.autoSchedule;
     
     // Set next run time for the *following* day at the specified UTC time
     activeGiveaway.autoSchedule.nextRunTime = new Date(Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate() + 1,
+      nowDate.getUTCFullYear(),
+      nowDate.getUTCMonth(),
+      nowDate.getUTCDate() + 1,
       startHourUTC,
       startMinuteUTC
     )).getTime();
@@ -237,12 +238,12 @@ async function startAutomaticGiveaway(channelId) {
   } else {
     console.error('Failed to start automatic giveaway:', result.message);
     // If starting failed, still try to schedule the next one
-    const now = Date.now();
+    const nowDate = new Date();
     const { startHourUTC, startMinuteUTC } = activeGiveaway.autoSchedule;
     activeGiveaway.autoSchedule.nextRunTime = new Date(Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate() + 1,
+      nowDate.getUTCFullYear(),
+      nowDate.getUTCMonth(),
+      nowDate.getUTCDate() + 1,
       startHourUTC,
       startMinuteUTC
     )).getTime();
@@ -270,12 +271,13 @@ async function initializeGiveawaySystem(client, data) {
   // Initialize nextRunTime for auto schedule if enabled but not set
   if (activeGiveaway.autoSchedule.enabled && !activeGiveaway.autoSchedule.nextRunTime) {
     console.log('Auto giveaway enabled but nextRunTime not set. Calculating initial nextRunTime.');
-    const now = Date.now();
+    const nowTimestamp = Date.now();
+    const nowDate = new Date(nowTimestamp);
     const { startHourUTC, startMinuteUTC } = activeGiveaway.autoSchedule;
-    let nextRunTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), startHourUTC, startMinuteUTC)).getTime();
+    let nextRunTime = new Date(Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate(), startHourUTC, startMinuteUTC)).getTime();
     
-    if (nextRunTime <= now) {
-      nextRunTime = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, startHourUTC, startMinuteUTC)).getTime();
+    if (nextRunTime <= nowTimestamp) {
+      nextRunTime = new Date(Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate() + 1, startHourUTC, startMinuteUTC)).getTime();
     }
     activeGiveaway.autoSchedule.nextRunTime = nextRunTime;
     await saveGiveawayState();
