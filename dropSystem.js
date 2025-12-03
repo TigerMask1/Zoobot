@@ -292,8 +292,8 @@ async function executeDrop(serverId) {
     } else if (dropTypeRoll < 0.02) {
       // 2% chance: Shards
       selectedDrop = { type: 'shards', min: 1, max: 2, emoji: '🔷' };
-    } else if (dropTypeRoll < 0.07) {
-      // 5% chance: Character Keys (1-2 keys) - bonus keys even outside Key Rush!
+    } else if (dropTypeRoll < 0.17) {
+      // 15% chance: Character Keys (1-2 keys) - bonus keys even outside Key Rush!
       const serverGame = getServerGame(serverId) || DEFAULT_GAME;
       const gameChars = characterManager.getCharactersByGame(serverGame);
       
@@ -305,7 +305,7 @@ async function executeDrop(serverId) {
         selectedDrop = { type: 'coins', min: 1, max: 10, emoji: '💰' };
       }
     } else if (dropTypeRoll < 0.62) {
-      // 55% chance: Character Tokens
+      // 45% chance: Character Tokens
       const serverGame = getServerGame(serverId) || DEFAULT_GAME;
       const gameChars = characterManager.getCharactersByGame(serverGame);
       const gameCharNames = new Set(gameChars.map(c => c.name));

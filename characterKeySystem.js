@@ -13,6 +13,8 @@ const KEYS_TO_UNLOCK = 750;
 const KEY_RUSH_COST = 250;
 const KEY_RUSH_DURATION = 3600000;
 const MAIN_SERVER_ID = '1430516117851340893';
+const MAIN_DROP_CHANNEL = '1430525383635107850';
+const EXCLUDED_DROP_CHANNEL = '1430525428312965160';
 
 const KEY_RUSH_SCHEDULE = [
   { hour: 10, minute: 0 },
@@ -796,7 +798,7 @@ function stopKeyRushDrops(serverId, sendNotification = true) {
 async function sendKeyRushEndNotification(serverId) {
   try {
     const config = getServerConfig(serverId);
-    const channelId = config?.dropChannelId || (isMainServer(serverId) ? MAIN_SERVER_ID : null);
+    const channelId = config?.dropChannelId || (isMainServer(serverId) ? MAIN_DROP_CHANNEL : null);
 
     if (!channelId || !activeClient) return;
 
@@ -819,7 +821,7 @@ async function sendKeyRushEndNotification(serverId) {
 async function sendKeyRushStartNotification(serverId, duration = '1 hour') {
   try {
     const config = getServerConfig(serverId);
-    const channelId = config?.dropChannelId || (isMainServer(serverId) ? MAIN_SERVER_ID : null);
+    const channelId = config?.dropChannelId || (isMainServer(serverId) ? MAIN_DROP_CHANNEL : null);
 
     if (!channelId || !activeClient) return;
 
@@ -849,10 +851,16 @@ async function executeKeyDrop(serverId) {
     }
 
     const config = getServerConfig(serverId);
-    const channelId = config?.dropChannelId || (isMainServer(serverId) ? MAIN_SERVER_ID : null);
+    const channelId = config?.dropChannelId || (isMainServer(serverId) ? MAIN_DROP_CHANNEL : null);
 
     if (!channelId) {
       console.error(`❌ No channel configured for Key Rush in server ${serverId}`);
+      return;
+    }
+
+    // Skip drops to excluded channel (only announce there, no drops)
+    if (channelId === EXCLUDED_DROP_CHANNEL) {
+      console.log(`⏭️ Skipping Key Rush drop to excluded channel ${EXCLUDED_DROP_CHANNEL}`);
       return;
     }
 

@@ -517,13 +517,14 @@ async function performLotteryDraw(serverId) {
       .setFooter({ text: 'Thanks for participating!' })
       .setTimestamp();
     
-    // Announce winners
+    // Announce winners to the lottery-specific channel
     const channel = await activeClient.channels.fetch(lottery.channelId).catch(() => null);
     if (channel) {
       await channel.send({ embeds: [winnerEmbed] });
     }
     
-    await broadcastToAllServers(winnerEmbed);
+    // Broadcast to all servers' events channels, but skip if it's the same as lottery channel
+    await broadcastToAllServers(winnerEmbed, lottery.channelId);
     
     // Update lottery history
     if (!lottery.winnersHistory) {
@@ -556,14 +557,15 @@ async function performLotteryDraw(serverId) {
   }
 }
 
-async function broadcastToAllServers(embed) {
+async function broadcastToAllServers(embed, skipChannelId = null) {
   if (!activeClient) return;
   
   try {
     for (const guild of activeClient.guilds.cache.values()) {
       const eventsChannelId = getEventsChannel(guild.id);
       
-      if (eventsChannelId) {
+      // Skip if this events channel is the same as the lottery channel (already sent there)
+      if (eventsChannelId && eventsChannelId !== skipChannelId) {
         const channel = await activeClient.channels.fetch(eventsChannelId).catch(() => null);
         if (channel) {
           await channel.send({ embeds: [embed] }).catch(err => {
