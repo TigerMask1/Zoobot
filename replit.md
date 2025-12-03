@@ -108,3 +108,10 @@ Added a new character key collection system as an alternative way to unlock char
 **Hub Documentation Updated:**
 - Added character keys information to rewards section
 - Added `!grantkeys` and `!grantkeyrush` to admin commands
+
+**Giveaway Deleted Message Handling (December 2025):**
+- Fixed "Unknown Message" errors when giveaway messages are deleted
+- Added graceful error handling for channel.fetch() and messages.fetch() calls
+- Auto-detects and cleans up stale giveaway data on bot restart
+- Prevents auto-giveaway conflicts when manual giveaway is running
+- If winner message is deleted, posts new winner announcement instead of crashing
