@@ -4289,7 +4289,7 @@ client.on('messageCreate', async (message) => {
             const pfpSetEmbed = new EmbedBuilder()
               .setColor('#FF69B4')
               .setTitle('🖼️ Profile Picture Updated!')
-              .setDescription(`${result.message}\n\nYour profile will now display **${equippedPfp.name}**!\n\nUse `!profile` to see your updated profile.`)
+              .setDescription(`${result.message}\n\nYour profile will now display **${equippedPfp.name}**!\n\nUse \`!profile\` to see your updated profile.`)
               .setThumbnail(equippedPfp.url);
 
             await message.reply({ embeds: [pfpSetEmbed] });
@@ -5354,8 +5354,8 @@ client.on('messageCreate', async (message) => {
           return;
         }
 
-        const stopResult = await eventSystem.stopEventManually();
-        await message.reply(stopResult.message);
+        const stopEventResult = await eventSystem.stopEventManually();
+        await message.reply(stopEventResult.message);
         break;
 
       case 'eventschedule':
@@ -6345,4 +6345,26 @@ client.on('messageCreate', async (message) => {
         if (durationType === '3h') durationHours = 3;
         else if (durationType === '6h') durationHours = 6;
         else if (durationType === '24h') durationHours = 24;
-        else {\n!submit Luna|🌙|crate\n!submit Luna|🌙|crate|Moonlight,🌕,Heals 5% HP per turn,healPerTurn,0.05\n!submit Luna|🌙|crate|Moonlight,🌕,Heals 5% HP per turn,healPerTurn,0.05|Moon Beam,90\n
+        else {
+          await message.reply('❌ Invalid duration! Use `3h`, `6h`, or `24h`.');
+          return;
+        }
+
+        if (!['coins', 'gems'].includes(currencyType)) {
+          await message.reply('❌ Invalid currency! Use `coins` or `gems`.');
+          return;
+        }
+
+        const { startLottery } = require('./lotterySystem.js');
+        const lotteryResult = await startLottery(serverId, durationHours, entryFee, currencyType, message.channel.id);
+        await message.reply(lotteryResult.message);
+        break;
+
+      default:
+        break;
+    }
+  } catch (error) {
+    console.error('Error handling message:', error);
+    await message.reply('❌ An error occurred while processing your command. Please try again later.');
+  }
+});
