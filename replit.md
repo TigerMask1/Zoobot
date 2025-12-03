@@ -115,3 +115,19 @@ Added a new character key collection system as an alternative way to unlock char
 - Auto-detects and cleans up stale giveaway data on bot restart
 - Prevents auto-giveaway conflicts when manual giveaway is running
 - If winner message is deleted, posts new winner announcement instead of crashing
+
+**Lottery Double Message Fix (December 2025):**
+- Fixed issue where auto-lottery was sending 2 messages when ending
+- Modified `broadcastToAllServers` to skip channels that match the lottery channel
+- Prevents duplicate announcements when lottery channel equals events channel
+
+**Key Rush Drop Channel Fix (December 2025):**
+- Fixed bug where `MAIN_SERVER_ID` was incorrectly used as channel ID fallback
+- Added `MAIN_DROP_CHANNEL` constant for proper channel targeting
+- Added `EXCLUDED_DROP_CHANNEL` (1430525428312965160) to prevent drops in that channel
+- Key Rush drops now correctly go to the main drop channel (1430525383635107850)
+- Start/End notifications still work normally
+
+**Normal Key Drops Increased (December 2025):**
+- Increased character key drop rate from 5% to 15% during normal gameplay
+- Updated drop distribution: 2% shards, 15% keys, 45% tokens, 30% coins, 8% gems
