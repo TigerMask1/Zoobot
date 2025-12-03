@@ -170,7 +170,7 @@ async function handleHubInteraction(interaction, data, saveData) {
     else if (customId.startsWith('cmdpage_')) {
       const parts = customId.split('_');
       const filter = parts[1];
-      const page = parseInt(parts[2]) || 0;
+      const page = parseInt(parts[parts.length - 1]) || 0;
       const { embed, currentPage, totalPages } = createAllCommandsEmbed(filter, page);
       const buttons = createAllCommandsButtons(filter, currentPage, totalPages);
       await interaction.update({ embeds: [embed], components: buttons });

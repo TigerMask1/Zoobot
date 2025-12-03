@@ -1648,25 +1648,25 @@ function createAllCommandsButtons(filter = 'all', page = 0, totalPages = 1) {
   if (totalPages > 1) {
     const navRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`cmdpage_${filter}_0`)
+        .setCustomId(`cmdpage_${filter}_first_0`)
         .setLabel('First')
         .setEmoji('⏮️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page === 0),
       new ButtonBuilder()
-        .setCustomId(`cmdpage_${filter}_${Math.max(0, page - 1)}`)
+        .setCustomId(`cmdpage_${filter}_prev_${Math.max(0, page - 1)}`)
         .setLabel('Prev')
         .setEmoji('◀️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page === 0),
       new ButtonBuilder()
-        .setCustomId(`cmdpage_${filter}_${Math.min(totalPages - 1, page + 1)}`)
+        .setCustomId(`cmdpage_${filter}_next_${Math.min(totalPages - 1, page + 1)}`)
         .setLabel('Next')
         .setEmoji('▶️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page >= totalPages - 1),
       new ButtonBuilder()
-        .setCustomId(`cmdpage_${filter}_${totalPages - 1}`)
+        .setCustomId(`cmdpage_${filter}_last_${totalPages - 1}`)
         .setLabel('Last')
         .setEmoji('⏭️')
         .setStyle(ButtonStyle.Secondary)
