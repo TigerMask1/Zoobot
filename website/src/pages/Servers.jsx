@@ -99,7 +99,7 @@ export default function Servers() {
               You don't have admin access to any servers with the bot installed.
             </p>
             <a 
-              href="https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=8&scope=bot%20applications.commands"
+              href="https://discord.com/oauth2/authorize?client_id=1430549442842460170&permissions=8&scope=bot%20applications.commands"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-primary"
