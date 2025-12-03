@@ -211,10 +211,11 @@ async function startAutomaticGiveaway(channelId) {
     return;
   }
   
-  // Stop any running manual giveaway if auto is starting
+  // Check if a giveaway is already running - don't try to end it, just skip
   if (activeGiveaway.active) {
-    console.log('An active giveaway is already running. Ending it to start the automatic one.');
-    await endGiveaway(); // End the current giveaway first
+    console.log('An active giveaway is already running. Skipping auto-start to avoid conflicts.');
+    // Just reschedule for later, don't try to end the current one
+    return;
   }
 
   const giveawayDurationMinutes = 1440; // Default to 24 hours for auto giveaways if not specified otherwise
@@ -284,14 +285,48 @@ async function initializeGiveawaySystem(client, data) {
   }
 
 
+  // Clean up stale giveaway data on startup
   if (activeGiveaway.active && activeGiveaway.endTime) {
     const remaining = activeGiveaway.endTime - Date.now();
     if (remaining > 0) {
-      setTimeout(async () => {
-        await endGiveaway();
-      }, remaining);
-      console.log(`⏰ Resumed giveaway - ${Math.floor(remaining / 60000)} minutes remaining`);
+      // Verify the giveaway message still exists before resuming
+      if (activeGiveaway.messageId && activeGiveaway.channelId) {
+        try {
+          const channel = await activeClient.channels.fetch(activeGiveaway.channelId).catch(() => null);
+          if (channel) {
+            const message = await channel.messages.fetch(activeGiveaway.messageId).catch(() => null);
+            if (!message) {
+              console.log('⚠️ Giveaway message was deleted - clearing stale giveaway');
+              activeGiveaway.active = false;
+              activeGiveaway.messageId = null;
+              activeGiveaway.participants = [];
+              activeGiveaway.endTime = null;
+              await saveGiveawayState();
+            } else {
+              setTimeout(async () => {
+                await endGiveaway();
+              }, remaining);
+              console.log(`⏰ Resumed giveaway - ${Math.floor(remaining / 60000)} minutes remaining`);
+            }
+          } else {
+            console.log('⚠️ Giveaway channel not found - clearing stale giveaway');
+            activeGiveaway.active = false;
+            activeGiveaway.messageId = null;
+            activeGiveaway.participants = [];
+            activeGiveaway.endTime = null;
+            await saveGiveawayState();
+          }
+        } catch (error) {
+          console.log('⚠️ Error checking giveaway message:', error.message);
+        }
+      } else {
+        setTimeout(async () => {
+          await endGiveaway();
+        }, remaining);
+        console.log(`⏰ Resumed giveaway - ${Math.floor(remaining / 60000)} minutes remaining`);
+      }
     } else {
+      console.log('⚠️ Giveaway time has expired - ending now');
       await endGiveaway(); // End giveaway if its time has already passed
     }
   }
@@ -480,19 +515,26 @@ async function endGiveaway() {
 
     try {
       if (preservedChannelId && messageId) {
-        const channel = await activeClient.channels.fetch(preservedChannelId);
-        const message = await channel.messages.fetch(messageId);
+        const channel = await activeClient.channels.fetch(preservedChannelId).catch(() => null);
+        if (channel) {
+          const message = await channel.messages.fetch(messageId).catch(() => null);
+          if (message) {
+            const noParticipantsEmbed = new EmbedBuilder()
+              .setColor('#FFA500')
+              .setTitle('🎉 GIVEAWAY ENDED')
+              .setDescription('No one participated in this giveaway. Better luck next time!')
+              .setTimestamp();
 
-        const noParticipantsEmbed = new EmbedBuilder()
-          .setColor('#FFA500')
-          .setTitle('🎉 GIVEAWAY ENDED')
-          .setDescription('No one participated in this giveaway. Better luck next time!')
-          .setTimestamp();
-
-        await message.edit({ embeds: [noParticipantsEmbed], components: [] });
+            await message.edit({ embeds: [noParticipantsEmbed], components: [] }).catch(() => {
+              console.log('Could not edit giveaway message - it may have been deleted');
+            });
+          } else {
+            console.log('Giveaway message not found - it may have been deleted');
+          }
+        }
       }
     } catch (error) {
-      console.error('Error updating giveaway message for no participants:', error);
+      console.log('Could not update giveaway message:', error.message);
     }
 
     return { success: true, message: '⚠️ Giveaway ended with no participants.' };
@@ -581,11 +623,20 @@ async function endGiveaway() {
 
     if (preservedChannelId && activeGiveaway.messageId) {
       try {
-        const channel = await activeClient.channels.fetch(preservedChannelId);
-        const message = await channel.messages.fetch(activeGiveaway.messageId);
-        await message.edit({ embeds: [winnerEmbed], components: [] });
+        const channel = await activeClient.channels.fetch(preservedChannelId).catch(() => null);
+        if (channel) {
+          const message = await channel.messages.fetch(activeGiveaway.messageId).catch(() => null);
+          if (message) {
+            await message.edit({ embeds: [winnerEmbed], components: [] }).catch(() => {
+              console.log('Could not edit winner message - it may have been deleted');
+            });
+          } else {
+            console.log('Winner giveaway message not found - posting new announcement');
+            await channel.send({ embeds: [winnerEmbed] }).catch(() => {});
+          }
+        }
       } catch (editError) {
-        console.error('Error editing giveaway message:', editError);
+        console.log('Error editing giveaway message:', editError.message);
       }
     }
 
