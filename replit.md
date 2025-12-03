@@ -168,3 +168,13 @@ Added a new character key collection system as an alternative way to unlock char
 **Normal Key Drops Increased (December 2025):**
 - Increased character key drop rate from 5% to 15% during normal gameplay
 - Updated drop distribution: 2% shards, 15% keys, 45% tokens, 30% coins, 8% gems
+
+**Key Rush & Revive Command Fix (December 2025):**
+- Fixed bug where `!revive` said "drops are already active" during Key Rush
+- Root cause: When Key Rush starts, normal drops are stopped but inactivity status wasn't updated
+- The revive command only checked `status.paused` which was false, even though drops weren't running
+- Fix 1: `reviveDrops()` now checks if Key Rush is active and shows appropriate message
+- Fix 2: `reviveDrops()` now checks if drops are actually running (via `dropIntervals` Map)
+- Fix 3: When Key Rush ends, inactivity status is now reset to prevent immediate pause
+- Added `resetInactivityStatus()` function to properly handle state transitions
+- Files modified: `dropSystem.js`, `characterKeySystem.js`

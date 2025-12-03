@@ -498,31 +498,93 @@ if (isMainServer(serverId)) {
 }
 
 async function reviveDrops(serverId) {
-  if (!serverInactivityStatus.has(serverId)) {
-    return { success: false, message: '❌ Drops are not paused!' };
+  // Check if Key Rush is active - if so, drops are handled by Key Rush system
+  if (isKeyRushActive(serverId)) {
+    return { 
+      success: false, 
+      message: '🔑 **Key Rush is currently active!**\n\nDuring Key Rush, character key drops are running instead of regular drops.\n\nRegular drops will automatically resume when Key Rush ends.' 
+    };
   }
   
-  const status = serverInactivityStatus.get(serverId);
+  // Check if drops are actually running (interval exists)
+  const dropsCurrentlyRunning = dropIntervals.has(serverId);
   
-  if (!status.paused) {
+  // Check inactivity status
+  const hasInactivityStatus = serverInactivityStatus.has(serverId);
+  const status = hasInactivityStatus ? serverInactivityStatus.get(serverId) : null;
+  const isPaused = status?.paused || false;
+  
+  // If drops are running and not paused, they're already active
+  if (dropsCurrentlyRunning && !isPaused) {
     return { success: false, message: '❌ Drops are already active!' };
   }
   
-  if (!areDropsActive(serverId)) {
-    return { success: false, message: '❌ Drops have expired! Use `!paydrops` to activate them again.' };
+  // If no inactivity status exists but drops aren't running, we need to start them
+  if (!hasInactivityStatus && !dropsCurrentlyRunning) {
+    // Check if drops should be active for this server
+    if (!areDropsActive(serverId)) {
+      return { success: false, message: '❌ Drops have expired! Use `!paydrops` to activate them again.' };
+    }
+    
+    // Initialize inactivity status and start drops
+    serverInactivityStatus.set(serverId, {
+      lastCatchAttempt: Date.now(),
+      paused: false
+    });
+    
+    startDropsForServer(serverId);
+    return { success: true, message: '✅ Drops started! They will begin spawning now.' };
   }
   
-  status.paused = false;
-  status.lastCatchAttempt = Date.now();
+  // If paused due to inactivity
+  if (isPaused) {
+    if (!areDropsActive(serverId)) {
+      return { success: false, message: '❌ Drops have expired! Use `!paydrops` to activate them again.' };
+    }
+    
+    status.paused = false;
+    status.lastCatchAttempt = Date.now();
+    
+    startDropsForServer(serverId);
+    
+    return { success: true, message: '✅ Drops revived! They will start spawning again.' };
+  }
   
-  startDropsForServer(serverId);
+  // Drops aren't running but also not paused - could be after Key Rush ended or bot restart
+  if (!dropsCurrentlyRunning) {
+    if (!areDropsActive(serverId)) {
+      return { success: false, message: '❌ Drops have expired! Use `!paydrops` to activate them again.' };
+    }
+    
+    // Reset inactivity status
+    if (status) {
+      status.paused = false;
+      status.lastCatchAttempt = Date.now();
+    } else {
+      serverInactivityStatus.set(serverId, {
+        lastCatchAttempt: Date.now(),
+        paused: false
+      });
+    }
+    
+    startDropsForServer(serverId);
+    return { success: true, message: '✅ Drops revived! They will start spawning again.' };
+  }
   
-  return { success: true, message: '✅ Drops revived! They will start spawning again.' };
+  return { success: false, message: '❌ Drops are already active!' };
 }
 
 function isDropsPaused(serverId) {
   if (!serverInactivityStatus.has(serverId)) return false;
   return serverInactivityStatus.get(serverId).paused;
+}
+
+function resetInactivityStatus(serverId) {
+  serverInactivityStatus.set(serverId, {
+    lastCatchAttempt: Date.now(),
+    paused: false
+  });
+  console.log(`🔄 Inactivity status reset for server ${serverId}`);
 }
 
 function checkInactivity(serverId) {
@@ -567,5 +629,6 @@ module.exports = {
   pauseDropsForInactivity,
   reviveDrops,
   isDropsPaused,
-  checkInactivity
+  checkInactivity,
+  resetInactivityStatus
 };

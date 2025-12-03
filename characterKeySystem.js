@@ -789,8 +789,14 @@ function stopKeyRushDrops(serverId, sendNotification = true) {
 
   // Auto-restart normal drops after Key Rush ends
   if (isMainServer(serverId)) {
-    const { startDropsForServer } = require('./dropSystem.js');
+    const { startDropsForServer, resetInactivityStatus } = require('./dropSystem.js');
     console.log(`🔄 Restarting normal drops for main server after Key Rush`);
+    
+    // Reset inactivity status to prevent immediate pause after Key Rush ends
+    if (typeof resetInactivityStatus === 'function') {
+      resetInactivityStatus(serverId);
+    }
+    
     startDropsForServer(serverId);
   }
 }
