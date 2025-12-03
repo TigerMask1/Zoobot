@@ -373,6 +373,508 @@ const SUPER_ADMIN_COMMANDS = {
   }
 };
 
+const ALL_COMMANDS = {
+  getting_started: {
+    emoji: '🚀',
+    name: 'Getting Started',
+    color: 0x00D9FF,
+    commands: [
+      { cmd: '!start', desc: 'Begin your ZooBot adventure' },
+      { cmd: '!select <character>', desc: 'Choose your starter character' },
+      { cmd: '!hub / !menu / !home', desc: 'Open interactive game hub' },
+      { cmd: '!guide / !tutorial', desc: 'View quick start guide' },
+      { cmd: '!help', desc: 'View all command categories' },
+      { cmd: '!overview / !systems', desc: 'View game systems overview' },
+      { cmd: '!discovery / !explore', desc: 'View feature discovery progress' },
+      { cmd: '!botinfo', desc: 'View information about ZooBot' },
+      { cmd: '!permissions / !perms', desc: 'View permission system info' }
+    ]
+  },
+  profile_collection: {
+    emoji: '👤',
+    name: 'Profile & Collection',
+    color: 0x9B59B6,
+    commands: [
+      { cmd: '!profile [@user] [page]', desc: 'View your or another user\'s profile' },
+      { cmd: '!myprofile', desc: 'Quick profile view' },
+      { cmd: '!collection', desc: 'View your character collection' },
+      { cmd: '!char <name> / !character <name>', desc: 'View detailed info for owned character' },
+      { cmd: '!info <name> / !i <name>', desc: 'View any character info (no ownership needed)' },
+      { cmd: '!levelup <name>', desc: 'Level up a character using tokens' },
+      { cmd: '!release <name>', desc: 'Release a character (Level 10+ required)' },
+      { cmd: '!setpfp <name> / !setprofilepic', desc: 'Set profile display character' },
+      { cmd: '!pfps', desc: 'View your profile pictures' },
+      { cmd: '!addpfp <name> (with image)', desc: 'Upload a custom profile picture' },
+      { cmd: '!equippfp <id>', desc: 'Equip a profile picture' },
+      { cmd: '!unequippfp', desc: 'Unequip current profile picture' }
+    ]
+  },
+  battles: {
+    emoji: '⚔️',
+    name: 'Battles',
+    color: 0xE74C3C,
+    commands: [
+      { cmd: '!battle @user / !b @user', desc: 'Challenge another player to a battle' },
+      { cmd: '!b easy / !b normal / !b hard', desc: 'Battle AI opponents' },
+      { cmd: '!shop', desc: 'View battle items shop' }
+    ]
+  },
+  drops_catching: {
+    emoji: '🎁',
+    name: 'Drops & Catching',
+    color: 0x2ECC71,
+    commands: [
+      { cmd: '!c <code>', desc: 'Catch a drop using its code' },
+      { cmd: '!paydrops / !activatedrops', desc: 'Activate drops (100 gems for 3 hours)' },
+      { cmd: '!dropstatus', desc: 'Check drop timer and status' },
+      { cmd: '!revive / !revivedrops', desc: 'Reactivate drops after inactivity pause' }
+    ]
+  },
+  character_keys: {
+    emoji: '🔑',
+    name: 'Character Keys',
+    color: 0xFFD700,
+    commands: [
+      { cmd: '!charkeys / !ck / !characterkeys', desc: 'View character key collection with progress' },
+      { cmd: '!keyunlock <character>', desc: 'Unlock a character using 750 keys' },
+      { cmd: '!convertkeys', desc: 'Convert excess keys to tokens (1:1)' },
+      { cmd: '!keyrush', desc: 'Activate Key Rush event (250 gems, 1 hour)' },
+      { cmd: '!keyrush confirm', desc: 'Confirm Key Rush activation when drops are active' },
+      { cmd: '!keyrushstatus', desc: 'Check Key Rush status and time remaining' },
+      { cmd: '!keys', desc: 'View your cage keys' },
+      { cmd: '!unlock <character>', desc: 'Unlock with cage keys (1000 keys)' },
+      { cmd: '!cage', desc: 'Open a random cage (250 cage keys)' }
+    ]
+  },
+  crates: {
+    emoji: '📦',
+    name: 'Crates',
+    color: 0xF39C12,
+    commands: [
+      { cmd: '!crate [type]', desc: 'View or buy crates' },
+      { cmd: '!pickcrate <type> / !pickchest', desc: 'Select a crate type to open' },
+      { cmd: '!opencrate <type> / !openchest', desc: 'Open a specific crate type' },
+      { cmd: '!bulkopen <type> [qty] / !openall', desc: 'Open multiple crates at once' }
+    ]
+  },
+  daily_rewards: {
+    emoji: '📅',
+    name: 'Daily & Rewards',
+    color: 0x3498DB,
+    commands: [
+      { cmd: '!daily', desc: 'Claim daily streak reward (24h cooldown)' },
+      { cmd: '!mail / !mailbox', desc: 'View your mailbox' },
+      { cmd: '!claimmail <#>', desc: 'Claim rewards from a mail item' },
+      { cmd: '!clearmail', desc: 'Clear claimed mail from inbox' },
+      { cmd: '!news', desc: 'View latest bot news and announcements' }
+    ]
+  },
+  quests_tasks: {
+    emoji: '📋',
+    name: 'Quests & Tasks',
+    color: 0x9B59B6,
+    commands: [
+      { cmd: '!quests [page]', desc: 'View available quests' },
+      { cmd: '!quest <id>', desc: 'View detailed quest info' },
+      { cmd: '!claim <quest_id>', desc: 'Claim completed quest rewards' },
+      { cmd: '!claimall', desc: 'Claim all completed quest rewards' },
+      { cmd: '!pttoggle on/off', desc: 'Toggle personalized tasks' },
+      { cmd: '!ptstats', desc: 'View personalized task statistics' }
+    ]
+  },
+  season_pass: {
+    emoji: '🌟',
+    name: 'Season Pass',
+    color: 0xE91E63,
+    commands: [
+      { cmd: '!season / !seasonpass / !sp', desc: 'View Season Pass progress' },
+      { cmd: '!seasontasks / !stasks / !dt', desc: 'View daily season tasks' },
+      { cmd: '!seasonrewards / !srewards', desc: 'View all season rewards' },
+      { cmd: '!taskclaimall / !tclaim', desc: 'Claim all completed task rewards' },
+      { cmd: '!seasonclaimall / !sclaim', desc: 'Claim all season pass rewards' }
+    ]
+  },
+  challenges_achievements: {
+    emoji: '🏆',
+    name: 'Challenges & Achievements',
+    color: 0xFFD700,
+    commands: [
+      { cmd: '!challenges / !weekly', desc: 'View weekly challenges' },
+      { cmd: '!claimchallenge <id> / !claimchal', desc: 'Claim challenge rewards' },
+      { cmd: '!achievements / !badges', desc: 'View your achievement badges' }
+    ]
+  },
+  leaderboards: {
+    emoji: '📊',
+    name: 'Leaderboards',
+    color: 0xF39C12,
+    commands: [
+      { cmd: '!leaderboard <type> / !lb', desc: 'View rankings (coins/gems/battles/collection/trophies)' },
+      { cmd: '!globalboard / !gboard / !glb', desc: 'View global leaderboards across all servers' }
+    ]
+  },
+  economy_trading: {
+    emoji: '💰',
+    name: 'Economy & Trading',
+    color: 0xFFD700,
+    commands: [
+      { cmd: '!balance', desc: 'Check your coins, gems, and trophies' },
+      { cmd: '!shop', desc: 'Browse the main shop' },
+      { cmd: '!trade @user / !t @user', desc: 'Initiate a trade with another player' },
+      { cmd: '!market', desc: 'Browse the player marketplace' },
+      { cmd: '!market sell <item> <price>', desc: 'List an item for sale' },
+      { cmd: '!market buy <id>', desc: 'Buy an item from market' },
+      { cmd: '!market cancel <id>', desc: 'Cancel your marketplace listing' },
+      { cmd: '!auctions', desc: 'View active auctions' },
+      { cmd: '!auction create', desc: 'Create a new auction' },
+      { cmd: '!bid <id> <amount>', desc: 'Place a bid on an auction' },
+      { cmd: '!myauctions', desc: 'View your auction listings' },
+      { cmd: '!mylistings', desc: 'View your market listings' },
+      { cmd: '!inventory / !inv', desc: 'View your items, ores, wood, tools' }
+    ]
+  },
+  ust_cosmetics: {
+    emoji: '🎨',
+    name: 'UST & Cosmetics',
+    color: 0xFF69B4,
+    commands: [
+      { cmd: '!ust / !ustbalance', desc: 'View your Universal Skin Token balance' },
+      { cmd: '!ustshop / !skinshop', desc: 'Browse the UST cosmetics shop' },
+      { cmd: '!skins', desc: 'View your owned skins' },
+      { cmd: '!equipskin <char> <skin>', desc: 'Equip a character skin' }
+    ]
+  },
+  st_boosters: {
+    emoji: '🔥',
+    name: 'ST Boosters',
+    color: 0xE74C3C,
+    commands: [
+      { cmd: '!shards', desc: 'View ST shard info and crafting' },
+      { cmd: '!craft', desc: 'Craft an ST booster (8 shards)' },
+      { cmd: '!boost <character>', desc: 'Use an ST booster (risky reroll!)' }
+    ]
+  },
+  work_system: {
+    emoji: '💼',
+    name: 'Work System',
+    color: 0x795548,
+    commands: [
+      { cmd: '!work', desc: 'Perform your assigned job for rewards' },
+      { cmd: '!workguide / !workhelp', desc: 'View complete work system guide' },
+      { cmd: '!crafttool <tool> [level]', desc: 'Craft tools to boost work efficiency' },
+      { cmd: '!upgrade / !upgradehouse', desc: 'Upgrade your Caretaking House' }
+    ]
+  },
+  minigames: {
+    emoji: '🎰',
+    name: 'Minigames',
+    color: 0x9C27B0,
+    commands: [
+      { cmd: '!coinduel <h/t> <bet> / !coinflip', desc: 'Flip a coin - heads or tails (x2, rare x5)' },
+      { cmd: '!diceclash <bet> / !dice', desc: 'Progressive dice rolling game' },
+      { cmd: '!dooroffate <bet> / !door', desc: 'Choose 1 of 3 doors to win' },
+      { cmd: '!almostwin <bet> / !slot / !roll', desc: 'Number guessing slot machine (1-100)' },
+      { cmd: '!rps <r/p/s> <bet>', desc: 'Rock Paper Scissors with betting' }
+    ]
+  },
+  clans: {
+    emoji: '🏰',
+    name: 'Clans',
+    color: 0x607D8B,
+    commands: [
+      { cmd: '!clan / !clanprofile', desc: 'View your clan info' },
+      { cmd: '!joinclan', desc: 'Join your server\'s clan' },
+      { cmd: '!leaveclan', desc: 'Leave your current clan' },
+      { cmd: '!donate <coins/gems/trophies> <amount>', desc: 'Donate resources to your clan' },
+      { cmd: '!clans / !clanleaderboard', desc: 'View the clan leaderboard' }
+    ]
+  },
+  trivia_qa: {
+    emoji: '🧠',
+    name: 'Trivia & Q&A',
+    color: 0x00BCD4,
+    commands: [
+      { cmd: '!trivia', desc: 'Start a character trivia game' },
+      { cmd: '!a <answer>', desc: 'Answer a trivia question' },
+      { cmd: '!q <keyword>', desc: 'Search the Q&A database' },
+      { cmd: '!submitqa <key> | <answer>', desc: 'Submit a Q&A entry for review' }
+    ]
+  },
+  giveaways: {
+    emoji: '🎉',
+    name: 'Giveaways',
+    color: 0xE91E63,
+    commands: [
+      { cmd: '!giveaway / !giveawayinfo', desc: 'View active giveaway info' },
+      { cmd: '!giveawayschedule / !nextgiveaway', desc: 'Check next auto giveaway time' }
+    ]
+  },
+  lottery: {
+    emoji: '🎰',
+    name: 'Lottery',
+    color: 0x9B59B6,
+    commands: [
+      { cmd: '!lottery / !lotteryinfo', desc: 'View lottery info and your tickets' },
+      { cmd: '!lottery join <tickets>', desc: 'Buy lottery tickets' },
+      { cmd: '!lotteryschedule / !nextlottery', desc: 'Check next auto lottery time' }
+    ]
+  },
+  events: {
+    emoji: '🎯',
+    name: 'Events',
+    color: 0x00D9FF,
+    commands: [
+      { cmd: '!event', desc: 'View current event details and your score' },
+      { cmd: '!eventleaderboard', desc: 'View event rankings' }
+    ]
+  },
+  history: {
+    emoji: '📜',
+    name: 'History & Stats',
+    color: 0x607D8B,
+    commands: [
+      { cmd: '!history [@user]', desc: 'View transaction history' },
+      { cmd: '!serverstats / !stats / !analytics', desc: 'View server statistics (ZooAdmin)' }
+    ]
+  },
+  admin_hierarchy: {
+    emoji: '📊',
+    name: 'Admin - Role Hierarchy',
+    color: 0xFFD700,
+    commands: [
+      { cmd: '!hierarchy / !roles / !roleinfo', desc: 'View complete role hierarchy' },
+      { cmd: '!myrole / !myrank', desc: 'Check your current role' },
+      { cmd: '!admins / !botadmins / !viewadmins', desc: 'View all bot admins' },
+      { cmd: '!addbotadmin @user', desc: 'Add global bot admin (Super Admin)' },
+      { cmd: '!removebotadmin @user', desc: 'Remove global bot admin (Super Admin)' },
+      { cmd: '!addserveradmin @user', desc: 'Add server admin' },
+      { cmd: '!removeserveradmin @user', desc: 'Remove server admin' },
+      { cmd: '!setzoorole <name> / !setzooadminrole', desc: 'Set ZooAdmin role name' }
+    ]
+  },
+  admin_settings: {
+    emoji: '🔧',
+    name: 'Admin - Server Settings',
+    color: 0x3498DB,
+    commands: [
+      { cmd: '!settings / !serversettings', desc: 'View all server settings' },
+      { cmd: '!toggle <feature>', desc: 'Toggle feature on/off' },
+      { cmd: '!toggle pingdrops/pingevents/pinggiveaways', desc: 'Toggle ping notifications' },
+      { cmd: '!toggle battles/minigames', desc: 'Toggle game features' },
+      { cmd: '!setpingrole <type> @role', desc: 'Set ping role (drops/events/giveaways/lottery/updates)' }
+    ]
+  },
+  admin_setup: {
+    emoji: '⚙️',
+    name: 'Admin - Server Setup',
+    color: 0xFF6B6B,
+    commands: [
+      { cmd: '!setup', desc: 'Start interactive server setup wizard' },
+      { cmd: '!setdropchannel #channel', desc: 'Set character drop channel' },
+      { cmd: '!seteventschannel #channel', desc: 'Set events announcement channel' },
+      { cmd: '!setupdateschannel #channel', desc: 'Set bot updates channel' },
+      { cmd: '!setgame <name>', desc: 'Set active game bundle' },
+      { cmd: '!gameinfo [name]', desc: 'View game bundle info' },
+      { cmd: '!bundlechars <name>', desc: 'List characters in a bundle' }
+    ]
+  },
+  admin_moderation: {
+    emoji: '🛡️',
+    name: 'Admin - Moderation',
+    color: 0xE67E22,
+    commands: [
+      { cmd: '!warn @user [reason]', desc: 'Issue warning to user' },
+      { cmd: '!warnings [@user]', desc: 'View warnings for user' },
+      { cmd: '!clearwarnings @user', desc: 'Clear all warnings' },
+      { cmd: '!botban @user [reason]', desc: 'Ban user from bot' },
+      { cmd: '!unbotban @user', desc: 'Unban user from bot' },
+      { cmd: '!mute @user [duration] [reason]', desc: 'Mute user from bot' },
+      { cmd: '!unmute @user', desc: 'Unmute user' },
+      { cmd: '!clear <count> [@user]', desc: 'Purge messages' },
+      { cmd: '!announce <message>', desc: 'Send announcement' },
+      { cmd: '!modlogs', desc: 'View moderation logs' },
+      { cmd: '!modstats', desc: 'View moderation statistics' }
+    ]
+  },
+  admin_management: {
+    emoji: '👑',
+    name: 'Admin - Bot Management',
+    color: 0x9B59B6,
+    commands: [
+      { cmd: '!addadmin @user', desc: 'Add server admin (legacy)' },
+      { cmd: '!removeadmin @user', desc: 'Remove server admin (legacy)' },
+      { cmd: '!setemoji <char> <emoji>', desc: 'Set custom character emoji' },
+      { cmd: '!setchestgif <type> <url>', desc: 'Set custom crate opening GIF' },
+      { cmd: '!startgiveaway <mins>', desc: 'Start manual giveaway' },
+      { cmd: '!endgiveaway', desc: 'End current giveaway' },
+      { cmd: '!autogiveaway enable/disable', desc: 'Toggle auto giveaways' },
+      { cmd: '!startlottery <duration> <fee> <currency>', desc: 'Start manual lottery' },
+      { cmd: '!stoplottery', desc: 'Stop current lottery' },
+      { cmd: '!autolottery enable/disable <fee> <currency>', desc: 'Toggle auto lottery' }
+    ]
+  },
+  admin_trivia: {
+    emoji: '🧠',
+    name: 'Admin - Trivia & Q&A',
+    color: 0x00BCD4,
+    commands: [
+      { cmd: '!addtrivia <question> | <answer>', desc: 'Add trivia question' },
+      { cmd: '!removetrivia <id>', desc: 'Remove trivia question' },
+      { cmd: '!listtrivia', desc: 'List all trivia questions' },
+      { cmd: '!qadd <key> | <answer>', desc: 'Add Q&A entry' },
+      { cmd: '!qedit <key> | <answer>', desc: 'Edit Q&A entry' },
+      { cmd: '!qdel <key>', desc: 'Delete Q&A entry' },
+      { cmd: '!pendingqa', desc: 'View pending Q&A submissions' },
+      { cmd: '!approveqa <id>', desc: 'Approve Q&A submission' },
+      { cmd: '!rejectqa <id> [reason]', desc: 'Reject Q&A submission' }
+    ]
+  },
+  admin_events: {
+    emoji: '🎯',
+    name: 'Admin - Events',
+    color: 0x00D9FF,
+    commands: [
+      { cmd: '!setevent', desc: 'Set event announcement channel' },
+      { cmd: '!startevent [trophy/drop/crate]', desc: 'Start an event manually' },
+      { cmd: '!stopevent', desc: 'Stop current event' },
+      { cmd: '!eventschedule', desc: 'View/manage event schedule' },
+      { cmd: '!eventschedule enable/disable', desc: 'Toggle auto events' },
+      { cmd: '!eventschedule settime HH:MM', desc: 'Set event start time (IST)' }
+    ]
+  },
+  admin_tasks: {
+    emoji: '📋',
+    name: 'Admin - Personalized Tasks',
+    color: 0x3498DB,
+    commands: [
+      { cmd: '!ptsend @user', desc: 'Send random task to user' },
+      { cmd: '!pttoggle @user on/off', desc: 'Toggle tasks for user' },
+      { cmd: '!ptstats', desc: 'View task statistics' },
+      { cmd: '!ptcustom @user <message>', desc: 'Send custom task message' },
+      { cmd: '!pttasks [easy/medium/hard]', desc: 'View available task templates' },
+      { cmd: '!ptsendtask @user <taskId>', desc: 'Send specific task by ID' }
+    ]
+  },
+  super_economy: {
+    emoji: '💰',
+    name: 'Super Admin - Economy',
+    color: 0xFFD700,
+    commands: [
+      { cmd: '!grant @user <coins/gems/tokens> [amount]', desc: 'Grant resources to user' },
+      { cmd: '!grantust @user <amount>', desc: 'Grant UST to user' },
+      { cmd: '!removeust @user <amount>', desc: 'Remove UST from user' },
+      { cmd: '!setustrate <rates...>', desc: 'Configure UST exchange rates' },
+      { cmd: '!ustrates / !viewustrates', desc: 'View current UST rates' }
+    ]
+  },
+  super_characters: {
+    emoji: '🦁',
+    name: 'Super Admin - Characters',
+    color: 0xE74C3C,
+    commands: [
+      { cmd: '!grantchar @user <char> [ST]', desc: 'Grant character to user' },
+      { cmd: '!grantkeys @user <char> <amount>', desc: 'Grant character keys' },
+      { cmd: '!forcerelease @user <char>', desc: 'Force release character' },
+      { cmd: '!grantkeyrush [serverID]', desc: 'Grant free Key Rush (1 hour)' },
+      { cmd: '!stopkeyrush [serverID]', desc: 'Force stop Key Rush' },
+      { cmd: '!createchar / !addchar', desc: 'Create new character' },
+      { cmd: '!editchar <name> <field> <value>', desc: 'Edit character details' },
+      { cmd: '!removechar <name>', desc: 'Delete character permanently' },
+      { cmd: '!listchars', desc: 'List all characters' },
+      { cmd: '!setability <char> <ability...>', desc: 'Set character ability' },
+      { cmd: '!setmove <char> <move...>', desc: 'Set character special move' },
+      { cmd: '!effecttypes', desc: 'View ability effect types' }
+    ]
+  },
+  super_skins: {
+    emoji: '🎨',
+    name: 'Super Admin - Skins & PFPs',
+    color: 0xFF69B4,
+    commands: [
+      { cmd: '!addskin <char> <skin> <rarity> [cost] [url]', desc: 'Add skin to shop' },
+      { cmd: '!updateskin <char> <skin> [url]', desc: 'Update skin image' },
+      { cmd: '!grantskin @user <char> <skin>', desc: 'Grant skin to user' },
+      { cmd: '!revokeskin @user <char> <skin>', desc: 'Revoke skin from user' },
+      { cmd: '!deleteskin <char> <skin>', desc: 'Delete skin from shop' },
+      { cmd: '!uploadskin <char> <skin> <rarity> [cost] [url]', desc: 'Upload skin to UST shop' },
+      { cmd: '!uploadpfp <name> <rarity> [cost] (with image)', desc: 'Upload PFP to shop' },
+      { cmd: '!grantpfp <name> @user', desc: 'Grant PFP to user' },
+      { cmd: '!grantpfptoclan <name>', desc: 'Grant PFP to entire clan' },
+      { cmd: '!listpfps', desc: 'List all available PFPs' },
+      { cmd: '!adminaddpfp <name> @user', desc: 'Admin add PFP to user' },
+      { cmd: '!adminremovepfp <name> @user', desc: 'Admin remove PFP from user' }
+    ]
+  },
+  super_games: {
+    emoji: '🎮',
+    name: 'Super Admin - Game Bundles',
+    color: 0x9C27B0,
+    commands: [
+      { cmd: '!assigngame <char> <game>', desc: 'Assign character to game' },
+      { cmd: '!bulkassign <game> <chars...>', desc: 'Bulk assign characters' },
+      { cmd: '!importchars <source> <target> [chars...]', desc: 'Import characters between games' },
+      { cmd: '!backfillgames', desc: 'Re-apply game data to characters' },
+      { cmd: '!togglegame <name>', desc: 'Toggle game active status' },
+      { cmd: '!gamestats', desc: 'View statistics for all games' }
+    ]
+  },
+  super_work: {
+    emoji: '💼',
+    name: 'Super Admin - Work System',
+    color: 0x795548,
+    commands: [
+      { cmd: '!setworkimage <job> <url>', desc: 'Set custom job image' },
+      { cmd: '!showwork <job>', desc: 'View job images' },
+      { cmd: '!assignwork @user <job>', desc: 'Assign job to user' }
+    ]
+  },
+  super_cosmetics: {
+    emoji: '✨',
+    name: 'Super Admin - Cosmetics',
+    color: 0xE91E63,
+    commands: [
+      { cmd: '!addcosmetic <type> <name> <price>', desc: 'Add cosmetic item' },
+      { cmd: '!removecosmetic <type> <name>', desc: 'Remove cosmetic item' },
+      { cmd: '!updatecosmeticprice <type> <name> <price>', desc: 'Update cosmetic price' }
+    ]
+  },
+  super_anticheat: {
+    emoji: '🛡️',
+    name: 'Super Admin - Anti-Cheat',
+    color: 0xF44336,
+    commands: [
+      { cmd: '!flags @user', desc: 'View anti-cheat flags' },
+      { cmd: '!clearflags @user', desc: 'Clear user flags' },
+      { cmd: '!suspicious [threshold]', desc: 'View flagged users' },
+      { cmd: '!transactions @user', desc: 'View transaction history' },
+      { cmd: '!anticheatstats', desc: 'View anti-cheat statistics' }
+    ]
+  },
+  super_system: {
+    emoji: '⚙️',
+    name: 'Super Admin - System',
+    color: 0x607D8B,
+    commands: [
+      { cmd: '!delete @user', desc: 'Delete user account permanently' },
+      { cmd: '!postupdate / !botupdate <message>', desc: 'Post update to all servers' },
+      { cmd: '!servers / !serverlist', desc: 'List all bot servers' },
+      { cmd: '!removeserver <id> / !leaveserver', desc: 'Remove bot from server' },
+      { cmd: '!reset', desc: 'Reset ALL bot data (DANGEROUS)' },
+      { cmd: '!sendmail <subject> | <message>', desc: 'Send mail to all players' },
+      { cmd: '!postnews <title> | <content>', desc: 'Post news announcement' },
+      { cmd: '!setbattle', desc: 'Set battle announcement channel' },
+      { cmd: '!settrophies @user <amount>', desc: 'Set user trophies' }
+    ]
+  }
+};
+
+const ALL_COMMANDS_FILTERS = [
+  { id: 'all', emoji: '📋', name: 'All Commands' },
+  { id: 'player', emoji: '🎮', name: 'Player Commands' },
+  { id: 'admin', emoji: '⚙️', name: 'Admin Commands' },
+  { id: 'super', emoji: '👑', name: 'Super Admin' }
+];
+
 const PLAYER_JOURNEY = {
   beginner: {
     level: 1,
@@ -1033,10 +1535,219 @@ async function handleGuideStep(interaction, step, data, userData) {
   return interaction.update({ embeds: [embed], components: buttons });
 }
 
+function getFilteredCategories(filter) {
+  const playerCategories = [
+    'getting_started', 'profile_collection', 'battles', 'drops_catching', 'character_keys',
+    'crates', 'daily_rewards', 'quests_tasks', 'season_pass', 'challenges_achievements',
+    'leaderboards', 'economy_trading', 'ust_cosmetics', 'st_boosters', 'work_system',
+    'minigames', 'clans', 'trivia_qa', 'giveaways', 'lottery', 'events', 'history'
+  ];
+  
+  const adminCategories = [
+    'admin_hierarchy', 'admin_settings', 'admin_setup', 'admin_moderation',
+    'admin_management', 'admin_trivia', 'admin_events', 'admin_tasks'
+  ];
+  
+  const superCategories = [
+    'super_economy', 'super_characters', 'super_skins', 'super_games',
+    'super_work', 'super_cosmetics', 'super_anticheat', 'super_system'
+  ];
+  
+  switch (filter) {
+    case 'player':
+      return playerCategories;
+    case 'admin':
+      return adminCategories;
+    case 'super':
+      return superCategories;
+    case 'all':
+    default:
+      return [...playerCategories, ...adminCategories, ...superCategories];
+  }
+}
+
+function countTotalCommands(filter = 'all') {
+  const categories = getFilteredCategories(filter);
+  return categories.reduce((total, catId) => {
+    const cat = ALL_COMMANDS[catId];
+    return total + (cat ? cat.commands.length : 0);
+  }, 0);
+}
+
+function createAllCommandsEmbed(filter = 'all', page = 0) {
+  const categories = getFilteredCategories(filter);
+  const itemsPerPage = 4;
+  const totalPages = Math.ceil(categories.length / itemsPerPage);
+  const currentPage = Math.max(0, Math.min(page, totalPages - 1));
+  
+  const startIdx = currentPage * itemsPerPage;
+  const pageCategories = categories.slice(startIdx, startIdx + itemsPerPage);
+  
+  const filterInfo = ALL_COMMANDS_FILTERS.find(f => f.id === filter) || ALL_COMMANDS_FILTERS[0];
+  const totalCommands = countTotalCommands(filter);
+  
+  let description = `📋 **${filterInfo.name}** — ${totalCommands} commands total\n\n`;
+  
+  for (const catId of pageCategories) {
+    const cat = ALL_COMMANDS[catId];
+    if (!cat) continue;
+    
+    description += `**${cat.emoji} ${cat.name}** (${cat.commands.length} commands)\n`;
+    for (const cmd of cat.commands) {
+      description += `\`${cmd.cmd}\` — ${cmd.desc}\n`;
+    }
+    description += '\n';
+  }
+  
+  const embed = new EmbedBuilder()
+    .setColor(0x5865F2)
+    .setTitle(`📖 Complete Command List`)
+    .setDescription(description)
+    .setFooter({ 
+      text: `Page ${currentPage + 1}/${totalPages} | ${totalCommands} commands | Filter: ${filterInfo.name}` 
+    })
+    .setTimestamp();
+  
+  return { embed, currentPage, totalPages };
+}
+
+function createAllCommandsButtons(filter = 'all', page = 0, totalPages = 1) {
+  const rows = [];
+  
+  const filterRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('cmdfilter_all')
+      .setLabel('All')
+      .setEmoji('📋')
+      .setStyle(filter === 'all' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('cmdfilter_player')
+      .setLabel('Player')
+      .setEmoji('🎮')
+      .setStyle(filter === 'player' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('cmdfilter_admin')
+      .setLabel('Admin')
+      .setEmoji('⚙️')
+      .setStyle(filter === 'admin' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('cmdfilter_super')
+      .setLabel('Super Admin')
+      .setEmoji('👑')
+      .setStyle(filter === 'super' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+  );
+  rows.push(filterRow);
+  
+  if (totalPages > 1) {
+    const navRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`cmdpage_${filter}_0`)
+        .setLabel('First')
+        .setEmoji('⏮️')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(page === 0),
+      new ButtonBuilder()
+        .setCustomId(`cmdpage_${filter}_${Math.max(0, page - 1)}`)
+        .setLabel('Prev')
+        .setEmoji('◀️')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(page === 0),
+      new ButtonBuilder()
+        .setCustomId(`cmdpage_${filter}_${Math.min(totalPages - 1, page + 1)}`)
+        .setLabel('Next')
+        .setEmoji('▶️')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(page >= totalPages - 1),
+      new ButtonBuilder()
+        .setCustomId(`cmdpage_${filter}_${totalPages - 1}`)
+        .setLabel('Last')
+        .setEmoji('⏭️')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(page >= totalPages - 1)
+    );
+    rows.push(navRow);
+  }
+  
+  const backRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('hub_back')
+      .setLabel('Back to Hub')
+      .setEmoji('🏠')
+      .setStyle(ButtonStyle.Danger)
+  );
+  rows.push(backRow);
+  
+  return rows;
+}
+
+function createCategorySelectMenu(filter = 'all') {
+  const categories = getFilteredCategories(filter);
+  
+  const options = categories.slice(0, 25).map(catId => {
+    const cat = ALL_COMMANDS[catId];
+    return {
+      label: cat.name,
+      description: `${cat.commands.length} commands`,
+      value: `viewcat_${catId}`,
+      emoji: cat.emoji
+    };
+  });
+  
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId('allcmds_category')
+      .setPlaceholder('Jump to a category...')
+      .addOptions(options)
+  );
+}
+
+function createSingleCategoryEmbed(categoryId) {
+  const cat = ALL_COMMANDS[categoryId];
+  if (!cat) return null;
+  
+  let description = '';
+  for (const cmd of cat.commands) {
+    description += `\`${cmd.cmd}\`\n└ ${cmd.desc}\n\n`;
+  }
+  
+  const embed = new EmbedBuilder()
+    .setColor(cat.color)
+    .setTitle(`${cat.emoji} ${cat.name}`)
+    .setDescription(description)
+    .setFooter({ text: `${cat.commands.length} commands in this category` })
+    .setTimestamp();
+  
+  return embed;
+}
+
+function createSingleCategoryButtons(categoryId) {
+  let filter = 'all';
+  if (categoryId.startsWith('admin_')) filter = 'admin';
+  else if (categoryId.startsWith('super_')) filter = 'super';
+  else filter = 'player';
+  
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`cmdfilter_${filter}`)
+        .setLabel('Back to List')
+        .setEmoji('⬅️')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId('hub_back')
+        .setLabel('Back to Hub')
+        .setEmoji('🏠')
+        .setStyle(ButtonStyle.Secondary)
+    )
+  ];
+}
+
 module.exports = {
   HUB_CATEGORIES,
   ADMIN_CATEGORIES,
   SUPER_ADMIN_COMMANDS,
+  ALL_COMMANDS,
+  ALL_COMMANDS_FILTERS,
   PLAYER_JOURNEY,
   getPlayerJourneyStage,
   getRandomTip,
@@ -1058,6 +1769,13 @@ module.exports = {
   createQuickStartButtons,
   createMinigamesEmbed,
   createMinigameButtons,
+  createAllCommandsEmbed,
+  createAllCommandsButtons,
+  createCategorySelectMenu,
+  createSingleCategoryEmbed,
+  createSingleCategoryButtons,
+  getFilteredCategories,
+  countTotalCommands,
   openHub,
   openCategory,
   openQuickStart,
