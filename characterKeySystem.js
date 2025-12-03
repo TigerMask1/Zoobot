@@ -594,7 +594,7 @@ function getKeyRushTimeRemaining(serverId) {
 }
 
 async function activateKeyRush(serverId, userId, data, isGranted = false) {
-  const { areDropsActive, stopDropsForServer } = require('./dropSystem.js');
+  const { areDropsActive, stopDropsForServer, resetInactivityStatus } = require('./dropSystem.js');
 
   if (areDropsActive(serverId) && !isMainServer(serverId)) {
     return { 
@@ -632,6 +632,13 @@ async function activateKeyRush(serverId, userId, data, isGranted = false) {
 
   await saveServerConfig(serverId, config);
 
+  // Auto-revive: Reset inactivity status on main server so Key Rush drops work
+  if (isMainServer(serverId) && typeof resetInactivityStatus === 'function') {
+    resetInactivityStatus(serverId);
+    stopDropsForServer(serverId, false);
+    console.log(`🔄 Auto-revived drops for Key Rush activation on main server`);
+  }
+
   startKeyRushDrops(serverId);
 
   const expiryDate = new Date(expiryTime);
@@ -644,11 +651,15 @@ async function activateKeyRush(serverId, userId, data, isGranted = false) {
 }
 
 async function activateKeyRushConfirmed(serverId, userId, data, isGranted = false) {
-  const { stopDropsForServer } = require('./dropSystem.js');
+  const { stopDropsForServer, resetInactivityStatus } = require('./dropSystem.js');
 
-  // Stop normal drops before starting Key Rush
+  // Stop normal drops before starting Key Rush and reset inactivity status
   if (isMainServer(serverId)) {
     console.log(`⏸️ Stopping normal drops for Key Rush on main server`);
+    if (typeof resetInactivityStatus === 'function') {
+      resetInactivityStatus(serverId);
+      console.log(`🔄 Auto-revived drops for Key Rush (confirmed) on main server`);
+    }
     stopDropsForServer(serverId, false);
   }
 
@@ -707,6 +718,18 @@ async function grantKeyRush(serverId, grantedByUserId) {
   config.keyRushGranted = true;
 
   await saveServerConfig(serverId, config);
+
+  // Auto-revive: Reset inactivity status on main server so Key Rush drops work
+  if (isMainServer(serverId)) {
+    const { resetInactivityStatus, stopDropsForServer } = require('./dropSystem.js');
+    if (typeof resetInactivityStatus === 'function') {
+      resetInactivityStatus(serverId);
+      console.log(`🔄 Auto-revived drops for granted Key Rush on main server`);
+    }
+    if (typeof stopDropsForServer === 'function') {
+      stopDropsForServer(serverId, false);
+    }
+  }
 
   startKeyRushDrops(serverId);
 
@@ -1017,6 +1040,19 @@ async function checkScheduledKeyRush() {
         config.keyRushActivatedBy = 'SYSTEM';
         config.dropChannelId = config.dropChannelId; // Keep existing drop channel
         await saveServerConfig(MAIN_SERVER_ID, config);
+
+        // Auto-revive: Reset inactivity status so Key Rush drops work properly
+        // This fixes the case where drops were paused due to inactivity before Key Rush started
+        const { resetInactivityStatus, stopDropsForServer } = require('./dropSystem.js');
+        if (typeof resetInactivityStatus === 'function') {
+          resetInactivityStatus(MAIN_SERVER_ID);
+          console.log(`🔄 Auto-revived drops for scheduled Key Rush on main server`);
+        }
+        
+        // Stop normal drops before starting Key Rush
+        if (typeof stopDropsForServer === 'function') {
+          stopDropsForServer(MAIN_SERVER_ID, false);
+        }
 
         await sendKeyRushStartNotification(MAIN_SERVER_ID, '1 hour');
         startKeyRushDrops(MAIN_SERVER_ID);

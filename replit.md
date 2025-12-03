@@ -176,5 +176,9 @@ Added a new character key collection system as an alternative way to unlock char
 - Fix 1: `reviveDrops()` now checks if Key Rush is active and shows appropriate message
 - Fix 2: `reviveDrops()` now checks if drops are actually running (via `dropIntervals` Map)
 - Fix 3: When Key Rush ends, inactivity status is now reset to prevent immediate pause
+- Fix 4: **AUTO-REVIVE** - When Key Rush starts (scheduled, manual, or granted), inactivity is automatically reset
+  - This means if drops were paused due to inactivity, they're automatically "revived" when Key Rush starts
+  - No need to manually `!revive` before Key Rush anymore
 - Added `resetInactivityStatus()` function to properly handle state transitions
+- Updated functions: `checkScheduledKeyRush()`, `activateKeyRush()`, `activateKeyRushConfirmed()`, `grantKeyRush()`
 - Files modified: `dropSystem.js`, `characterKeySystem.js`
