@@ -6377,11 +6377,11 @@ console.log('🚀 Starting ZooBot...');
 console.log(`📊 Environment: ${USE_MONGODB ? 'MongoDB' : 'JSON-only'}`);
 
 // Validate required environment variables
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
+const DISCORD_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.DISCORD_TOKEN;
 
 if (!DISCORD_TOKEN) {
-  console.error('❌ FATAL: DISCORD_TOKEN environment variable is not set!');
-  console.error('Please set the DISCORD_TOKEN in your environment variables.');
+  console.error('❌ FATAL: DISCORD_BOT_TOKEN environment variable is not set!');
+  console.error('Please set the DISCORD_BOT_TOKEN in your environment variables.');
   process.exit(1);
 }
 
