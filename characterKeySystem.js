@@ -13,6 +13,7 @@ const KEYS_TO_UNLOCK = 750;
 const KEY_RUSH_COST = 250;
 const KEY_RUSH_DURATION = 3600000;
 const MAIN_SERVER_ID = '1430516117851340893';
+const MAIN_DROP_CHANNEL = '1430525383635107850';
 const EVENT_ROLE_NAME = 'event';
 
 const KEY_RUSH_SCHEDULE = [
@@ -743,7 +744,7 @@ function stopKeyRushDrops(serverId, sendNotification = true) {
 async function sendKeyRushEndNotification(serverId) {
   try {
     const config = getServerConfig(serverId);
-    const channelId = config?.dropChannelId;
+    const channelId = isMainServer(serverId) ? MAIN_DROP_CHANNEL : config?.dropChannelId;
     
     if (!channelId || !activeClient) return;
     
@@ -796,7 +797,7 @@ async function getEventRole(guild) {
 async function sendKeyRushStartNotification(serverId, duration = '1 hour') {
   try {
     const config = getServerConfig(serverId);
-    const channelId = config?.dropChannelId;
+    const channelId = isMainServer(serverId) ? MAIN_DROP_CHANNEL : config?.dropChannelId;
     
     if (!channelId || !activeClient) return;
     
@@ -823,13 +824,13 @@ async function executeKeyDrop(serverId) {
   if (!activeClient || !activeData) return;
   
   try {
-    if (!isKeyRushActive(serverId) && !isMainServer(serverId)) {
+    if (!isKeyRushActive(serverId)) {
       stopKeyRushDrops(serverId);
       return;
     }
     
     const config = getServerConfig(serverId);
-    const channelId = config?.dropChannelId || (isMainServer(serverId) ? KEY_RUSH_CHANNEL : null);
+    const channelId = isMainServer(serverId) ? MAIN_DROP_CHANNEL : (config?.dropChannelId || null);
     
     if (!channelId) {
       console.error(`❌ No channel configured for Key Rush in server ${serverId}`);
@@ -857,7 +858,7 @@ async function executeKeyDrop(serverId) {
     const DROP_CODES = ['tyrant', 'zooba', 'zoo', 'catch', 'grab', 'quick', 'fast', 'win', 'get', 'take'];
     const code = DROP_CODES[Math.floor(Math.random() * DROP_CODES.length)];
     
-    const timeRemaining = isMainServer(serverId) ? '∞' : getKeyRushTimeRemaining(serverId);
+    const timeRemaining = getKeyRushTimeRemaining(serverId);
     
     const dropEmbed = new EmbedBuilder()
       .setColor('#FFD700')
@@ -1007,6 +1008,43 @@ async function checkScheduledKeyRush() {
   }
 }
 
+async function stopKeyRush(serverId, stoppedByUserId) {
+  if (!isSuperAdmin(stoppedByUserId)) {
+    return { success: false, message: '❌ Only Super Admins can stop Key Rush!' };
+  }
+  
+  if (!isKeyRushActive(serverId)) {
+    return { success: false, message: '❌ No Key Rush event is currently active!' };
+  }
+  
+  const config = getServerConfig(serverId);
+  if (!config) {
+    return { success: false, message: '❌ Server not configured!' };
+  }
+  
+  stopKeyRushDrops(serverId, true);
+  
+  config.keyRushUntil = null;
+  config.keyRushActivatedBy = null;
+  config.keyRushGranted = false;
+  await saveServerConfig(serverId, config);
+  
+  const { startDropsForServer } = require('./dropSystem.js');
+  if (isMainServer(serverId)) {
+    try {
+      await startDropsForServer(serverId);
+      console.log('🎮 Regular drops resumed after Key Rush stopped');
+    } catch (err) {
+      console.error('Error resuming drops:', err);
+    }
+  }
+  
+  return {
+    success: true,
+    message: `🛑 **KEY RUSH STOPPED!**\n\nThe Key Rush event has been manually stopped.\n✅ Regular drops are resuming now.`
+  };
+}
+
 module.exports = {
   KEYS_TO_UNLOCK,
   KEY_RUSH_COST,
@@ -1039,5 +1077,6 @@ module.exports = {
   catchKeyDrop,
   initKeyRushScheduler,
   sendKeyRushStartNotification,
-  sendKeyRushEndNotification
+  sendKeyRushEndNotification,
+  stopKeyRush
 };

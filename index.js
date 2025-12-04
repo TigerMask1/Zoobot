@@ -175,6 +175,7 @@ const {
   activateKeyRush,
   activateKeyRushConfirmed,
   grantKeyRush,
+  stopKeyRush,
   catchKeyDrop,
   initKeyRushScheduler,
   convertAllExcessKeysToTokens,
@@ -6111,6 +6112,19 @@ client.on('messageCreate', async (message) => {
           .setColor(gkrResult.success ? '#FFD700' : '#FF0000')
           .setDescription(gkrResult.message);
         await message.reply({ embeds: [gkrEmbed] });
+        break;
+      
+      case 'stoprush':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can stop Key Rush!');
+          break;
+        }
+        const stopRushServerId = args[0] || serverId;
+        const stopRushResult = await stopKeyRush(stopRushServerId, userId);
+        const stopRushEmbed = new EmbedBuilder()
+          .setColor(stopRushResult.success ? '#00FF00' : '#FF0000')
+          .setDescription(stopRushResult.message);
+        await message.reply({ embeds: [stopRushEmbed] });
         break;
         
       case 'cage':
