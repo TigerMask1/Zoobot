@@ -4444,7 +4444,7 @@ client.on('messageCreate', async (message) => {
           return;
         }
 
-        const { addSkinToCatalog } = require('./cosmeticsShopSystem.js');
+        const { addSkinToCatalog, RARITY_EMOJIS } = require('./cosmeticsShopSystem.js');
         const skinAddResult = await addSkinToCatalog(foundUploadChar.name, uploadSkinName, uploadRarity, discordCdnUrl, uploadCustomCost, isExclusive);
 
         if (skinAddResult.success) {

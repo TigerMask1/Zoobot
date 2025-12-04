@@ -58,6 +58,7 @@ The bot is built on Discord.js v14 and Node.js 20, utilizing a dual-mode data st
 **Upload Skin Fix:**
 - Fixed `!uploadskin` command that was throwing an error
 - Updated `addSkinToCatalog()` function to accept and use the `isExclusive` parameter
+- Added missing `RARITY_EMOJIS` import in the command handler to fix undefined variable error
 
 **Lottery Double Announcement Fix:**
 - Fixed race condition causing lottery to announce results twice
