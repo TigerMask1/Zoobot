@@ -4,6 +4,7 @@ const characterManager = require('./characterManager.js');
 const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerGame, hasSelectedGame, DEFAULT_GAME } = require('./serverConfigManager.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
 const { isKeyRushActive, getKeyRushTimeRemaining } = require('./characterKeySystem.js');
+const { getDroppableCollectibleItems, awardCollectibleItem, getRarityTier } = require('./collectibleItemsSystem.js');
 
 let dropIntervals = new Map();
 let activeClient = null;
@@ -333,12 +334,42 @@ async function executeDrop(serverId) {
       // 8% chance: Gems
       selectedDrop = { type: 'gems', min: 1, max: 2, emoji: '💎' };
     }
+    
+    // Check for collectible item drop (separate roll with item-specific probability)
+    const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+    try {
+      const droppableItems = await getDroppableCollectibleItems(serverGame);
+      if (droppableItems.length > 0 && !keyRushActive) {
+        for (const item of droppableItems) {
+          const itemRoll = Math.random();
+          if (itemRoll < (item.droppable?.probability || 0.05)) {
+            const rarity = getRarityTier(item.ownerCount);
+            selectedDrop = { 
+              type: 'collectibleItem', 
+              itemId: item._id.toString(),
+              itemName: item.name,
+              itemImage: item.imageUrl,
+              itemValue: item.computedValue,
+              rarity: rarity,
+              emoji: rarity.emoji,
+              min: 1, 
+              max: 1 
+            };
+            break;
+          }
+        }
+      }
+    } catch (itemError) {
+      console.error('Error checking collectible items:', itemError);
+    }
 
     const amount = Math.floor(Math.random() * (selectedDrop.max - selectedDrop.min + 1)) + selectedDrop.min;
     const code = DROP_CODES[Math.floor(Math.random() * DROP_CODES.length)];
 
     let rewardText;
-    if (selectedDrop.type === 'characterKey') {
+    if (selectedDrop.type === 'collectibleItem') {
+      rewardText = `**Reward:** ${selectedDrop.emoji} **${selectedDrop.itemName}** (${selectedDrop.rarity.name})\n💰 Value: ${selectedDrop.itemValue} coins`;
+    } else if (selectedDrop.type === 'characterKey') {
       const charEmoji = selectedDrop.characterEmoji || '🔑';
       rewardText = `**Reward:** ${charEmoji} ${characterName} Key ${selectedDrop.emoji}`;
     } else if (selectedDrop.type === 'tokens') {

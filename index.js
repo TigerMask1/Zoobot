@@ -165,6 +165,37 @@ const {
 const { getCharacterAbility, getAbilityDescription } = require('./characterAbilities.js');
 const characterManager = require('./characterManager.js');
 const eventSystem = require('./eventSystem.js');
+const {
+  initCollectibleItemsIndexes,
+  displayCollectibleItemsList,
+  displayUserCollectibleItems,
+  handleCollectibleItemsButton,
+  startCollectibleItemSubmission,
+  handleCollectibleSubmissionStep,
+  hasActiveCollectibleSubmissionSession,
+  displayPendingCollectibleSubmissions,
+  getCollectibleItemByName,
+  setProfileCollectibleItem,
+  clearProfileCollectibleItem,
+  getProfileCollectibleItem,
+  sellCollectibleItem,
+  approveCollectibleSubmission,
+  rejectCollectibleSubmission,
+  createCollectibleItem,
+  deleteCollectibleItem,
+  updateCollectibleItem,
+  giveCollectibleItem,
+  takeCollectibleItem,
+  setItemGlobal,
+  toggleItemTrait,
+  setItemProbability,
+  setItemAvailability,
+  recalculateAllItemValues,
+  getDroppableCollectibleItems,
+  getCrateCollectibleItems,
+  awardCollectibleItem,
+  getRarityTier
+} = require('./collectibleItemsSystem.js');
 const { viewKeys, unlockCharacter, openRandomCage } = require('./keySystem.js');
 const {
   displayCharacterKeysMenu,
@@ -510,6 +541,13 @@ client.on('clientReady', async () => {
       await eventSystem.init(client, data);
     } catch (error) {
       console.warn('⚠️ Event system init error:', error.message);
+    }
+    
+    try {
+      await initCollectibleItemsIndexes();
+      console.log('✅ Collectible items indexes initialized');
+    } catch (error) {
+      console.warn('⚠️ Collectible items init error:', error.message);
     }
   }
   
@@ -1281,6 +1319,8 @@ client.on('interactionCreate', async (interaction) => {
       await interaction.update({ embeds: [embed], components: [navButtons, filterButtons] });
     } else if (interaction.customId.startsWith('charkeys_')) {
       await handleCharacterKeysButton(interaction, data);
+    } else if (interaction.customId.startsWith('colitems_') || interaction.customId.startsWith('mycolitem_')) {
+      await handleCollectibleItemsButton(interaction);
     }
   } catch (error) {
     console.error('Error handling button interaction:', error);
@@ -1389,6 +1429,11 @@ client.on('messageCreate', async (message) => {
     } else {
       saveData(data);
     }
+  }
+  
+  if (hasActiveCollectibleSubmissionSession(userId)) {
+    const handled = await handleCollectibleSubmissionStep(message);
+    if (handled) return;
   }
   
   let commandContent = message.content;
@@ -6125,6 +6170,401 @@ client.on('messageCreate', async (message) => {
           .setColor(stopRushResult.success ? '#00FF00' : '#FF0000')
           .setDescription(stopRushResult.message);
         await message.reply({ embeds: [stopRushEmbed] });
+        break;
+      
+      case 'collectibles':
+      case 'collectibleitems':
+      case 'colitems':
+        const colItemsBundle = getServerConfig(serverId)?.gameBundle || 'default';
+        const colItemsPage = parseInt(args[0]) || 1;
+        await displayCollectibleItemsList(message, colItemsBundle, colItemsPage);
+        break;
+      
+      case 'mycollectibles':
+      case 'myitems':
+      case 'mycolitems':
+        const myColItemsPage = parseInt(args[0]) || 1;
+        await displayUserCollectibleItems(message, userId, myColItemsPage);
+        break;
+      
+      case 'setitem':
+      case 'selectitem':
+      case 'displayitem':
+        if (!args[0]) {
+          await message.reply('❌ Please specify an item name! Usage: `!setitem <item name>`');
+          break;
+        }
+        const setItemName = args.join(' ');
+        const setItemBundle = getServerConfig(serverId)?.gameBundle || 'default';
+        const setItemFound = await getCollectibleItemByName(setItemName, setItemBundle);
+        
+        if (!setItemFound) {
+          await message.reply(`❌ Item "${setItemName}" not found!`);
+          break;
+        }
+        
+        const setItemResult = await setProfileCollectibleItem(userId, setItemFound._id.toString());
+        await message.reply(setItemResult.message);
+        break;
+      
+      case 'clearitem':
+      case 'removeitem':
+        const clearItemResult = await clearProfileCollectibleItem(userId);
+        await message.reply(clearItemResult.message);
+        break;
+      
+      case 'sellitem':
+        if (!args[0]) {
+          await message.reply('❌ Please specify an item name! Usage: `!sellitem <item name> [quantity]`');
+          break;
+        }
+        
+        let sellItemQty = 1;
+        let sellItemNameParts = [...args];
+        
+        const sellLastArg = args[args.length - 1];
+        if (!isNaN(parseInt(sellLastArg)) && args.length > 1) {
+          sellItemQty = Math.max(1, parseInt(sellLastArg));
+          sellItemNameParts = args.slice(0, -1);
+        }
+        
+        const sellItemName = sellItemNameParts.join(' ');
+        const sellItemBundle = getServerConfig(serverId)?.gameBundle || 'default';
+        const sellItemFound = await getCollectibleItemByName(sellItemName, sellItemBundle);
+        
+        if (!sellItemFound) {
+          await message.reply(`❌ Item "${sellItemName}" not found!`);
+          break;
+        }
+        
+        const sellItemResult = await sellCollectibleItem(userId, sellItemFound._id.toString(), sellItemQty, data);
+        if (sellItemResult.success) {
+          await saveDataImmediate(data);
+        }
+        await message.reply(sellItemResult.message);
+        break;
+      
+      case 'submititem':
+        if (!USE_MONGODB) {
+          await message.reply('❌ Item submissions require MongoDB to be connected!');
+          break;
+        }
+        const submitItemBundle = getServerConfig(serverId)?.gameBundle || 'default';
+        await startCollectibleItemSubmission(message, submitItemBundle);
+        break;
+      
+      case 'itemsubmissions':
+      case 'pendingitems':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can view item submissions!');
+          break;
+        }
+        const itemSubPage = parseInt(args[0]) || 1;
+        await displayPendingCollectibleSubmissions(message, itemSubPage);
+        break;
+      
+      case 'approveitem':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can approve items!');
+          break;
+        }
+        if (!args[0]) {
+          await message.reply('❌ Please provide the submission ID! Usage: `!approveitem <id>`');
+          break;
+        }
+        const approveItemResult = await approveCollectibleSubmission(args[0], userId);
+        await message.reply(approveItemResult.message);
+        break;
+      
+      case 'rejectitem':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can reject items!');
+          break;
+        }
+        if (!args[0]) {
+          await message.reply('❌ Please provide the submission ID! Usage: `!rejectitem <id> [reason]`');
+          break;
+        }
+        const itemRejectReason = args.slice(1).join(' ') || 'No reason provided';
+        const rejectItemResult = await rejectCollectibleSubmission(args[0], userId, itemRejectReason);
+        await message.reply(rejectItemResult.message);
+        break;
+      
+      case 'additem':
+      case 'createitem':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can create items!');
+          break;
+        }
+        
+        if (message.attachments.size === 0) {
+          await message.reply('❌ Please attach an image for the item!\n\nUsage: `!additem <name> | <bundle> | <baseValue> | [traits: droppable,crate,sellable,stackable] | [global]`\nAttach an image with the message.');
+          break;
+        }
+        
+        const addItemAttachment = message.attachments.first();
+        if (!addItemAttachment.contentType?.startsWith('image/')) {
+          await message.reply('❌ Please attach a valid image file!');
+          break;
+        }
+        
+        const addItemParts = args.join(' ').split('|').map(p => p.trim());
+        if (addItemParts.length < 2) {
+          await message.reply('❌ Invalid format!\n\nUsage: `!additem <name> | <bundle> | <baseValue> | [traits] | [global]`');
+          break;
+        }
+        
+        const addItemData = {
+          name: addItemParts[0],
+          imageUrl: addItemAttachment.url,
+          bundle: addItemParts[1] || 'default',
+          baseValue: parseInt(addItemParts[2]) || 100,
+          droppable: { enabled: false, probability: 0.05 },
+          crateObtainable: { enabled: false, probability: 0.1 },
+          sellable: true,
+          stackable: true,
+          isGlobal: false,
+          createdBy: userId
+        };
+        
+        if (addItemParts[3]) {
+          const traits = addItemParts[3].toLowerCase();
+          addItemData.droppable.enabled = traits.includes('droppable') || traits.includes('drop');
+          addItemData.crateObtainable.enabled = traits.includes('crate');
+          addItemData.sellable = !traits.includes('nosell');
+          addItemData.stackable = !traits.includes('nostack') && !traits.includes('unique');
+        }
+        
+        if (addItemParts[4]?.toLowerCase() === 'global') {
+          addItemData.isGlobal = true;
+        }
+        
+        const addItemResult = await createCollectibleItem(addItemData);
+        const addItemEmbed = new EmbedBuilder()
+          .setColor(addItemResult.success ? '#00D166' : '#FF0000')
+          .setTitle('📦 Create Item')
+          .setDescription(addItemResult.message)
+          .setThumbnail(addItemAttachment.url);
+        
+        if (addItemResult.success) {
+          let traitsStr = [];
+          if (addItemData.droppable.enabled) traitsStr.push('🎯 Droppable');
+          if (addItemData.crateObtainable.enabled) traitsStr.push('📦 Crate');
+          if (addItemData.sellable) traitsStr.push('💰 Sellable');
+          if (addItemData.stackable) traitsStr.push('📚 Stackable');
+          if (addItemData.isGlobal) traitsStr.push('🌍 Global');
+          
+          addItemEmbed.addFields(
+            { name: 'Name', value: addItemData.name, inline: true },
+            { name: 'Bundle', value: addItemData.bundle, inline: true },
+            { name: 'Base Value', value: `${addItemData.baseValue} coins`, inline: true },
+            { name: 'Traits', value: traitsStr.join('\n') || 'None', inline: false }
+          );
+        }
+        await message.reply({ embeds: [addItemEmbed] });
+        break;
+      
+      case 'deleteitem':
+      case 'delitem':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can delete items!');
+          break;
+        }
+        if (!args[0]) {
+          await message.reply('❌ Please specify the item name! Usage: `!deleteitem <item name>`');
+          break;
+        }
+        const delItemName = args.join(' ');
+        const delItemFound = await getCollectibleItemByName(delItemName);
+        
+        if (!delItemFound) {
+          await message.reply(`❌ Item "${delItemName}" not found!`);
+          break;
+        }
+        
+        const delItemResult = await deleteCollectibleItem(delItemFound._id.toString());
+        await message.reply(delItemResult.message);
+        break;
+      
+      case 'toggleitemtrait':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can toggle item traits!');
+          break;
+        }
+        
+        const toggleParts = args.join(' ').split('|').map(p => p.trim());
+        if (toggleParts.length < 2) {
+          await message.reply('❌ Usage: `!toggleitemtrait <item name> | <trait> | [on/off]`\nTraits: droppable, crate, sellable, stackable');
+          break;
+        }
+        
+        const toggleItemFound = await getCollectibleItemByName(toggleParts[0]);
+        if (!toggleItemFound) {
+          await message.reply(`❌ Item "${toggleParts[0]}" not found!`);
+          break;
+        }
+        
+        const traitToToggle = toggleParts[1].toLowerCase();
+        let traitValue = true;
+        if (toggleParts[2]) {
+          traitValue = toggleParts[2].toLowerCase() === 'on' || toggleParts[2].toLowerCase() === 'true';
+        } else {
+          if (traitToToggle === 'droppable') traitValue = !toggleItemFound.droppable?.enabled;
+          else if (traitToToggle === 'crate') traitValue = !toggleItemFound.crateObtainable?.enabled;
+          else if (traitToToggle === 'sellable') traitValue = !toggleItemFound.sellable;
+          else if (traitToToggle === 'stackable') traitValue = !toggleItemFound.stackable;
+        }
+        
+        const itemToggleResult = await toggleItemTrait(toggleItemFound._id.toString(), traitToToggle, traitValue);
+        await message.reply(`${itemToggleResult.success ? '✅' : '❌'} ${toggleParts[0]}: ${traitToToggle} is now **${traitValue ? 'ON' : 'OFF'}**`);
+        break;
+      
+      case 'setitemglobal':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can set global items!');
+          break;
+        }
+        
+        const globalParts = args.join(' ').split('|').map(p => p.trim());
+        if (globalParts.length < 1) {
+          await message.reply('❌ Usage: `!setitemglobal <item name> | [on/off]`');
+          break;
+        }
+        
+        const globalItemFound = await getCollectibleItemByName(globalParts[0]);
+        if (!globalItemFound) {
+          await message.reply(`❌ Item "${globalParts[0]}" not found!`);
+          break;
+        }
+        
+        let globalValue = !globalItemFound.isGlobal;
+        if (globalParts[1]) {
+          globalValue = globalParts[1].toLowerCase() === 'on' || globalParts[1].toLowerCase() === 'true';
+        }
+        
+        const globalResult = await setItemGlobal(globalItemFound._id.toString(), globalValue);
+        await message.reply(`${globalResult.success ? '✅' : '❌'} ${globalParts[0]} is now **${globalValue ? 'GLOBAL' : 'BUNDLE-SPECIFIC'}**`);
+        break;
+      
+      case 'setitemprobability':
+      case 'setitemprob':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can set item probabilities!');
+          break;
+        }
+        
+        const probParts = args.join(' ').split('|').map(p => p.trim());
+        if (probParts.length < 3) {
+          await message.reply('❌ Usage: `!setitemprobability <item name> | <drop/crate> | <probability 0-1>`');
+          break;
+        }
+        
+        const probItemFound = await getCollectibleItemByName(probParts[0]);
+        if (!probItemFound) {
+          await message.reply(`❌ Item "${probParts[0]}" not found!`);
+          break;
+        }
+        
+        const probType = probParts[1].toLowerCase();
+        const probValue = Math.max(0, Math.min(1, parseFloat(probParts[2]) || 0));
+        
+        const probResult = await setItemProbability(probItemFound._id.toString(), probType, probValue);
+        await message.reply(`${probResult.success ? '✅' : '❌'} ${probParts[0]}: ${probType} probability set to **${(probValue * 100).toFixed(1)}%**`);
+        break;
+      
+      case 'setitemavailability':
+      case 'setitemtime':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can set item availability!');
+          break;
+        }
+        
+        const availParts = args.join(' ').split('|').map(p => p.trim());
+        if (availParts.length < 2) {
+          await message.reply('❌ Usage: `!setitemavailability <item name> | <end date YYYY-MM-DD or permanent>`');
+          break;
+        }
+        
+        const availItemFound = await getCollectibleItemByName(availParts[0]);
+        if (!availItemFound) {
+          await message.reply(`❌ Item "${availParts[0]}" not found!`);
+          break;
+        }
+        
+        let availFrom = null;
+        let availUntil = null;
+        
+        if (availParts[1].toLowerCase() !== 'permanent') {
+          const dateMatch = availParts[1].match(/^(\d{4})-(\d{2})-(\d{2})$/);
+          if (dateMatch) {
+            availUntil = availParts[1] + 'T23:59:59Z';
+          }
+        }
+        
+        const availResult = await setItemAvailability(availItemFound._id.toString(), availFrom, availUntil);
+        await message.reply(`${availResult.success ? '✅' : '❌'} ${availParts[0]} availability set to **${availUntil ? `until ${availParts[1]}` : 'permanent'}**`);
+        break;
+      
+      case 'giveitem':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can give items!');
+          break;
+        }
+        
+        const giveParts = args.join(' ').split('|').map(p => p.trim());
+        if (giveParts.length < 2) {
+          await message.reply('❌ Usage: `!giveitem <@user> | <item name> | [quantity]`');
+          break;
+        }
+        
+        const giveItemTarget = message.mentions.users.first();
+        if (!giveItemTarget) {
+          await message.reply('❌ Please mention a user!');
+          break;
+        }
+        
+        const giveItemName = giveParts[1];
+        const giveItemQty = parseInt(giveParts[2]) || 1;
+        const giveItemBundle = getServerConfig(serverId)?.gameBundle || 'default';
+        
+        const giveItemResult = await giveCollectibleItem(giveItemTarget.id, giveItemName, giveItemQty, giveItemBundle);
+        await message.reply(`${giveItemResult.success ? '✅' : '❌'} ${giveItemResult.message.replace('Received', `<@${giveItemTarget.id}> received`)}`);
+        break;
+      
+      case 'takeitem':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can take items!');
+          break;
+        }
+        
+        const takeParts = args.join(' ').split('|').map(p => p.trim());
+        if (takeParts.length < 2) {
+          await message.reply('❌ Usage: `!takeitem <@user> | <item name> | [quantity]`');
+          break;
+        }
+        
+        const takeItemTarget = message.mentions.users.first();
+        if (!takeItemTarget) {
+          await message.reply('❌ Please mention a user!');
+          break;
+        }
+        
+        const takeItemName = takeParts[1];
+        const takeItemQty = parseInt(takeParts[2]) || 1;
+        const takeItemBundle = getServerConfig(serverId)?.gameBundle || 'default';
+        
+        const takeItemResult = await takeCollectibleItem(takeItemTarget.id, takeItemName, takeItemQty, takeItemBundle);
+        await message.reply(`${takeItemResult.success ? '✅' : '❌'} Removed ${takeItemQty}x ${takeItemName} from <@${takeItemTarget.id}>`);
+        break;
+      
+      case 'recalcitems':
+      case 'recalculateitems':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can recalculate item values!');
+          break;
+        }
+        const recalcResult = await recalculateAllItemValues();
+        await message.reply(recalcResult.message);
         break;
         
       case 'cage':
