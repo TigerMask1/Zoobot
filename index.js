@@ -1837,6 +1837,32 @@ client.on('messageCreate', async (message) => {
         }
         break;
 
+      case 'setupstatus':
+      case 'serverstatus':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+
+        const serverStatusInfo = getSetupStatus(serverId);
+        const currentServerGame = gameSystem.getServerGame(serverId);
+        const setupStatusEmbed = new EmbedBuilder()
+          .setColor(serverStatusInfo.isFullySetup ? '#00FF00' : '#FFA500')
+          .setTitle('🛠️ Server Setup Status')
+          .setDescription(serverStatusInfo.isFullySetup 
+            ? '✅ **Server is fully configured!**' 
+            : '⚠️ **Setup incomplete - complete the steps below:**')
+          .addFields(
+            { name: '🎮 Game Selected', value: currentServerGame ? `✅ ${currentServerGame}` : '❌ Not set - Use `!setgame <name>`', inline: true },
+            { name: '📣 Drop Channel', value: serverStatusInfo.hasDropChannel ? '✅ Configured' : '❌ Not set - Use `!setdropchannel #channel`', inline: true },
+            { name: '🎉 Events Channel', value: serverStatusInfo.hasEventsChannel ? '✅ Configured' : '❌ Not set - Use `!seteventschannel #channel`', inline: true },
+            { name: '📢 Updates Channel', value: serverStatusInfo.hasUpdatesChannel ? '✅ Configured' : '❌ Not set - Use `!setupdateschannel #channel`', inline: true }
+          )
+          .setFooter({ text: 'Use !setup to see the full setup guide' });
+
+        await message.reply({ embeds: [setupStatusEmbed] });
+        break;
+
       case 'addadmin':
         if (!serverId) {
           await message.reply('❌ This command can only be used in a server!');
@@ -2358,6 +2384,239 @@ client.on('messageCreate', async (message) => {
 
         const setGifResult = await setChestGif(chestType, gifUrl, userId);
         await message.reply(setGifResult.message);
+        break;
+
+      case 'setgame':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only users with the **ZooAdmin** role can set the server game!');
+          return;
+        }
+
+        const gameToSet = args.join(' ');
+        if (!gameToSet) {
+          await message.reply('Usage: `!setgame <game name>`\n\nUse `!games` to see available games.');
+          return;
+        }
+
+        const setGameResult = await gameSystem.setServerGame(serverId, gameToSet, userId, message.member, characterManager);
+        await message.reply(setGameResult.message);
+        break;
+
+      case 'creategame':
+      case 'newgame':
+      case 'createbundle':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+
+        if (!isSuperAdmin(userId) && !isZooAdmin(message.member)) {
+          await message.reply('❌ Only users with the **ZooAdmin** role can create games/bundles!');
+          return;
+        }
+
+        const newGameName = args[0];
+        const newGameDesc = args.slice(1).join(' ') || null;
+
+        if (!newGameName) {
+          await message.reply('Usage: `!creategame <name> [description]`\n\nExample: `!creategame MyGame An awesome custom character bundle`');
+          return;
+        }
+
+        const createGameResult = await gameSystem.createGame(userId, newGameName, newGameDesc, message.member);
+        await message.reply(createGameResult.message);
+        break;
+
+      case 'games':
+      case 'gamelist':
+      case 'bundles':
+        const gamesListDetailed = gameSystem.formatGameList(characterManager, true);
+        
+        if (gamesListDetailed.length === 0) {
+          await message.reply('❌ No games/bundles found!');
+          return;
+        }
+
+        const gamesDescParts = gamesListDetailed.slice(0, 10).map(g => 
+          `${g.status} **${g.name}** ${g.usable} (${g.characterCount} chars)${g.isDefault ? ' ⭐' : ''}`
+        );
+        
+        const gamesEmbed = new EmbedBuilder()
+          .setColor('#00D9FF')
+          .setTitle('🎮 Available Games/Bundles')
+          .setDescription(gamesDescParts.join('\n') + 
+            (gamesListDetailed.length > 10 ? `\n\n...and ${gamesListDetailed.length - 10} more` : ''))
+          .setFooter({ text: 'Use !setgame <name> to select a game for your server' });
+
+        await message.reply({ embeds: [gamesEmbed] });
+        break;
+
+      case 'listchars':
+      case 'allchars':
+      case 'characters':
+      case 'charlist':
+        const charGameFilter = args[0] || null;
+        let charsToList;
+        let charListTitle;
+
+        if (charGameFilter) {
+          charsToList = characterManager.getCharactersByGame(charGameFilter);
+          charListTitle = `Characters in ${charGameFilter}`;
+        } else if (serverId) {
+          const serverSelectedGame = gameSystem.getServerGame(serverId);
+          if (serverSelectedGame) {
+            charsToList = characterManager.getCharactersByGame(serverSelectedGame);
+            charListTitle = `Characters in ${serverSelectedGame}`;
+          } else {
+            charsToList = characterManager.getCharacters();
+            charListTitle = 'All Characters';
+          }
+        } else {
+          charsToList = characterManager.getCharacters();
+          charListTitle = 'All Characters';
+        }
+
+        if (!charsToList || charsToList.length === 0) {
+          await message.reply(charGameFilter 
+            ? `❌ No characters found in game "${charGameFilter}"!`
+            : '❌ No characters found!');
+          return;
+        }
+
+        const charDisplayList = charsToList.slice(0, 50).map(c => `${c.emoji} ${c.name}`);
+        const moreCharsText = charsToList.length > 50 ? `\n\n...and ${charsToList.length - 50} more` : '';
+
+        const charListEmbed = new EmbedBuilder()
+          .setColor('#3498DB')
+          .setTitle(`📋 ${charListTitle}`)
+          .setDescription(`Total: **${charsToList.length}** characters\n\n${charDisplayList.join(', ')}${moreCharsText}`)
+          .setFooter({ text: 'Use !listchars <game> to filter by game | !info <char> for details' });
+
+        await message.reply({ embeds: [charListEmbed] });
+        break;
+
+      case 'submit':
+      case 'submitchar':
+      case 'submitcharacter':
+        if (!serverId) {
+          await message.reply('❌ This command can only be used in a server!');
+          return;
+        }
+
+        if (!data.users[userId].started) {
+          await message.reply('❌ You must start first! Use `!start` to begin.');
+          return;
+        }
+
+        const submitArgs = args.join(' ');
+        if (!submitArgs) {
+          await message.reply(
+            '**Submit a Character**\n\n' +
+            'Usage: `!submit <name> | <emoji> | [obtainable]`\n\n' +
+            '**Example:**\n' +
+            '`!submit Luna | 🌙 | crate`\n\n' +
+            '**Obtainable Types:**\n' +
+            '• `crate` - Available in crates (default)\n' +
+            '• `drop` - Available in drops\n' +
+            '• `starter` - Starter character\n' +
+            '• `event` - Event exclusive\n' +
+            '• `exclusive` - Special exclusive\n\n' +
+            'Your submission will be reviewed by bot admins!'
+          );
+          return;
+        }
+
+        const submitParts = submitArgs.split('|').map(p => p.trim());
+        const submitName = submitParts[0];
+        const submitEmoji = submitParts[1];
+        const submitObtainable = submitParts[2] || 'crate';
+
+        if (!submitName || !submitEmoji) {
+          await message.reply('❌ Please provide both name and emoji!\n\nUsage: `!submit <name> | <emoji> | [obtainable]`');
+          return;
+        }
+
+        const submitResult = await charSubmissionSystem.submitCharacter(
+          userId,
+          message.author.username,
+          serverId,
+          {
+            name: submitName,
+            emoji: submitEmoji,
+            obtainable: submitObtainable
+          }
+        );
+
+        await message.reply(submitResult.message);
+        break;
+
+      case 'pendingchars':
+      case 'pendingsubmissions':
+      case 'reviewsubmissions':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can view pending character submissions!');
+          return;
+        }
+
+        const charPendingList = charSubmissionSystem.getPendingSubmissions();
+        
+        if (charPendingList.length === 0) {
+          await message.reply('✅ No pending character submissions!');
+          return;
+        }
+
+        const charPendingEmbed = new EmbedBuilder()
+          .setColor('#FFA500')
+          .setTitle('📋 Pending Character Submissions')
+          .setDescription(`**${charPendingList.length}** submissions awaiting review:\n\n` +
+            charPendingList.slice(0, 10).map(s => 
+              `**${s.id}**: ${s.emoji} ${s.name}\n` +
+              `└ By: ${s.submitterName} | Game: ${s.targetGame}`
+            ).join('\n\n'))
+          .setFooter({ text: 'Use !approvesubmit <id> or !rejectsubmit <id> <reason>' });
+
+        await message.reply({ embeds: [charPendingEmbed] });
+        break;
+
+      case 'approvesubmit':
+      case 'approvechar':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can approve character submissions!');
+          return;
+        }
+
+        const charApproveId = args[0];
+        if (!charApproveId) {
+          await message.reply('Usage: `!approvesubmit <submission ID>`\n\nUse `!pendingchars` to see pending submissions.');
+          return;
+        }
+
+        const charApproveResult = await charSubmissionSystem.approveSubmission(charApproveId, userId, characterManager, client);
+        await message.reply(charApproveResult.message);
+        break;
+
+      case 'rejectsubmit':
+      case 'rejectchar':
+        if (!isSuperAdmin(userId)) {
+          await message.reply('❌ Only Super Admins can reject character submissions!');
+          return;
+        }
+
+        const charRejectId = args[0];
+        const charRejectReason = args.slice(1).join(' ') || 'No reason provided';
+
+        if (!charRejectId) {
+          await message.reply('Usage: `!rejectsubmit <submission ID> [reason]`\n\nUse `!pendingchars` to see pending submissions.');
+          return;
+        }
+
+        const charRejectResult = await charSubmissionSystem.rejectSubmission(charRejectId, userId, charRejectReason, client);
+        await message.reply(charRejectResult.message);
         break;
 
       case 'delete':
