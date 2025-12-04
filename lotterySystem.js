@@ -422,7 +422,9 @@ async function performLotteryDraw(serverId) {
       
       const channel = await activeClient.channels.fetch(lottery.channelId).catch(() => null);
       if (channel) {
-        await channel.send({ embeds: [noParticipantsEmbed] });
+        await channel.send({ embeds: [noParticipantsEmbed] }).catch(err => {
+          console.error('Failed to send lottery no-participants message:', err.message);
+        });
       }
       
       if (USE_MONGODB) {
@@ -529,7 +531,9 @@ async function performLotteryDraw(serverId) {
     // Announce winners to the lottery-specific channel
     const channel = await activeClient.channels.fetch(lottery.channelId).catch(() => null);
     if (channel) {
-      await channel.send({ embeds: [winnerEmbed] });
+      await channel.send({ embeds: [winnerEmbed] }).catch(err => {
+        console.error('Failed to send lottery winner announcement:', err.message);
+      });
     }
     
     // Broadcast to all servers' events channels, but skip if it's the same as lottery channel
