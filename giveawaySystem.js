@@ -1,5 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { saveDataImmediate } = require('./dataManager.js');
+const { saveDataImmediate, saveData } = require('./dataManager.js');
 
 const USE_MONGODB = process.env.USE_MONGODB === 'true';
 let mongoManager = null;
@@ -28,6 +28,7 @@ let activeGiveaway = {
 let activeClient = null;
 let sharedData = null;
 let autoScheduleTimeout = null;
+let getMainDataRef = null;
 
 function getGiveawayData() {
   return activeGiveaway;
@@ -37,7 +38,17 @@ function setSharedData(data) {
   sharedData = data;
 }
 
+function setMainDataGetter(getter) {
+  getMainDataRef = getter;
+}
+
 function getSharedData() {
+  if (getMainDataRef) {
+    const currentData = getMainDataRef();
+    if (currentData && currentData !== sharedData) {
+      sharedData = currentData;
+    }
+  }
   return sharedData;
 }
 
@@ -346,13 +357,15 @@ async function endGiveaway() {
   try {
     const winner = await activeClient.users.fetch(winnerId);
     
-    if (!sharedData) {
+    const currentData = getSharedData();
+    
+    if (!currentData) {
       console.error('Error: sharedData is not available in giveaway system');
       return { success: false, message: '❌ Internal error: Data not available.' };
     }
 
-    if (!sharedData.users[winnerId]) {
-      sharedData.users[winnerId] = {
+    if (!currentData.users[winnerId]) {
+      currentData.users[winnerId] = {
         username: winner.username,
         coins: 0,
         gems: 0,
@@ -368,7 +381,7 @@ async function endGiveaway() {
       };
     }
 
-    const userData = sharedData.users[winnerId];
+    const userData = currentData.users[winnerId];
     
     if (!userData.legendaryCrates) {
       userData.legendaryCrates = 0;
@@ -378,14 +391,22 @@ async function endGiveaway() {
     const coinsToAdd = activeGiveaway.prizes.coins;
     const cratesToAdd = activeGiveaway.prizes.crates.legendary;
 
-    userData.gems = (userData.gems || 0) + gemsToAdd;
-    userData.coins = (userData.coins || 0) + coinsToAdd;
-    userData.legendaryCrates = (userData.legendaryCrates || 0) + cratesToAdd;
+    const previousGems = userData.gems || 0;
+    const previousCoins = userData.coins || 0;
+    const previousCrates = userData.legendaryCrates || 0;
+
+    userData.gems = previousGems + gemsToAdd;
+    userData.coins = previousCoins + coinsToAdd;
+    userData.legendaryCrates = previousCrates + cratesToAdd;
     
-    console.log(`🎁 Giveaway: Granted ${gemsToAdd} gems, ${coinsToAdd} coins, ${cratesToAdd} legendary crates to ${winner.username} (${winnerId})`);
-    console.log(`🎁 Giveaway: User now has ${userData.gems} gems, ${userData.coins} coins, ${userData.legendaryCrates} legendary crates`);
+    console.log(`🎁 Giveaway: Granting rewards to ${winner.username} (${winnerId})`);
+    console.log(`🎁 Giveaway: Before - ${previousGems} gems, ${previousCoins} coins, ${previousCrates} legendary crates`);
+    console.log(`🎁 Giveaway: Adding - ${gemsToAdd} gems, ${coinsToAdd} coins, ${cratesToAdd} legendary crates`);
+    console.log(`🎁 Giveaway: After - ${userData.gems} gems, ${userData.coins} coins, ${userData.legendaryCrates} legendary crates`);
     
-    await saveDataImmediate(sharedData);
+    await saveDataImmediate(currentData);
+    
+    console.log(`🎁 Giveaway: Data saved immediately for ${winner.username}`);
 
     const winnerEmbed = new EmbedBuilder()
       .setColor('#00FF00')
@@ -477,6 +498,7 @@ module.exports = {
   getGiveawayData,
   setGiveawayData,
   setSharedData,
+  setMainDataGetter,
   getSharedData,
   enableAutoGiveaway,
   disableAutoGiveaway

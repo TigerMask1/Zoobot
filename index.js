@@ -234,7 +234,7 @@ const {
 const gameSystem = require('./gameSystem.js');
 const charSubmissionSystem = require('./characterSubmissionSystem.js');
 const { startPromotionSystem } = require('./promotionSystem.js');
-const { initializeGiveawaySystem, setGiveawayData, enableAutoGiveaway, disableAutoGiveaway } = require('./giveawaySystem.js');
+const { initializeGiveawaySystem, setGiveawayData, setMainDataGetter, enableAutoGiveaway, disableAutoGiveaway } = require('./giveawaySystem.js');
 const { initializeLotterySystem, setLotteryData, enableAutoLottery, disableAutoLottery } = require('./lotterySystem.js');
 const { startDropsForServer } = require('./dropSystem.js');
 const { addCommandXP, getAccountLevelDisplay } = require('./accountLevelSystem.js');
@@ -492,6 +492,8 @@ client.on('clientReady', async () => {
   
   try {
     await initializeGiveawaySystem(client, data);
+    setMainDataGetter(() => data);
+    console.log('✅ Giveaway system initialized with live data reference');
   } catch (error) {
     console.warn('⚠️ Giveaway system init error:', error.message);
   }
