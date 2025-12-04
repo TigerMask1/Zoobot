@@ -6351,6 +6351,107 @@ client.on('messageCreate', async (message) => {
         await message.reply({ embeds: [overviewEmbed] });
         break;
 
+      case 'work':
+        if (!isFeatureEnabled(serverId, 'workSystemEnabled')) {
+          await message.reply('❌ The work system is disabled in this server!');
+          break;
+        }
+
+        const workData = initializeWorkData(data.users[userId]);
+        const workCheck = canWork(data.users[userId]);
+
+        if (!workCheck.canWork) {
+          await message.reply(`⏰ You need to wait **${workCheck.timeLeft}** before working again!`);
+          break;
+        }
+
+        const jobResult = assignRandomJob(data.users[userId]);
+        const job = jobResult.job;
+        const jobInfo = jobResult.jobData;
+
+        let workResult;
+        switch (job) {
+          case 'miner':
+            workResult = handleMinerJob(data.users[userId]);
+            break;
+          case 'caretaker':
+            workResult = handleCaretakerJob(data.users[userId]);
+            break;
+          case 'farmer':
+            workResult = handleFarmerJob(data.users[userId]);
+            break;
+          case 'zookeeper':
+            workResult = handleZookeeperJob(data.users[userId]);
+            break;
+          case 'ranger':
+            workResult = handleRangerJob(data.users[userId]);
+            break;
+          default:
+            workResult = handleCaretakerJob(data.users[userId]);
+        }
+
+        if (!workResult.success) {
+          await message.reply(workResult.message);
+          break;
+        }
+
+        completeWork(data.users[userId]);
+        await saveDataImmediate(data);
+
+        const workEmbed = new EmbedBuilder()
+          .setColor('#00D9FF')
+          .setTitle(`${jobInfo.emoji} ${jobInfo.name} Job Complete!`)
+          .setDescription(`You worked as a **${jobInfo.name}** and earned rewards!`);
+
+        let rewardText = '';
+        if (workResult.rewards.coins) rewardText += `💰 **${workResult.rewards.coins}** Coins\n`;
+        if (workResult.rewards.gems) rewardText += `💎 **${workResult.rewards.gems}** Gems\n`;
+        if (workResult.rewards.tokens) {
+          if (workResult.rewards.grantedTo) {
+            rewardText += `🎫 **${workResult.rewards.tokens}** Tokens (to ${workResult.rewards.grantedTo})\n`;
+          } else {
+            rewardText += `🎫 **${workResult.rewards.tokens}** Pending Tokens\n`;
+          }
+        }
+        if (workResult.rewards.shards) rewardText += `🔷 **${workResult.rewards.shards}** Shards\n`;
+        if (workResult.rewards.keys) rewardText += `🔑 **${workResult.rewards.keys}** Keys\n`;
+
+        if (workResult.rewards.ores && Object.keys(workResult.rewards.ores).length > 0) {
+          const oreEmojis = { aurelite: '🟡', kryonite: '🔵', zyronite: '🟣', rubinite: '🔴', voidinite: '⚫' };
+          for (const [ore, amount] of Object.entries(workResult.rewards.ores)) {
+            rewardText += `${oreEmojis[ore] || '⛰️'} **${amount}** ${ore.charAt(0).toUpperCase() + ore.slice(1)}\n`;
+          }
+        }
+
+        if (workResult.rewards.wood && Object.keys(workResult.rewards.wood).length > 0) {
+          const woodEmojis = { oak: '🟤', maple: '🟠', ebony: '⚫', celestial: '✨' };
+          for (const [wood, amount] of Object.entries(workResult.rewards.wood)) {
+            rewardText += `${woodEmojis[wood] || '🪵'} **${amount}** ${wood.charAt(0).toUpperCase() + wood.slice(1)} Wood\n`;
+          }
+        }
+
+        if (workResult.rewards.crates && Object.keys(workResult.rewards.crates).length > 0) {
+          const crateEmojis = { bronze: '🟤', silver: '⚪', gold: '🟡', emerald: '🟢' };
+          for (const [crate, amount] of Object.entries(workResult.rewards.crates)) {
+            rewardText += `📦 **${amount}x** ${crate.charAt(0).toUpperCase() + crate.slice(1)} Crate\n`;
+          }
+        }
+
+        workEmbed.addFields({ name: '🎁 Rewards', value: rewardText || 'No rewards', inline: false });
+
+        if (workResult.durability !== undefined) {
+          workEmbed.addFields({ name: '🔧 Tool Durability', value: `${workResult.durability} uses remaining`, inline: true });
+        }
+
+        if (workResult.houseLevel !== undefined) {
+          workEmbed.addFields({ name: '🏠 House Level', value: `Level ${workResult.houseLevel}`, inline: true });
+        }
+
+        workEmbed.setFooter({ text: 'Work again in 15 minutes! | Use !workguide for help' });
+
+        await message.reply({ embeds: [workEmbed] });
+        break;
+
       case 'workguide':
       case 'workhelp':
         const workGuideEmbed = new EmbedBuilder()

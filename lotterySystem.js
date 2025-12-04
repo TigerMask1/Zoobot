@@ -11,6 +11,7 @@ if (USE_MONGODB) {
 let activeLotteries = {};
 let activeClient = null;
 let autoScheduleTimeouts = {};
+let drawInProgress = {};
 
 function getNextUTCMidnight() {
   const now = new Date();
@@ -395,10 +396,18 @@ async function performLotteryDraw(serverId) {
     return;
   }
   
-  if (!activeClient) {
-    console.log('⚠️ Lottery draw skipped - client not ready');
+  if (drawInProgress[serverId]) {
+    console.log(`⚠️ Lottery draw skipped for server ${serverId} - draw already in progress`);
     return;
   }
+  
+  if (!activeClient) {
+    console.log('⚠️ Lottery draw skipped - client not ready, will retry later');
+    return;
+  }
+  
+  drawInProgress[serverId] = true;
+  lottery.active = false;
   
   try {
     // Handle no participants case
@@ -416,7 +425,6 @@ async function performLotteryDraw(serverId) {
         await channel.send({ embeds: [noParticipantsEmbed] });
       }
       
-      lottery.active = false;
       if (USE_MONGODB) {
         await saveLotteryToMongo();
       } else {
@@ -425,6 +433,7 @@ async function performLotteryDraw(serverId) {
         data.lotteryData = activeLotteries;
         await saveDataImmediate(data);
       }
+      delete drawInProgress[serverId];
       return;
     }
     
@@ -538,8 +547,6 @@ async function performLotteryDraw(serverId) {
       totalEntries: totalEntries
     });
     
-    lottery.active = false;
-    
     // Save lottery state ONLY (user data already saved above)
     if (USE_MONGODB) {
       await saveLotteryToMongo();
@@ -552,8 +559,11 @@ async function performLotteryDraw(serverId) {
     
     console.log(`✅ Lottery completed for server ${serverId} - ${numWinners} winners with ${numWinners} prizes distributed`);
     
+    delete drawInProgress[serverId];
+    
   } catch (error) {
     console.error(`❌ Error performing lottery draw for server ${serverId}:`, error);
+    delete drawInProgress[serverId];
   }
 }
 

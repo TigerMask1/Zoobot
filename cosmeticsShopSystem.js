@@ -161,7 +161,7 @@ function initializeSkinCatalog() {
   }
 }
 
-async function addSkinToCatalog(characterName, skinName, rarity, url, customCost = null) {
+async function addSkinToCatalog(characterName, skinName, rarity, url, customCost = null, isExclusive = false) {
   await loadCosmeticsCatalog();
   initializeSkinCatalog();
   
@@ -187,14 +187,16 @@ async function addSkinToCatalog(characterName, skinName, rarity, url, customCost
     character: characterName,
     url: url,
     cost: cost,
-    exclusive: false
+    exclusive: isExclusive
   });
   
   await saveCosmeticsCatalog();
   
+  const exclusiveNote = isExclusive ? '\n🔒 This skin is **exclusive** and not purchasable.' : '';
+  
   return {
     success: true,
-    message: `✅ Added **${skinName}** skin for ${characterName} to the UST shop!\n${RARITY_EMOJIS[rarityKey]} Rarity: ${rarity}\n💰 Cost: ${cost} UST`,
+    message: `✅ Added **${skinName}** skin for ${characterName} to the UST shop!\n${RARITY_EMOJIS[rarityKey]} Rarity: ${rarity}\n💰 Cost: ${cost} UST${exclusiveNote}`,
     skinId: SKIN_CATALOG[rarityKey][SKIN_CATALOG[rarityKey].length - 1].id
   };
 }
