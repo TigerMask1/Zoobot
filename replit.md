@@ -96,3 +96,25 @@ Added a new character key collection system as an alternative way to unlock char
 **Hub Documentation Updated:**
 - Added character keys information to rewards section
 - Added `!grantkeys` and `!grantkeyrush` to admin commands
+
+### UTC Scheduling & Event System Improvements (December 2025)
+
+**Lottery & Giveaway UTC Scheduling:**
+- Lottery runs every 12 hours at 00:00 and 12:00 UTC
+- Giveaway runs every 24 hours at 00:00 UTC
+- Both use channel 1445441639064801322 as default
+- Multi-server support: single global scheduler iterates all servers
+- Prevention of duplicate automatic triggers (skips if already active)
+
+**KeyRush Event Improvements:**
+- Now runs in main drops channel (uses server's configured dropChannelId)
+- Pings Event role on start notification
+- Auto-revives paused drops before event starts
+- Auto-resumes drops after event ends (respects dropsWerePausedBefore flag)
+- Graceful error handling for drop resumption
+
+**Technical Notes:**
+- `startUTCLotteryScheduler()` - Global minute-based checker for all servers
+- `startUTCGiveawayScheduler()` - Global minute-based checker for giveaways
+- `dropsWerePausedBefore` flag prevents unwanted drop restarts
+- All critical saves use `saveDataImmediate()` for data integrity
