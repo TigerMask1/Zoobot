@@ -12,14 +12,16 @@ if (USE_MONGODB) {
 const KEYS_TO_UNLOCK = 750;
 const KEY_RUSH_COST = 250;
 const KEY_RUSH_DURATION = 3600000;
-const KEY_RUSH_CHANNEL = '1430525428312965160';
 const MAIN_SERVER_ID = '1430516117851340893';
+const EVENT_ROLE_NAME = 'event';
 
 const KEY_RUSH_SCHEDULE = [
   { hour: 10, minute: 0 },
   { hour: 16, minute: 0 },
   { hour: 22, minute: 0 }
 ];
+
+let dropsWerePausedBefore = false;
 
 let keyRushIntervals = new Map();
 let keyRushScheduler = null;
@@ -741,17 +743,37 @@ function stopKeyRushDrops(serverId, sendNotification = true) {
 async function sendKeyRushEndNotification(serverId) {
   try {
     const config = getServerConfig(serverId);
-    const channelId = config?.dropChannelId || (isMainServer(serverId) ? KEY_RUSH_CHANNEL : null);
+    const channelId = config?.dropChannelId;
     
     if (!channelId || !activeClient) return;
     
     const channel = await activeClient.channels.fetch(channelId).catch(() => null);
     if (!channel) return;
     
+    let resumeMessage = '';
+    
+    if (!dropsWerePausedBefore && activeData) {
+      const { startDropsForServer, areDropsActive } = require('./dropSystem.js');
+      if (!areDropsActive(serverId)) {
+        console.log(`🎮 Auto-resuming drops after Key Rush for server ${serverId}`);
+        try {
+          await startDropsForServer(activeClient, activeData, serverId);
+          resumeMessage = '\n\n✅ **Regular drops are resuming now!**';
+        } catch (err) {
+          console.error('Error auto-resuming drops:', err);
+          resumeMessage = '\n\n⚠️ Use `!revive` to resume drops.';
+        }
+      }
+    } else {
+      resumeMessage = '\n\n*Use `!revive` to start drops if needed.*';
+    }
+    
+    dropsWerePausedBefore = false;
+    
     const embed = new EmbedBuilder()
       .setColor('#FF6B6B')
       .setTitle('🔑 Key Rush Ended!')
-      .setDescription(`The Key Rush event has ended!\n\n📊 Check your collected keys with \`!charkeys\`\n🔓 Unlock characters with \`!keyunlock <name>\`\n🔄 Convert excess keys with \`!convertkeys\`\n\n*Regular drops will resume shortly...*`)
+      .setDescription(`The Key Rush event has ended!\n\n📊 Check your collected keys with \`!charkeys\`\n🔓 Unlock characters with \`!keyunlock <name>\`\n🔄 Convert excess keys with \`!convertkeys\`${resumeMessage}`)
       .setFooter({ text: 'Thanks for participating!' })
       .setTimestamp();
     
@@ -761,15 +783,28 @@ async function sendKeyRushEndNotification(serverId) {
   }
 }
 
+async function getEventRole(guild) {
+  try {
+    const role = guild.roles.cache.find(r => r.name.toLowerCase() === EVENT_ROLE_NAME.toLowerCase());
+    return role;
+  } catch (error) {
+    console.error('Error finding event role:', error);
+    return null;
+  }
+}
+
 async function sendKeyRushStartNotification(serverId, duration = '1 hour') {
   try {
     const config = getServerConfig(serverId);
-    const channelId = config?.dropChannelId || (isMainServer(serverId) ? KEY_RUSH_CHANNEL : null);
+    const channelId = config?.dropChannelId;
     
     if (!channelId || !activeClient) return;
     
     const channel = await activeClient.channels.fetch(channelId).catch(() => null);
     if (!channel) return;
+    
+    const eventRole = await getEventRole(channel.guild);
+    const pingMessage = eventRole ? `<@&${eventRole.id}>` : '';
     
     const embed = new EmbedBuilder()
       .setColor('#FFD700')
@@ -778,7 +813,7 @@ async function sendKeyRushStartNotification(serverId, duration = '1 hour') {
       .setFooter({ text: 'Key Rush Event | Type !c <code> to catch drops!' })
       .setTimestamp();
     
-    await channel.send({ embeds: [embed] });
+    await channel.send({ content: pingMessage, embeds: [embed] });
   } catch (error) {
     console.error('Error sending Key Rush start notification:', error);
   }
@@ -943,10 +978,17 @@ async function checkScheduledKeyRush() {
       if (!isKeyRushActive(MAIN_SERVER_ID)) {
         console.log(`🔑 Starting scheduled Key Rush at ${currentHour}:${currentMinute}`);
         
+        const { areDropsActive, stopDropsForServer, startDropsForServer } = require('./dropSystem.js');
+        dropsWerePausedBefore = !areDropsActive(MAIN_SERVER_ID);
+        
+        if (areDropsActive(MAIN_SERVER_ID)) {
+          console.log('⏸️ Pausing regular drops for Key Rush event');
+          await stopDropsForServer(MAIN_SERVER_ID, false);
+        }
+        
         const config = getServerConfig(MAIN_SERVER_ID) || {};
         config.keyRushUntil = Date.now() + KEY_RUSH_DURATION;
         config.keyRushActivatedBy = 'SYSTEM';
-        config.dropChannelId = KEY_RUSH_CHANNEL;
         await saveServerConfig(MAIN_SERVER_ID, config);
         
         await sendKeyRushStartNotification(MAIN_SERVER_ID, '1 hour');
