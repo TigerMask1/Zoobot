@@ -64,3 +64,14 @@ The bot is built on Discord.js v14 and Node.js 20, utilizing a dual-mode data st
 - Fixed race condition causing lottery to announce results twice
 - Added `drawInProgress` mutex lock to prevent concurrent draw operations
 - Lock only acquired after confirming Discord client is ready
+
+**Missing Command Handlers Fix (December 4, 2025):**
+- Added missing case statements for game/bundle management: `!setgame`, `!creategame`, `!newgame`, `!createbundle`
+- Added missing case statements for game listing: `!games`, `!gamelist`, `!bundles`
+- Added missing case statements for character listing: `!listchars`, `!allchars`, `!characters`, `!charlist`
+- Added character submission commands: `!submit`, `!submitchar`, `!pendingchars`, `!approvesubmit`, `!rejectsubmit`
+- Added setup status command: `!setupstatus`, `!serverstatus`
+- Fixed `!listchars` to filter by server's selected game instead of showing all characters
+- Fixed `!games` to paginate results and prevent exceeding Discord embed limits
+- Restricted character submission approval/rejection to Super Admins only (matching character creation permissions)
+- Fixed variable name conflicts (renamed statusEmbed, gameFilter to avoid redeclaration errors)
