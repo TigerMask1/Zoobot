@@ -755,18 +755,26 @@ async function sendKeyRushEndNotification(serverId) {
     
     if (!dropsWerePausedBefore && activeData) {
       const { startDropsForServer, areDropsActive } = require('./dropSystem.js');
-      if (!areDropsActive(serverId)) {
-        console.log(`🎮 Auto-resuming drops after Key Rush for server ${serverId}`);
-        try {
-          await startDropsForServer(activeClient, activeData, serverId);
-          resumeMessage = '\n\n✅ **Regular drops are resuming now!**';
-        } catch (err) {
-          console.error('Error auto-resuming drops:', err);
-          resumeMessage = '\n\n⚠️ Use `!revive` to resume drops.';
-        }
+      console.log(`🎮 Auto-resuming drops after Key Rush for server ${serverId}`);
+      try {
+        await startDropsForServer(serverId);
+        resumeMessage = '\n\n✅ **Regular drops are resuming now!**';
+      } catch (err) {
+        console.error('Error auto-resuming drops:', err);
+        resumeMessage = '\n\n⚠️ Use `!revive` to resume drops.';
       }
-    } else {
+    } else if (dropsWerePausedBefore) {
       resumeMessage = '\n\n*Use `!revive` to start drops if needed.*';
+    } else {
+      const { startDropsForServer } = require('./dropSystem.js');
+      console.log(`🎮 Auto-resuming drops after Key Rush for server ${serverId} (default case)`);
+      try {
+        await startDropsForServer(serverId);
+        resumeMessage = '\n\n✅ **Regular drops are resuming now!**';
+      } catch (err) {
+        console.error('Error auto-resuming drops:', err);
+        resumeMessage = '\n\n⚠️ Use `!revive` to resume drops.';
+      }
     }
     
     dropsWerePausedBefore = false;

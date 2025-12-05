@@ -256,7 +256,36 @@ async function endAuction(data, auctionId) {
   } else {
     if (seller) {
       const categoryData = ITEM_CATEGORIES[auction.category];
-      categoryData.setUserInventory(seller, auction.itemName, auction.quantity);
+      if (categoryData) {
+        categoryData.setUserInventory(seller, auction.itemName, auction.quantity);
+        console.log(`✅ Returned ${auction.quantity}x ${auction.itemName} to seller ${seller.username} (Auction ${auctionId} - no bids)`);
+        
+        if (botClient) {
+          try {
+            const sellerUser = await botClient.users.fetch(auction.sellerId);
+            const sellerEmbed = new EmbedBuilder()
+              .setColor('#FFA500')
+              .setTitle('📦 Auction Ended - No Bids')
+              .setDescription(
+                `Your auction has ended with no bids.\n\n` +
+                `**Item:** ${auction.quantity}x ${auction.itemName}\n` +
+                `**Starting Bid:** ${auction.startingBid} ${currencyEmoji}\n\n` +
+                `✅ Your items have been returned to your inventory!`
+              )
+              .setTimestamp();
+            
+            await sellerUser.send({ embeds: [sellerEmbed] }).catch(() => {
+              console.log(`Could not send auction ended notification to ${seller.username}`);
+            });
+          } catch (error) {
+            console.log(`Error sending no-bids notification: ${error.message}`);
+          }
+        }
+      } else {
+        console.error(`❌ Could not return items - category ${auction.category} not found for auction ${auctionId}`);
+      }
+    } else {
+      console.error(`❌ Could not return items - seller not found for auction ${auctionId}`);
     }
     
     data.globalAuctions.splice(auctionIndex, 1);
