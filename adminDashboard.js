@@ -238,6 +238,20 @@ async function getBundles() {
   }
 }
 
+async function getBundleById(bundleId) {
+  if (!isMongoConnected()) return null;
+  
+  const db = getMongoDatabase();
+  const { ObjectId } = require('mongodb');
+  
+  try {
+    return await db.collection(ADMIN_BUNDLES_COLLECTION).findOne({ _id: new ObjectId(bundleId) });
+  } catch (error) {
+    console.error('[AdminDashboard] Error getting bundle:', error);
+    return null;
+  }
+}
+
 async function createBundle(bundleData) {
   if (!isMongoConnected()) {
     return { success: false, message: 'Database not connected' };
@@ -655,6 +669,78 @@ function setupAdminRoutes(app, discordClient = null) {
     } catch (error) {
       console.error('[AdminDashboard] Error getting stats:', error);
       res.json({ success: false, error: 'Failed to get stats' });
+    }
+  });
+  
+  app.get('/api/admin/server/:serverId/config', authMiddleware, async (req, res) => {
+    try {
+      const { serverId } = req.params;
+      const serverConfigManager = require('./serverConfigManager.js');
+      const config = serverConfigManager.getServerConfig(serverId) || {};
+      
+      res.json({
+        success: true,
+        config: config.features || {},
+        characters: config.enabledCharacters || [],
+        bundleId: config.bundleId || null
+      });
+    } catch (error) {
+      console.error('[AdminDashboard] Error getting server config:', error);
+      res.json({ success: false, error: 'Failed to get server config' });
+    }
+  });
+  
+  app.put('/api/admin/server/:serverId/config', authMiddleware, async (req, res) => {
+    try {
+      const { serverId } = req.params;
+      const { features, characters } = req.body;
+      const serverConfigManager = require('./serverConfigManager.js');
+      
+      const existingConfig = serverConfigManager.getServerConfig(serverId) || { serverId };
+      
+      const updatedConfig = {
+        ...existingConfig,
+        serverId,
+        features: features || existingConfig.features || {},
+        enabledCharacters: characters || existingConfig.enabledCharacters || []
+      };
+      
+      await serverConfigManager.saveServerConfig(serverId, updatedConfig);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[AdminDashboard] Error saving server config:', error);
+      res.json({ success: false, error: 'Failed to save server config' });
+    }
+  });
+  
+  app.put('/api/admin/server/:serverId/bundle', authMiddleware, async (req, res) => {
+    try {
+      const { serverId } = req.params;
+      const { bundleId } = req.body;
+      const serverConfigManager = require('./serverConfigManager.js');
+      
+      const existingConfig = serverConfigManager.getServerConfig(serverId) || { serverId };
+      
+      const updatedConfig = {
+        ...existingConfig,
+        serverId,
+        bundleId: bundleId || null
+      };
+      
+      if (bundleId) {
+        const bundle = await getBundleById(bundleId);
+        if (bundle && bundle.characters) {
+          updatedConfig.enabledCharacters = bundle.characters;
+        }
+      }
+      
+      await serverConfigManager.saveServerConfig(serverId, updatedConfig);
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[AdminDashboard] Error saving server bundle:', error);
+      res.json({ success: false, error: 'Failed to save server bundle' });
     }
   });
   

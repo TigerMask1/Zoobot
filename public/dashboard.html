@@ -1090,7 +1090,14 @@
       }
 
       showView('dashboard');
-      loadServers();
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const serverParam = urlParams.get('server');
+      if (serverParam) {
+        selectServer(serverParam);
+      } else {
+        loadServers();
+      }
     }
 
     async function loadServers() {
