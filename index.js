@@ -96,6 +96,8 @@ setupAdminRoutes(app, null);
 console.log('🔧 Admin dashboard routes configured');
 
 const { setupDashboardRoutes, setDiscordClient: setDashboardDiscordClient } = require('./dashboard/index.js');
+const dashboardDb = require('./dashboard/database.js');
+const { MINIMUM_CHARACTERS_REQUIRED } = require('./dashboard/schemas.js');
 setupDashboardRoutes(app, null);
 console.log('🔧 New dashboard routes configured');
 
@@ -591,6 +593,17 @@ client.on('clientReady', async () => {
   
   setDashboardDiscordClient(client);
   console.log('✅ Dashboard Discord client configured');
+  
+  client.on('dashboardConfigUpdate', async (updateData) => {
+    const { serverId, type, data: updatePayload } = updateData;
+    console.log(`[Dashboard] Config update for server ${serverId}: ${type}`);
+    
+    if (type === 'characterAdded' || type === 'characterRemoved') {
+      await dashboardDb.checkAndUpdateSetupStatus(serverId);
+      console.log(`[Dashboard] Setup status checked for server ${serverId}`);
+    }
+  });
+  console.log('✅ Dashboard event listener configured');
   
   console.log('✅ All systems initialized!');
 });
@@ -1489,6 +1502,38 @@ client.on('messageCreate', async (message) => {
     const remainingMin = Math.ceil(muteInfo.remainingMs / 60000);
     await message.reply(`🔇 You are muted for ${remainingMin} more minute(s).\n**Reason:** ${muteInfo?.reason || 'No reason provided'}`);
     return;
+  }
+  
+  const GAMEPLAY_COMMANDS = [
+    'start', 'catch', 'battle', 'trade', 'drop', 'crate', 'opencrate', 
+    'daily', 'work', 'balance', 'bal', 'profile', 'collection', 'shop',
+    'buy', 'sell', 'gift', 'market', 'auction', 'quest', 'trivia',
+    'leaderboard', 'lb', 'globalboard', 'clan', 'joinclan', 'leaveclan',
+    'donate', 'charkeys', 'ck', 'keyunlock', 'convertkeys', 'lottery',
+    'giveaway', 'items', 'inventory', 'cosmetics', 'skins', 'minigame'
+  ];
+  
+  const SETUP_EXEMPT_COMMANDS = [
+    'setup', 'setdropchannel', 'seteventschannel', 'setupdateschannel',
+    'setgame', 'help', 'info', 'about', 'invite', 'support', 'ping',
+    'setupstatus', 'hub', 'setemoji', 'setchestgif', 'creategame'
+  ];
+  
+  if (serverId && !isMainServer(serverId) && GAMEPLAY_COMMANDS.includes(command)) {
+    const dashboardSetupComplete = await dashboardDb.isServerSetupComplete(serverId);
+    if (!dashboardSetupComplete) {
+      const serverConfig = await dashboardDb.getServerConfig(serverId);
+      const currentCount = serverConfig?.selectedCharacterIds?.length || 0;
+      
+      await message.reply({
+        embeds: [new EmbedBuilder()
+          .setColor('#FF6B6B')
+          .setTitle('⚠️ Server Setup Required')
+          .setDescription(`This server needs to complete setup before gameplay commands work.\n\n**Current Status:**\n🎭 Characters Selected: **${currentCount}/${MINIMUM_CHARACTERS_REQUIRED}**\n\n**How to Complete Setup:**\n1. Server owner visits the **Dashboard** at the bot's website\n2. Select at least **${MINIMUM_CHARACTERS_REQUIRED} characters** for this server\n3. Once complete, all gameplay commands will be unlocked!\n\n*Alternatively, use \`!setup\` to configure basic server settings.*`)
+          .setFooter({ text: 'Need help? Use !help or join our support server' })]
+      });
+      return;
+    }
   }
   
   try {
