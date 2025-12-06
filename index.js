@@ -1252,6 +1252,44 @@ client.on('interactionCreate', async (interaction) => {
       if (handled) return;
     }
     
+    if (interaction.customId === 'setup_help_guide') {
+      const guideEmbed = new EmbedBuilder()
+        .setColor('#00D9FF')
+        .setTitle('📖 ZooBot Setup Guide')
+        .setDescription('Follow these steps to set up ZooBot for your server:')
+        .addFields(
+          {
+            name: '1️⃣ Open the Dashboard',
+            value: 'Click the **"Open Dashboard"** button or visit our website and log in with Discord.',
+            inline: false
+          },
+          {
+            name: '2️⃣ Select Your Server',
+            value: 'Choose the server you want to configure from the list of servers you own.',
+            inline: false
+          },
+          {
+            name: '3️⃣ Choose Characters',
+            value: `Select at least **${MINIMUM_CHARACTERS_REQUIRED} characters** that will appear in drops and crates on your server.`,
+            inline: false
+          },
+          {
+            name: '4️⃣ Configure Channels',
+            value: '**Drop Channel:** Where character drops appear\n**Events Channel:** Where announcements go\n**Updates Channel:** For bot update notifications',
+            inline: false
+          },
+          {
+            name: '5️⃣ Start Playing!',
+            value: 'Once setup is complete, all gameplay commands will be unlocked for your server members.',
+            inline: false
+          }
+        )
+        .setFooter({ text: 'Need help? Join our support server for assistance!' });
+      
+      await interaction.reply({ embeds: [guideEmbed], ephemeral: true });
+      return;
+    }
+    
     if (interaction.customId === 'join_giveaway') {
       const { handleButtonJoin } = require('./giveawaySystem.js');
       await handleButtonJoin(interaction);
@@ -1550,18 +1588,37 @@ client.on('messageCreate', async (message) => {
         }
         
         const setupStatusInfo = getSetupStatus(serverId);
-        const availableGamesList = gameSystem.getUsableGames(characterManager);
-        const gamesForSetup = availableGamesList.length > 0 
-          ? availableGamesList.map(g => `• ${g.name} (${g.characterCount} chars)`).join('\n')
-          : '• ZooBot (default)';
+        const dashboardServerConfig = await dashboardDb.getServerConfig(serverId);
+        const selectedCharCount = dashboardServerConfig?.selectedCharacterIds?.length || 0;
+        const setupIsComplete = selectedCharCount >= MINIMUM_CHARACTERS_REQUIRED;
+        
+        const websiteUrl = process.env.WEBSITE_URL || 
+          (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000');
+        const dashboardLoginUrl = `${websiteUrl}/dashboard/login`;
         
         const setupEmbed = new EmbedBuilder()
-          .setColor('#00D9FF')
-          .setTitle('🛠️ Server Setup')
-          .setDescription(`Welcome! Let's set up ZooBot for your server.\n\n**Role Requirement:** You need the **ZooAdmin** role to manage this bot.\n\n**Required Steps:**\n1. 🎮 **Select a Game:** \`!setgame <name>\`\n2. 📣 Set drop channel: \`!setdropchannel #channel\`\n3. 🎉 Set events channel: \`!seteventschannel #channel\`\n4. 📢 Set updates channel: \`!setupdateschannel #channel\`\n\n**Available Games:**\n${gamesForSetup}\n\n**Current Status:**\n🎮 Game: ${setupStatusInfo.selectedGame || '❌ Not set'}\n📣 Drop Channel: ${setupStatusInfo.hasDropChannel ? '✅' : '❌'}\n🎉 Events Channel: ${setupStatusInfo.hasEventsChannel ? '✅' : '❌'}\n📢 Updates Channel: ${setupStatusInfo.hasUpdatesChannel ? '✅' : '❌'}\n\n⚠️ **Important:** You must select a game before drops will work! Only characters from your selected game will appear.\n\n**Want to create your own game?**\nUse \`!creategame <name> [description]\` to create a custom bundle, then submit characters with \`!submit\`!`)
-          .setFooter({ text: 'Use !setupstatus to check your progress' });
+          .setColor(setupIsComplete ? '#10B981' : '#F59E0B')
+          .setTitle(setupIsComplete ? '✅ Server Setup Complete!' : '🛠️ Server Setup Required')
+          .setDescription(setupIsComplete 
+            ? `Your server is fully set up and ready to go!\n\n**Status:**\n🎭 Characters: **${selectedCharCount}/${MINIMUM_CHARACTERS_REQUIRED}** ✅\n🎮 Game: ${setupStatusInfo.selectedGame || 'Default'}\n📣 Drop Channel: ${setupStatusInfo.hasDropChannel ? '✅' : '❌'}\n🎉 Events Channel: ${setupStatusInfo.hasEventsChannel ? '✅' : '❌'}\n📢 Updates Channel: ${setupStatusInfo.hasUpdatesChannel ? '✅' : '❌'}\n\nUse the Dashboard to manage characters and settings.`
+            : `Welcome! Let's set up ZooBot for your server.\n\n**Current Status:**\n🎭 Characters: **${selectedCharCount}/${MINIMUM_CHARACTERS_REQUIRED}**\n🎮 Game: ${setupStatusInfo.selectedGame || '❌ Not set'}\n📣 Drop Channel: ${setupStatusInfo.hasDropChannel ? '✅' : '❌'}\n🎉 Events Channel: ${setupStatusInfo.hasEventsChannel ? '✅' : '❌'}\n📢 Updates Channel: ${setupStatusInfo.hasUpdatesChannel ? '✅' : '❌'}\n\n**To complete setup:**\n1. Click the button below to open the Dashboard\n2. Log in with Discord\n3. Select at least **${MINIMUM_CHARACTERS_REQUIRED} characters** for this server\n4. Configure your drop and event channels`)
+          .setThumbnail(message.guild?.iconURL({ dynamic: true }) || null)
+          .setFooter({ text: setupIsComplete ? 'Your server is ready for gameplay!' : 'Complete setup to unlock all gameplay features' });
         
-        await message.reply({ embeds: [setupEmbed] });
+        const setupRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setLabel('Open Dashboard')
+            .setStyle(ButtonStyle.Link)
+            .setURL(dashboardLoginUrl)
+            .setEmoji('🌐'),
+          new ButtonBuilder()
+            .setCustomId('setup_help_guide')
+            .setLabel('Setup Guide')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('❓')
+        );
+        
+        await message.reply({ embeds: [setupEmbed], components: [setupRow] });
         break;
         
       case 'setdropchannel':

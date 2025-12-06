@@ -1,9 +1,38 @@
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   initNavigation();
   initScrollAnimations();
   initMobileMenu();
   initScrollIndicator();
 });
+
+function initTheme() {
+  const savedTheme = localStorage.getItem('zoobot-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeIcons(savedTheme);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('zoobot-theme', next);
+  updateThemeIcons(next);
+}
+
+function updateThemeIcons(theme) {
+  const sunIcon = document.getElementById('sunIcon');
+  const moonIcon = document.getElementById('moonIcon');
+  if (sunIcon && moonIcon) {
+    if (theme === 'dark') {
+      sunIcon.style.display = 'none';
+      moonIcon.style.display = 'block';
+    } else {
+      sunIcon.style.display = 'block';
+      moonIcon.style.display = 'none';
+    }
+  }
+}
 
 function initNavigation() {
   const nav = document.querySelector('nav');

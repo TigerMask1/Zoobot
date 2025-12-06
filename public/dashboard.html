@@ -7,20 +7,42 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
   <style>
     :root {
+      --primary: #F59E0B;
+      --primary-dark: #D97706;
+      --bg-primary: #FFFFFF;
+      --bg-secondary: #F8FAFC;
+      --bg-tertiary: #F1F5F9;
+      --bg-card: #FFFFFF;
+      --text-primary: #1E293B;
+      --text-secondary: #64748B;
+      --text-muted: #94A3B8;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --error: #EF4444;
+      --border: #E2E8F0;
+      --border-color: #E2E8F0;
+      --accent: var(--primary);
+      --accent-hover: var(--primary-dark);
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    [data-theme="dark"] {
+      --primary: #00D9FF;
+      --primary-dark: #00BFDF;
       --bg-primary: #0f1419;
       --bg-secondary: #1a1f26;
       --bg-tertiary: #242a33;
-      --accent: #00d9ff;
-      --accent-hover: #00b8d9;
+      --bg-card: rgba(255, 255, 255, 0.05);
       --text-primary: #ffffff;
       --text-secondary: #9ca3af;
       --text-muted: #6b7280;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --error: #ef4444;
       --border: #374151;
+      --border-color: rgba(0, 217, 255, 0.15);
+      --accent: var(--primary);
+      --accent-hover: var(--primary-dark);
       --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
     }
 
@@ -316,6 +338,34 @@
     .server-card:hover {
       border-color: var(--accent);
       transform: translateY(-2px);
+    }
+
+    .server-card.setup-pending {
+      border: 2px solid var(--warning);
+      background: rgba(245, 158, 11, 0.05);
+    }
+
+    .server-card.setup-pending:hover {
+      border-color: var(--warning);
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .theme-toggle {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .theme-toggle:hover {
+      background: var(--border);
+      color: var(--text-primary);
     }
 
     .server-icon {
@@ -732,8 +782,27 @@
 <body>
   <header class="header">
     <div class="container header-content">
-      <a href="/" class="logo">ZooBot Dashboard</a>
+      <a href="/" class="logo">
+        <img src="/logo.png" alt="ZooBot" style="width: 36px; height: 36px; border-radius: 8px;">
+        <span>ZooBot</span>
+      </a>
       <div id="userSection" class="user-info hidden">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+          <svg id="sunIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg id="moonIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
         <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
         <span id="userName" class="user-name"></span>
         <span id="userBadge" class="badge badge-admin hidden">Admin</span>
@@ -918,6 +987,36 @@
       { id: 'events', name: 'Events', description: 'Special limited-time events' }
     ];
 
+    function initTheme() {
+      const savedTheme = localStorage.getItem('zoobot-theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      updateThemeIcons(savedTheme);
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('zoobot-theme', next);
+      updateThemeIcons(next);
+    }
+
+    function updateThemeIcons(theme) {
+      const sunIcon = document.getElementById('sunIcon');
+      const moonIcon = document.getElementById('moonIcon');
+      if (sunIcon && moonIcon) {
+        if (theme === 'dark') {
+          sunIcon.style.display = 'none';
+          moonIcon.style.display = 'block';
+        } else {
+          sunIcon.style.display = 'block';
+          moonIcon.style.display = 'none';
+        }
+      }
+    }
+
+    initTheme();
+
     async function init() {
       const urlParams = new URLSearchParams(window.location.search);
       const error = urlParams.get('error');
@@ -1022,7 +1121,7 @@
       }
 
       container.innerHTML = servers.map(server => `
-        <div class="server-card" onclick="selectServer('${server.id}')">
+        <div class="server-card ${!server.setupComplete ? 'setup-pending' : ''}" onclick="selectServer('${server.id}')">
           <div class="server-icon">
             ${server.icon ? `<img src="${server.icon}" alt="${server.name}">` : server.name.charAt(0)}
           </div>
