@@ -17,10 +17,22 @@ if (!fs.existsSync(ITEMS_IMAGE_DIR)) {
 const RARITY_MULTIPLIERS = {
   legendary: 5.0,
   epic: 3.0,
+  'ultra rare': 2.5,
   rare: 2.0,
   uncommon: 1.5,
   common: 1.0
 };
+
+const RARITY_CONFIG = {
+  legendary: { emoji: '🌟', color: '#FFD700', dropChance: 0.5, baseValue: 500 },
+  epic: { emoji: '💜', color: '#9B59B6', dropChance: 2, baseValue: 250 },
+  'ultra rare': { emoji: '💎', color: '#00CED1', dropChance: 5, baseValue: 150 },
+  rare: { emoji: '💙', color: '#3498DB', dropChance: 10, baseValue: 100 },
+  uncommon: { emoji: '💚', color: '#2ECC71', dropChance: 20, baseValue: 50 },
+  common: { emoji: '⚪', color: '#95A5A6', dropChance: 40, baseValue: 25 }
+};
+
+const VALID_CRATE_TYPES = ['bronze', 'silver', 'gold', 'emerald', 'legendary', 'tyrant'];
 
 async function initCollectibleItemsIndexes() {
   if (!isMongoConnected()) return;
@@ -55,26 +67,36 @@ async function createCollectibleItem(itemData) {
   
   const db = getMongoDatabase();
   
+  const rarity = itemData.rarity?.toLowerCase() || 'common';
+  const rarityConfig = RARITY_CONFIG[rarity] || RARITY_CONFIG.common;
+  
   const item = {
     name: itemData.name,
     description: itemData.description || '',
     imageUrl: itemData.imageUrl,
+    emoji: itemData.emoji || rarityConfig.emoji,
+    rarity: rarity,
     bundle: itemData.bundle,
     isGlobal: itemData.isGlobal || false,
     droppable: {
       enabled: itemData.droppable?.enabled || false,
-      probability: itemData.droppable?.probability || 0.05
+      probability: itemData.droppable?.probability || rarityConfig.dropChance
     },
     crateObtainable: {
       enabled: itemData.crateObtainable?.enabled || false,
-      probability: itemData.crateObtainable?.probability || 0.1
+      probability: itemData.crateObtainable?.probability || rarityConfig.dropChance,
+      crates: itemData.crateObtainable?.crates || []
     },
+    tradable: itemData.tradable !== false,
+    giftable: itemData.giftable !== false,
     sellable: itemData.sellable !== false,
-    baseValue: itemData.baseValue || 100,
-    computedValue: itemData.baseValue || 100,
+    baseValue: itemData.baseValue || rarityConfig.baseValue,
+    computedValue: itemData.baseValue || rarityConfig.baseValue,
     stackable: itemData.stackable !== false,
     availableFrom: itemData.availableFrom || null,
     availableUntil: itemData.availableUntil || null,
+    serverSpecific: itemData.serverSpecific || null,
+    eventName: itemData.eventName || null,
     ownerCount: 0,
     totalQuantity: 0,
     status: 'active',
@@ -663,25 +685,35 @@ async function submitCollectibleItem(submissionData) {
   
   const db = getMongoDatabase();
   
+  const rarity = submissionData.rarity?.toLowerCase() || 'common';
+  const rarityConfig = RARITY_CONFIG[rarity] || RARITY_CONFIG.common;
+  
   const submission = {
     name: submissionData.name,
     description: submissionData.description || '',
     imageUrl: submissionData.imageUrl,
+    emoji: submissionData.emoji || rarityConfig.emoji,
+    rarity: rarity,
     bundle: submissionData.bundle,
     isGlobal: false,
     droppable: {
       enabled: submissionData.droppable || false,
-      probability: submissionData.dropProbability || 0.05
+      probability: submissionData.dropProbability || rarityConfig.dropChance
     },
     crateObtainable: {
       enabled: submissionData.crateObtainable || false,
-      probability: submissionData.crateProbability || 0.1
+      probability: submissionData.crateProbability || rarityConfig.dropChance,
+      crates: submissionData.crates || []
     },
+    tradable: submissionData.tradable !== false,
+    giftable: submissionData.giftable !== false,
     sellable: submissionData.sellable !== false,
-    baseValue: submissionData.baseValue || 100,
+    baseValue: submissionData.baseValue || rarityConfig.baseValue,
     stackable: submissionData.stackable !== false,
     availableFrom: submissionData.availableFrom || null,
     availableUntil: submissionData.availableUntil || null,
+    serverSpecific: submissionData.serverSpecific || null,
+    eventName: submissionData.eventName || null,
     submittedBy: submissionData.submittedBy,
     submittedByUsername: submissionData.submittedByUsername,
     status: 'pending',
@@ -875,7 +907,7 @@ async function getDroppableCollectibleItems(bundle) {
   }
 }
 
-async function getCrateCollectibleItems(bundle) {
+async function getCrateCollectibleItems(bundle, crateType = null, serverId = null) {
   if (!isMongoConnected()) return [];
   
   const db = getMongoDatabase();
@@ -885,7 +917,6 @@ async function getCrateCollectibleItems(bundle) {
     const query = {
       status: 'active',
       'crateObtainable.enabled': true,
-      $or: [{ bundle }, { isGlobal: true }],
       $and: [
         {
           $or: [
@@ -902,11 +933,54 @@ async function getCrateCollectibleItems(bundle) {
       ]
     };
     
-    return await db.collection(COLLECTIBLE_ITEMS_COLLECTION).find(query).toArray();
+    if (bundle) {
+      query.$or = [{ bundle }, { isGlobal: true }];
+    }
+    
+    if (serverId) {
+      query.$or = query.$or || [];
+      query.$or.push({ serverSpecific: serverId });
+    }
+    
+    let items = await db.collection(COLLECTIBLE_ITEMS_COLLECTION).find(query).toArray();
+    
+    if (crateType) {
+      items = items.filter(item => {
+        const crates = item.crateObtainable?.crates || [];
+        return crates.length === 0 || crates.includes(crateType);
+      });
+    }
+    
+    return items;
   } catch (error) {
     console.error('[CollectibleItemsSystem] Error getting crate items:', error);
     return [];
   }
+}
+
+async function tryDropCollectibleFromCrate(userId, bundle, crateType, serverId = null) {
+  const items = await getCrateCollectibleItems(bundle, crateType, serverId);
+  
+  if (items.length === 0) return null;
+  
+  for (const item of items) {
+    const roll = Math.random() * 100;
+    const dropChance = item.crateObtainable?.probability || RARITY_CONFIG[item.rarity]?.dropChance || 5;
+    
+    if (roll < dropChance) {
+      const awardResult = await awardCollectibleItem(userId, item._id.toString(), 1);
+      if (awardResult.success) {
+        return {
+          item,
+          message: `🎁 **Collectible Item!** ${item.emoji} **${item.name}**\n${item.description || ''}`
+        };
+      } else if (awardResult.alreadyOwned && !item.stackable) {
+        continue;
+      }
+    }
+  }
+  
+  return null;
 }
 
 function getRarityTier(ownerCount) {
@@ -1476,6 +1550,7 @@ module.exports = {
   rejectCollectibleSubmission,
   getDroppableCollectibleItems,
   getCrateCollectibleItems,
+  tryDropCollectibleFromCrate,
   getRarityTier,
   isCollectibleItemAvailable,
   formatCollectibleItemAvailability,
@@ -1492,5 +1567,7 @@ module.exports = {
   toggleItemTrait,
   setItemProbability,
   setItemAvailability,
+  RARITY_CONFIG,
+  VALID_CRATE_TYPES,
   ITEMS_PER_PAGE
 };
