@@ -63,6 +63,14 @@ function getDb() {
   return db;
 }
 
+function isMongoConnected() {
+  return connected && db !== null;
+}
+
+function getMongoDatabase() {
+  return db;
+}
+
 async function ensureConnected() {
   if (!connected) {
     await connect();
@@ -672,6 +680,8 @@ module.exports = {
   clearAllData,
   getCollection,
   getDb,
+  getMongoDatabase,
+  isMongoConnected,
   ensureConnected,
   getCurrentEvent,
   createEvent,
