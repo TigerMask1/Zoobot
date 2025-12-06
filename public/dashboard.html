@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZooBot Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0f1419;
+      --bg-secondary: #1a1f26;
+      --bg-tertiary: #242a33;
+      --accent: #00d9ff;
+      --accent-hover: #00b8d9;
+      --text-primary: #ffffff;
+      --text-secondary: #9ca3af;
+      --text-muted: #6b7280;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --border: #374151;
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+    }
+
+    .user-name {
+      font-weight: 500;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-admin {
+      background: linear-gradient(135deg, var(--accent), #0099cc);
+      color: white;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg-primary);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    .btn-danger {
+      background: var(--error);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    .main {
+      padding: 32px 0;
+    }
+
+    .login-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+    }
+
+    .login-card {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 48px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: var(--card-shadow);
+    }
+
+    .login-title {
+      font-size: 28px;
+      margin-bottom: 12px;
+    }
+
+    .login-description {
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+    }
+
+    .discord-btn {
+      background: #5865F2;
+      color: white;
+      width: 100%;
+      justify-content: center;
+      padding: 14px 24px;
+      font-size: 16px;
+    }
+
+    .discord-btn:hover {
+      background: #4752c4;
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 73px;
+      width: 260px;
+      height: calc(100vh - 73px);
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      padding: 24px 16px;
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      margin-bottom: 24px;
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      padding: 0 12px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 4px;
+    }
+
+    .nav-item:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: var(--accent);
+      color: var(--bg-primary);
+    }
+
+    .content {
+      margin-left: 260px;
+      padding: 32px;
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .page-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .page-subtitle {
+      color: var(--text-secondary);
+    }
+
+    .grid {
+      display: grid;
+      gap: 24px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .grid-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid var(--border);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .server-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .server-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .server-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .server-icon img {
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      object-fit: cover;
+    }
+
+    .server-info {
+      flex: 1;
+    }
+
+    .server-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .server-stats {
+      display: flex;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .status-ready {
+      background: var(--success);
+    }
+
+    .status-setup {
+      background: var(--warning);
+    }
+
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: var(--bg-tertiary);
+      border-radius: 13px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .toggle.active {
+      background: var(--accent);
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .toggle.active::after {
+      transform: translateX(22px);
+    }
+
+    .feature-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .feature-row:last-child {
+      border-bottom: none;
+    }
+
+    .feature-info h4 {
+      margin-bottom: 4px;
+    }
+
+    .feature-info p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .item-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 16px;
+    }
+
+    .item-card {
+      background: var(--bg-tertiary);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .item-card:hover {
+      border-color: var(--accent);
+    }
+
+    .item-card.selected {
+      border-color: var(--success);
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .item-emoji {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .item-name {
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .item-rarity {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .rarity-common { color: #9ca3af; }
+    .rarity-uncommon { color: #10b981; }
+    .rarity-rare { color: #3b82f6; }
+    .rarity-epic { color: #8b5cf6; }
+    .rarity-legendary { color: #f59e0b; }
+    .rarity-mythic { color: #ef4444; }
+
+    .tab-nav {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .tab-btn {
+      padding: 12px 24px;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-weight: 500;
+      position: relative;
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .form-select {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .alert {
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .alert-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--error);
+      color: var(--error);
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid var(--success);
+      color: var(--success);
+    }
+
+    .alert-warning {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid var(--warning);
+      color: var(--warning);
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .search-box {
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px 12px 44px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+    }
+
+    .counter {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .counter-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .counter-label {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.3s;
+    }
+
+    @media (max-width: 1024px) {
+      .sidebar {
+        width: 200px;
+      }
+      .content {
+        margin-left: 200px;
+      }
+      .grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+      .content {
+        margin-left: 0;
+      }
+      .grid-2, .grid-3, .grid-4 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container header-content">
+      <a href="/" class="logo">ZooBot Dashboard</a>
+      <div id="userSection" class="user-info hidden">
+        <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
+        <span id="userName" class="user-name"></span>
+        <span id="userBadge" class="badge badge-admin hidden">Admin</span>
+        <a href="/dashboard/logout" class="btn btn-secondary btn-sm">Logout</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div id="loginView" class="login-container hidden">
+      <div class="login-card">
+        <h1 class="login-title">Welcome to ZooBot</h1>
+        <p class="login-description">Sign in with Discord to manage your servers</p>
+        <a href="/dashboard/login" class="btn discord-btn">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+          </svg>
+          Login with Discord
+        </a>
+        <div id="loginError" class="alert alert-error hidden" style="margin-top: 24px;"></div>
+      </div>
+    </div>
+
+    <div id="loadingView" class="loading">
+      <div class="spinner"></div>
+    </div>
+
+    <div id="dashboardView" class="hidden">
+      <nav class="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-title">Navigation</div>
+          <div class="nav-item active" data-view="servers">Servers</div>
+          <div id="navCharacters" class="nav-item hidden" data-view="characters">Characters</div>
+          <div id="navCollectibles" class="nav-item hidden" data-view="collectibles">Collectibles</div>
+          <div id="navSubmissions" class="nav-item hidden" data-view="submissions">Submissions</div>
+        </div>
+      </nav>
+
+      <div class="content">
+        <div id="serversView">
+          <div class="page-header">
+            <h1 class="page-title">Your Servers</h1>
+            <p class="page-subtitle">Select a server to configure</p>
+          </div>
+          <div id="serversList" class="grid grid-2"></div>
+        </div>
+
+        <div id="serverConfigView" class="hidden">
+          <div class="page-header">
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+              <button id="backToServers" class="btn btn-secondary btn-sm">Back</button>
+              <h1 id="serverConfigTitle" class="page-title"></h1>
+            </div>
+            <div id="setupAlert" class="alert alert-warning hidden">
+              <span>Setup Required: Add at least 5 characters to complete server setup</span>
+            </div>
+          </div>
+
+          <div class="tab-nav">
+            <button class="tab-btn active" data-tab="features">Features</button>
+            <button class="tab-btn" data-tab="characters">Characters</button>
+            <button class="tab-btn" data-tab="collectibles">Collectibles</button>
+            <button class="tab-btn" data-tab="channels">Channels</button>
+          </div>
+
+          <div id="featuresTab" class="tab-content">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Feature Settings</h3>
+              </div>
+              <div id="featuresList"></div>
+            </div>
+          </div>
+
+          <div id="charactersTab" class="tab-content hidden">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Server Characters</h3>
+                <div id="characterCounter" class="counter-label"></div>
+              </div>
+              <div class="progress-bar" style="margin-bottom: 24px;">
+                <div id="characterProgress" class="progress-fill" style="width: 0%;"></div>
+              </div>
+              <div class="search-box">
+                <span class="search-icon">O</span>
+                <input type="text" id="characterSearch" class="search-input" placeholder="Search characters...">
+              </div>
+              <div id="characterGrid" class="item-grid"></div>
+            </div>
+          </div>
+
+          <div id="collectiblesTab" class="tab-content hidden">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Server Collectibles</h3>
+                <div id="collectibleCounter" class="counter-label"></div>
+              </div>
+              <div class="search-box">
+                <span class="search-icon">O</span>
+                <input type="text" id="collectibleSearch" class="search-input" placeholder="Search collectibles...">
+              </div>
+              <div id="collectibleGrid" class="item-grid"></div>
+            </div>
+          </div>
+
+          <div id="channelsTab" class="tab-content hidden">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Channel Settings</h3>
+              </div>
+              <div id="channelSettings"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="charactersView" class="hidden">
+          <div class="page-header">
+            <h1 class="page-title">Global Characters</h1>
+            <p class="page-subtitle">Manage all available characters</p>
+          </div>
+          <div class="search-box">
+            <span class="search-icon">O</span>
+            <input type="text" id="globalCharacterSearch" class="search-input" placeholder="Search characters...">
+          </div>
+          <div id="globalCharacterGrid" class="item-grid"></div>
+        </div>
+
+        <div id="collectiblesView" class="hidden">
+          <div class="page-header">
+            <h1 class="page-title">Global Collectibles</h1>
+            <p class="page-subtitle">Manage all available collectibles</p>
+          </div>
+          <div class="search-box">
+            <span class="search-icon">O</span>
+            <input type="text" id="globalCollectibleSearch" class="search-input" placeholder="Search collectibles...">
+          </div>
+          <div id="globalCollectibleGrid" class="item-grid"></div>
+        </div>
+
+        <div id="submissionsView" class="hidden">
+          <div class="page-header">
+            <h1 class="page-title">Pending Submissions</h1>
+            <p class="page-subtitle">Review and approve user submissions</p>
+          </div>
+          <div class="tab-nav">
+            <button class="tab-btn active" data-submissions-tab="characters">Characters</button>
+            <button class="tab-btn" data-submissions-tab="collectibles">Collectibles</button>
+          </div>
+          <div id="submissionsList"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="modal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle"></h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '/dashboard/api';
+    let currentUser = null;
+    let currentServer = null;
+    let allCharacters = [];
+    let allCollectibles = [];
+    let serverCharacters = [];
+    let serverCollectibles = [];
+
+    const FEATURES = [
+      { id: 'drops', name: 'Character Drops', description: 'Enable random character drops in chat' },
+      { id: 'battles', name: 'Battles', description: 'Allow users to battle their characters' },
+      { id: 'trading', name: 'Trading', description: 'Enable character trading between users' },
+      { id: 'quests', name: 'Quests', description: 'Daily and weekly quest system' },
+      { id: 'crates', name: 'Crates', description: 'Enable crate opening and rewards' },
+      { id: 'shop', name: 'Shop', description: 'In-game shop for purchasing items' },
+      { id: 'leaderboards', name: 'Leaderboards', description: 'Show competitive rankings' },
+      { id: 'events', name: 'Events', description: 'Special limited-time events' }
+    ];
+
+    async function init() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const error = urlParams.get('error');
+      
+      if (error) {
+        showLoginError(getErrorMessage(error));
+        showView('login');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/auth/me`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            currentUser = data.user;
+            showDashboard();
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+      }
+
+      showView('login');
+    }
+
+    function getErrorMessage(code) {
+      const messages = {
+        'no_code': 'Authorization failed. Please try again.',
+        'state_mismatch': 'Security check failed. Please try again.',
+        'missing_credentials': 'Server configuration error.',
+        'token_exchange_failed': 'Failed to authenticate with Discord.',
+        'fetch_user_failed': 'Failed to fetch user data.',
+        'session_save_failed': 'Failed to create session.',
+        'access_denied': 'Access denied by Discord.'
+      };
+      return messages[code] || 'An error occurred. Please try again.';
+    }
+
+    function showLoginError(message) {
+      const el = document.getElementById('loginError');
+      el.textContent = message;
+      el.classList.remove('hidden');
+    }
+
+    function showView(view) {
+      document.getElementById('loadingView').classList.add('hidden');
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('dashboardView').classList.add('hidden');
+
+      if (view === 'login') {
+        document.getElementById('loginView').classList.remove('hidden');
+      } else if (view === 'loading') {
+        document.getElementById('loadingView').classList.remove('hidden');
+      } else if (view === 'dashboard') {
+        document.getElementById('dashboardView').classList.remove('hidden');
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById('userAvatar').src = currentUser.avatar;
+      document.getElementById('userName').textContent = currentUser.username;
+      document.getElementById('userSection').classList.remove('hidden');
+
+      if (currentUser.isSuperAdmin || currentUser.isGlobalAdmin) {
+        document.getElementById('userBadge').classList.remove('hidden');
+        document.getElementById('navCharacters').classList.remove('hidden');
+        document.getElementById('navCollectibles').classList.remove('hidden');
+        document.getElementById('navSubmissions').classList.remove('hidden');
+      }
+
+      showView('dashboard');
+      loadServers();
+    }
+
+    async function loadServers() {
+      try {
+        const response = await fetch(`${API_BASE}/servers`);
+        const data = await response.json();
+
+        if (data.success) {
+          renderServers(data.servers);
+        }
+      } catch (err) {
+        console.error('Failed to load servers:', err);
+      }
+    }
+
+    function renderServers(servers) {
+      const container = document.getElementById('serversList');
+
+      if (servers.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="grid-column: 1/-1;">
+            <div class="empty-state-icon">O</div>
+            <h3>No Servers Found</h3>
+            <p>You need to own a server with ZooBot installed to manage it here.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = servers.map(server => `
+        <div class="server-card" onclick="selectServer('${server.id}')">
+          <div class="server-icon">
+            ${server.icon ? `<img src="${server.icon}" alt="${server.name}">` : server.name.charAt(0)}
+          </div>
+          <div class="server-info">
+            <div class="server-name">${server.name}</div>
+            <div class="server-stats">
+              <span>
+                <span class="status-indicator ${server.setupComplete ? 'status-ready' : 'status-setup'}"></span>
+                ${server.setupComplete ? 'Ready' : 'Setup Required'}
+              </span>
+              <span>${server.characterCount} / ${server.minimumRequired} chars</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function selectServer(serverId) {
+      currentServer = serverId;
+      document.getElementById('serversView').classList.add('hidden');
+      document.getElementById('serverConfigView').classList.remove('hidden');
+
+      try {
+        const [serverRes, charsRes, collectsRes] = await Promise.all([
+          fetch(`${API_BASE}/servers/${serverId}`),
+          fetch(`${API_BASE}/characters`),
+          fetch(`${API_BASE}/collectibles`)
+        ]);
+
+        const serverData = await serverRes.json();
+        const charsData = await charsRes.json();
+        const collectsData = await collectsRes.json();
+
+        if (serverData.success) {
+          document.getElementById('serverConfigTitle').textContent = serverData.server.name;
+          
+          if (!serverData.server.setupComplete) {
+            document.getElementById('setupAlert').classList.remove('hidden');
+          } else {
+            document.getElementById('setupAlert').classList.add('hidden');
+          }
+
+          serverCharacters = serverData.server.characters || [];
+          serverCollectibles = serverData.server.collectibles || [];
+          
+          renderFeatures(serverData.server.config.features || {});
+        }
+
+        if (charsData.success) {
+          allCharacters = charsData.characters;
+          renderCharacterGrid();
+        }
+
+        if (collectsData.success) {
+          allCollectibles = collectsData.collectibles;
+          renderCollectibleGrid();
+        }
+
+      } catch (err) {
+        console.error('Failed to load server config:', err);
+      }
+    }
+
+    function renderFeatures(features) {
+      const container = document.getElementById('featuresList');
+      container.innerHTML = FEATURES.map(feature => `
+        <div class="feature-row">
+          <div class="feature-info">
+            <h4>${feature.name}</h4>
+            <p>${feature.description}</p>
+          </div>
+          <div class="toggle ${features[feature.id] ? 'active' : ''}" 
+               onclick="toggleFeature('${feature.id}', this)"></div>
+        </div>
+      `).join('');
+    }
+
+    async function toggleFeature(featureId, element) {
+      const isActive = element.classList.contains('active');
+      element.classList.toggle('active');
+
+      try {
+        const response = await fetch(`${API_BASE}/servers/${currentServer}/features`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ features: { [featureId]: !isActive } })
+        });
+
+        if (!response.ok) {
+          element.classList.toggle('active');
+        }
+      } catch (err) {
+        console.error('Failed to update feature:', err);
+        element.classList.toggle('active');
+      }
+    }
+
+    function renderCharacterGrid() {
+      const container = document.getElementById('characterGrid');
+      const searchTerm = document.getElementById('characterSearch')?.value?.toLowerCase() || '';
+      
+      const filtered = allCharacters.filter(c => 
+        c.name.toLowerCase().includes(searchTerm)
+      );
+
+      const selectedIds = serverCharacters.map(c => c.id || c._id);
+      
+      document.getElementById('characterCounter').textContent = 
+        `${selectedIds.length} selected (min: 5)`;
+      
+      const progress = Math.min((selectedIds.length / 5) * 100, 100);
+      document.getElementById('characterProgress').style.width = `${progress}%`;
+
+      container.innerHTML = filtered.map(char => `
+        <div class="item-card ${selectedIds.includes(char.id) ? 'selected' : ''}" 
+             onclick="toggleCharacter('${char.id}')">
+          <div class="item-emoji">${char.emoji || 'O'}</div>
+          <div class="item-name">${char.name}</div>
+          <div class="item-rarity rarity-${char.rarity || 'common'}">${char.rarity || 'common'}</div>
+        </div>
+      `).join('');
+    }
+
+    async function toggleCharacter(charId) {
+      const selectedIds = serverCharacters.map(c => c.id || c._id);
+      const isSelected = selectedIds.includes(charId);
+
+      try {
+        const method = isSelected ? 'DELETE' : 'POST';
+        const response = await fetch(`${API_BASE}/servers/${currentServer}/characters/${charId}`, {
+          method
+        });
+
+        if (response.ok) {
+          if (isSelected) {
+            serverCharacters = serverCharacters.filter(c => (c.id || c._id) !== charId);
+          } else {
+            const char = allCharacters.find(c => c.id === charId);
+            if (char) serverCharacters.push(char);
+          }
+          renderCharacterGrid();
+        }
+      } catch (err) {
+        console.error('Failed to toggle character:', err);
+      }
+    }
+
+    function renderCollectibleGrid() {
+      const container = document.getElementById('collectibleGrid');
+      const searchTerm = document.getElementById('collectibleSearch')?.value?.toLowerCase() || '';
+      
+      const filtered = allCollectibles.filter(c => 
+        c.name.toLowerCase().includes(searchTerm)
+      );
+
+      const selectedIds = serverCollectibles.map(c => c.id || c._id);
+      
+      document.getElementById('collectibleCounter').textContent = 
+        `${selectedIds.length} selected`;
+
+      container.innerHTML = filtered.map(item => `
+        <div class="item-card ${selectedIds.includes(item.id) ? 'selected' : ''}" 
+             onclick="toggleCollectible('${item.id}')">
+          <div class="item-emoji">${item.emoji || 'O'}</div>
+          <div class="item-name">${item.name}</div>
+          <div class="item-rarity rarity-${item.rarity || 'common'}">${item.rarity || 'common'}</div>
+        </div>
+      `).join('');
+    }
+
+    async function toggleCollectible(itemId) {
+      const selectedIds = serverCollectibles.map(c => c.id || c._id);
+      const isSelected = selectedIds.includes(itemId);
+
+      try {
+        const method = isSelected ? 'DELETE' : 'POST';
+        const response = await fetch(`${API_BASE}/servers/${currentServer}/collectibles/${itemId}`, {
+          method
+        });
+
+        if (response.ok) {
+          if (isSelected) {
+            serverCollectibles = serverCollectibles.filter(c => (c.id || c._id) !== itemId);
+          } else {
+            const item = allCollectibles.find(c => c.id === itemId);
+            if (item) serverCollectibles.push(item);
+          }
+          renderCollectibleGrid();
+        }
+      } catch (err) {
+        console.error('Failed to toggle collectible:', err);
+      }
+    }
+
+    function openModal(title, content) {
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalContent').innerHTML = content;
+      document.getElementById('modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('active');
+    }
+
+    document.getElementById('backToServers').addEventListener('click', () => {
+      currentServer = null;
+      document.getElementById('serverConfigView').classList.add('hidden');
+      document.getElementById('serversView').classList.remove('hidden');
+      loadServers();
+    });
+
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        const view = item.dataset.view;
+        document.getElementById('serversView').classList.add('hidden');
+        document.getElementById('serverConfigView').classList.add('hidden');
+        document.getElementById('charactersView').classList.add('hidden');
+        document.getElementById('collectiblesView').classList.add('hidden');
+        document.getElementById('submissionsView').classList.add('hidden');
+
+        if (view === 'servers') {
+          currentServer = null;
+          document.getElementById('serversView').classList.remove('hidden');
+          loadServers();
+        } else if (view === 'characters') {
+          document.getElementById('charactersView').classList.remove('hidden');
+          loadGlobalCharacters();
+        } else if (view === 'collectibles') {
+          document.getElementById('collectiblesView').classList.remove('hidden');
+          loadGlobalCollectibles();
+        } else if (view === 'submissions') {
+          document.getElementById('submissionsView').classList.remove('hidden');
+          loadSubmissions();
+        }
+      });
+    });
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabName = btn.dataset.tab;
+        if (!tabName) return;
+
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+        document.getElementById(`${tabName}Tab`).classList.remove('hidden');
+      });
+    });
+
+    document.getElementById('characterSearch')?.addEventListener('input', renderCharacterGrid);
+    document.getElementById('collectibleSearch')?.addEventListener('input', renderCollectibleGrid);
+
+    async function loadGlobalCharacters() {
+      try {
+        const response = await fetch(`${API_BASE}/characters`);
+        const data = await response.json();
+        if (data.success) {
+          allCharacters = data.characters;
+          renderGlobalCharacters();
+        }
+      } catch (err) {
+        console.error('Failed to load characters:', err);
+      }
+    }
+
+    function renderGlobalCharacters() {
+      const container = document.getElementById('globalCharacterGrid');
+      const searchTerm = document.getElementById('globalCharacterSearch')?.value?.toLowerCase() || '';
+      
+      const filtered = allCharacters.filter(c => 
+        c.name.toLowerCase().includes(searchTerm)
+      );
+
+      container.innerHTML = filtered.map(char => `
+        <div class="item-card">
+          <div class="item-emoji">${char.emoji || 'O'}</div>
+          <div class="item-name">${char.name}</div>
+          <div class="item-rarity rarity-${char.rarity || 'common'}">${char.rarity || 'common'}</div>
+        </div>
+      `).join('');
+    }
+
+    async function loadGlobalCollectibles() {
+      try {
+        const response = await fetch(`${API_BASE}/collectibles`);
+        const data = await response.json();
+        if (data.success) {
+          allCollectibles = data.collectibles;
+          renderGlobalCollectibles();
+        }
+      } catch (err) {
+        console.error('Failed to load collectibles:', err);
+      }
+    }
+
+    function renderGlobalCollectibles() {
+      const container = document.getElementById('globalCollectibleGrid');
+      const searchTerm = document.getElementById('globalCollectibleSearch')?.value?.toLowerCase() || '';
+      
+      const filtered = allCollectibles.filter(c => 
+        c.name.toLowerCase().includes(searchTerm)
+      );
+
+      container.innerHTML = filtered.map(item => `
+        <div class="item-card">
+          <div class="item-emoji">${item.emoji || 'O'}</div>
+          <div class="item-name">${item.name}</div>
+          <div class="item-rarity rarity-${item.rarity || 'common'}">${item.rarity || 'common'}</div>
+        </div>
+      `).join('');
+    }
+
+    async function loadSubmissions() {
+      try {
+        const [charsRes, collectsRes] = await Promise.all([
+          fetch(`${API_BASE}/characters/submissions/list?status=pending`),
+          fetch(`${API_BASE}/collectibles/submissions/list?status=pending`)
+        ]);
+
+        const charsData = await charsRes.json();
+        const collectsData = await collectsRes.json();
+
+        renderSubmissions(charsData.submissions || [], collectsData.submissions || []);
+      } catch (err) {
+        console.error('Failed to load submissions:', err);
+      }
+    }
+
+    function renderSubmissions(characters, collectibles) {
+      const container = document.getElementById('submissionsList');
+      const allSubmissions = [
+        ...characters.map(s => ({ ...s, type: 'character' })),
+        ...collectibles.map(s => ({ ...s, type: 'collectible' }))
+      ];
+
+      if (allSubmissions.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">O</div>
+            <h3>No Pending Submissions</h3>
+            <p>All submissions have been reviewed.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = allSubmissions.map(sub => `
+        <div class="card" style="margin-bottom: 16px;">
+          <div class="card-header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px;">${sub.emoji || 'O'}</span>
+              <div>
+                <h3 class="card-title">${sub.name}</h3>
+                <span class="badge" style="background: var(--bg-tertiary); color: var(--text-secondary);">
+                  ${sub.type}
+                </span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-success btn-sm" onclick="approveSubmission('${sub.id}', '${sub.type}')">
+                Approve
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="rejectSubmission('${sub.id}', '${sub.type}')">
+                Reject
+              </button>
+            </div>
+          </div>
+          <p style="color: var(--text-secondary);">${sub.description || 'No description'}</p>
+          <div style="margin-top: 12px; font-size: 12px; color: var(--text-muted);">
+            Submitted by: ${sub.submittedByUsername || sub.submittedBy}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function approveSubmission(id, type) {
+      try {
+        const endpoint = type === 'character' ? 'characters' : 'collectibles';
+        const response = await fetch(`${API_BASE}/${endpoint}/submissions/${id}/approve`, {
+          method: 'POST'
+        });
+
+        if (response.ok) {
+          loadSubmissions();
+        }
+      } catch (err) {
+        console.error('Failed to approve submission:', err);
+      }
+    }
+
+    async function rejectSubmission(id, type) {
+      const reason = prompt('Enter rejection reason (optional):');
+      
+      try {
+        const endpoint = type === 'character' ? 'characters' : 'collectibles';
+        const response = await fetch(`${API_BASE}/${endpoint}/submissions/${id}/reject`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason })
+        });
+
+        if (response.ok) {
+          loadSubmissions();
+        }
+      } catch (err) {
+        console.error('Failed to reject submission:', err);
+      }
+    }
+
+    document.getElementById('globalCharacterSearch')?.addEventListener('input', renderGlobalCharacters);
+    document.getElementById('globalCollectibleSearch')?.addEventListener('input', renderGlobalCollectibles);
+
+    document.getElementById('modal').addEventListener('click', (e) => {
+      if (e.target.id === 'modal') {
+        closeModal();
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const PORT = process.env.PORT || 5000;
 const WEBSITE_URL = process.env.WEBSITE_URL || process.env.RENDER_EXTERNAL_URL || `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
@@ -33,6 +34,7 @@ const apiLimiter = rateLimit({
 });
 
 app.use(express.json({ limit: '10kb' }));
+app.use(cookieParser());
 
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -81,7 +83,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/:page.html', (req, res, next) => {
-  const validPages = ['index', 'features', 'guide', 'changelog', 'about', 'admin'];
+  const validPages = ['index', 'features', 'guide', 'changelog', 'about', 'admin', 'dashboard'];
   if (validPages.includes(req.params.page)) {
     res.sendFile(path.join(__dirname, 'public', `${req.params.page}.html`));
   } else {
@@ -92,6 +94,10 @@ app.get('/:page.html', (req, res, next) => {
 const { setupAdminRoutes } = require('./adminDashboard.js');
 setupAdminRoutes(app, null);
 console.log('🔧 Admin dashboard routes configured');
+
+const { setupDashboardRoutes, setDiscordClient: setDashboardDiscordClient } = require('./dashboard/index.js');
+setupDashboardRoutes(app, null);
+console.log('🔧 New dashboard routes configured');
 
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
@@ -582,6 +588,9 @@ client.on('clientReady', async () => {
       console.warn('⚠️ Could not load moderation data from MongoDB');
     }
   }
+  
+  setDashboardDiscordClient(client);
+  console.log('✅ Dashboard Discord client configured');
   
   console.log('✅ All systems initialized!');
 });
