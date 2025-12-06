@@ -2438,12 +2438,12 @@ client.on('messageCreate', async (message) => {
           const isEquipped = pfp.id === pfpsList.equipped ? ' ✅ (Equipped)' : '';
           pfpsEmbed.addFields({
             name: `${index + 1}. ${pfp.name}${isEquipped}`,
-            value: `ID: \`${pfp.id}\`\nUse: \`!equippfp ${pfp.id}\``,
+            value: `Use: \`!equippfp ${pfp.name}\``,
             inline: false
           });
         });
         
-        pfpsEmbed.setFooter({ text: 'Use !equippfp <id> to equip | !unequippfp to remove' });
+        pfpsEmbed.setFooter({ text: 'Use !equippfp <name> to equip | !unequippfp to remove' });
         
         await message.reply({ embeds: [pfpsEmbed] });
         break;
@@ -2454,13 +2454,16 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const pfpIdToEquip = args[0];
-        if (!pfpIdToEquip) {
-          await message.reply('❌ Please provide a PFP ID to equip!\nUsage: `!equippfp <pfp_id>`\n\nUse `!pfps` to see your profile images.');
+        const pfpToEquip = args.join(' ');
+        if (!pfpToEquip) {
+          await message.reply('❌ Please provide a PFP name to equip!\nUsage: `!equippfp <name>`\n\nUse `!pfps` to see your profile images.');
           return;
         }
         
-        const equipResult = await equipPfp(userId, pfpIdToEquip, data);
+        let equipResult = await equipPfpByName(userId, pfpToEquip, data);
+        if (!equipResult.success && pfpToEquip.startsWith('pfp_')) {
+          equipResult = await equipPfp(userId, pfpToEquip, data);
+        }
         await message.reply(equipResult.message);
         break;
         
@@ -3829,13 +3832,12 @@ client.on('messageCreate', async (message) => {
         }
         
         const { updateSkinImageUrl } = require('./skinSystem.js');
-        const updateResult = await updateSkinImageUrl(foundUpdateChar.name, updateSkinName, updateSkinUrl);
+        const { updateUSTSkinUrl } = require('./cosmeticsShopSystem.js');
         
-        if (updateResult) {
-          // Also try to update in UST shop
-          const { updateUSTSkinUrl } = require('./cosmeticsShopSystem.js');
-          await updateUSTSkinUrl(foundUpdateChar.name, updateSkinName, updateSkinUrl);
-          
+        const regularSkinResult = await updateSkinImageUrl(foundUpdateChar.name, updateSkinName, updateSkinUrl);
+        const ustSkinResult = await updateUSTSkinUrl(foundUpdateChar.name, updateSkinName, updateSkinUrl);
+        
+        if (regularSkinResult || ustSkinResult) {
           await message.reply(`✅ Updated **${updateSkinName}** skin for **${foundUpdateChar.name} ${foundUpdateChar.emoji}**!\nNew Image: ${updateSkinUrl}`);
         } else {
           await message.reply(`❌ Skin **${updateSkinName}** not found for **${foundUpdateChar.name}**!`);
