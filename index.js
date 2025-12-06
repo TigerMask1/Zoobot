@@ -81,13 +81,17 @@ app.get('/', (req, res) => {
 });
 
 app.get('/:page.html', (req, res, next) => {
-  const validPages = ['index', 'features', 'guide', 'changelog', 'about'];
+  const validPages = ['index', 'features', 'guide', 'changelog', 'about', 'admin'];
   if (validPages.includes(req.params.page)) {
     res.sendFile(path.join(__dirname, 'public', `${req.params.page}.html`));
   } else {
     next();
   }
 });
+
+const { setupAdminRoutes } = require('./adminDashboard.js');
+setupAdminRoutes(app, null);
+console.log('🔧 Admin dashboard routes configured');
 
 app.use((err, req, res, next) => {
   console.error('Server error:', err);

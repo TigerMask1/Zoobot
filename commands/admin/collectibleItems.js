@@ -19,9 +19,14 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-function checkMongoConnection(message) {
+function checkMongoConnection(context) {
   if (!isMongoConnected()) {
-    message.reply({ embeds: [createErrorEmbed('Database Unavailable', 'The collectible items system requires a database connection. Please try again later.')] });
+    const embed = createErrorEmbed('Database Unavailable', 'The collectible items system requires a database connection. Please try again later.');
+    if (context.reply) {
+      context.reply({ embeds: [embed] });
+    } else if (context.followUp) {
+      context.followUp({ embeds: [embed] });
+    }
     return false;
   }
   return true;
@@ -65,6 +70,8 @@ const createItemCommand = {
   superAdminOnly: true,
   
   async execute({ message, args, data }) {
+    if (!checkMongoConnection(message)) return;
+    
     if (!isSuperAdmin(message.author.id)) {
       return message.reply({ embeds: [createErrorEmbed('No Permission', 'Only Super Admins can create items!')] });
     }
@@ -153,6 +160,8 @@ const reviewItemCommand = {
   superAdminOnly: true,
   
   async execute({ message, args }) {
+    if (!checkMongoConnection(message)) return;
+    
     if (!isSuperAdmin(message.author.id)) {
       return message.reply({ embeds: [createErrorEmbed('No Permission', 'Only Super Admins can review items!')] });
     }
@@ -192,6 +201,8 @@ const approveItemCommand = {
   superAdminOnly: true,
   
   async execute({ message, args }) {
+    if (!checkMongoConnection(message)) return;
+    
     if (!isSuperAdmin(message.author.id)) {
       return message.reply({ embeds: [createErrorEmbed('No Permission', 'Only Super Admins can approve items!')] });
     }
@@ -219,6 +230,8 @@ const rejectItemCommand = {
   superAdminOnly: true,
   
   async execute({ message, args }) {
+    if (!checkMongoConnection(message)) return;
+    
     if (!isSuperAdmin(message.author.id)) {
       return message.reply({ embeds: [createErrorEmbed('No Permission', 'Only Super Admins can reject items!')] });
     }
@@ -247,6 +260,8 @@ const setItemDropCommand = {
   superAdminOnly: true,
   
   async execute({ message, args }) {
+    if (!checkMongoConnection(message)) return;
+    
     if (!isSuperAdmin(message.author.id)) {
       return message.reply({ embeds: [createErrorEmbed('No Permission', 'Only Super Admins can configure item drops!')] });
     }
@@ -320,6 +335,8 @@ const grantItemCommand = {
   adminOnly: true,
   
   async execute({ message, args, data }) {
+    if (!checkMongoConnection(message)) return;
+    
     if (args.length < 2) {
       return message.reply({ embeds: [createErrorEmbed('Usage', '`!grantitem @user <item_name> [quantity]`')] });
     }

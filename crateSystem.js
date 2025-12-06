@@ -10,6 +10,34 @@ const { getServerGame, DEFAULT_GAME } = require('./serverConfigManager.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
 const { generateST } = require('./utils/shared.js');
 const { tryDropCollectibleFromCrate } = require('./collectibleItemsSystem.js');
+const { isMongoConnected } = require('./mongoManager.js');
+
+async function safeDropCollectibleFromCrate(userId, serverGame, crateType, serverId) {
+  if (!isMongoConnected()) {
+    return null;
+  }
+  
+  if (!userId || typeof userId !== 'string') {
+    console.error('[CrateSystem] Invalid userId for collectible drop');
+    return null;
+  }
+  
+  if (!crateType || typeof crateType !== 'string') {
+    console.error('[CrateSystem] Invalid crateType for collectible drop:', crateType);
+    return null;
+  }
+  
+  try {
+    const collectibleDrop = await tryDropCollectibleFromCrate(userId, serverGame, crateType, serverId);
+    if (collectibleDrop && collectibleDrop.item && collectibleDrop.message) {
+      return collectibleDrop;
+    }
+    return null;
+  } catch (error) {
+    console.error('[CrateSystem] Error in safe collectible drop:', error.message);
+    return null;
+  }
+}
 
 const CRATE_TYPES = {
   bronze: {
@@ -236,13 +264,9 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
   }
   
   const serverGame = serverId ? (getServerGame(serverId) || DEFAULT_GAME) : DEFAULT_GAME;
-  try {
-    const collectibleDrop = await tryDropCollectibleFromCrate(userId, serverGame, crateType, serverId);
-    if (collectibleDrop) {
-      rewards += `\n\n${collectibleDrop.message}`;
-    }
-  } catch (error) {
-    console.error('[CrateSystem] Error dropping collectible item:', error);
+  const collectibleDrop = await safeDropCollectibleFromCrate(userId, serverGame, crateType, serverId);
+  if (collectibleDrop) {
+    rewards += `\n\n${collectibleDrop.message}`;
   }
   
   return {
@@ -343,13 +367,9 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
       }
     }
     
-    try {
-      const collectibleDrop = await tryDropCollectibleFromCrate(userId, serverGame, crateType, serverId);
-      if (collectibleDrop) {
-        collectiblesGained.push(collectibleDrop.item);
-      }
-    } catch (error) {
-      console.error('[CrateSystem] Error dropping collectible item in bulk:', error);
+    const collectibleDrop = await safeDropCollectibleFromCrate(userId, serverGame, crateType, serverId);
+    if (collectibleDrop && collectibleDrop.item) {
+      collectiblesGained.push(collectibleDrop.item);
     }
   }
   
