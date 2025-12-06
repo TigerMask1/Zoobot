@@ -12,14 +12,17 @@
       --bg-primary: #0f0f23;
       --bg-secondary: #1a1a2e;
       --bg-card: #16213e;
+      --bg-hover: #1f2b47;
       --text-primary: #e8e8e8;
       --text-secondary: #a0a0a0;
       --accent-primary: #5865F2;
       --accent-secondary: #7289da;
+      --accent-cyan: #00D9FF;
       --success: #43b581;
       --warning: #faa61a;
       --danger: #f04747;
       --border: #2a2a4a;
+      --border-light: #3a3a5a;
     }
     
     body {
@@ -68,17 +71,21 @@
     
     .login-card {
       background: var(--bg-card);
-      border-radius: 12px;
-      padding: 40px;
+      border-radius: 16px;
+      padding: 50px;
       text-align: center;
-      max-width: 400px;
+      max-width: 450px;
       width: 100%;
       border: 1px solid var(--border);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
     }
     
     .login-card h1 {
-      font-size: 28px;
+      font-size: 32px;
       margin-bottom: 10px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
     
     .login-card p {
@@ -89,64 +96,82 @@
     .discord-btn {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       background: var(--accent-primary);
       color: white;
-      padding: 14px 28px;
-      border-radius: 8px;
+      padding: 16px 32px;
+      border-radius: 10px;
       text-decoration: none;
       font-weight: 600;
-      transition: background 0.2s;
+      font-size: 16px;
+      transition: all 0.3s;
     }
     
-    .discord-btn:hover { background: var(--accent-secondary); }
-    
-    .discord-btn svg {
-      width: 24px;
-      height: 24px;
+    .discord-btn:hover {
+      background: var(--accent-secondary);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(88, 101, 242, 0.4);
     }
+    
+    .discord-btn svg { width: 24px; height: 24px; }
     
     .error-message {
       background: rgba(240, 71, 71, 0.1);
       border: 1px solid var(--danger);
       color: var(--danger);
-      padding: 12px 16px;
-      border-radius: 8px;
+      padding: 14px 18px;
+      border-radius: 10px;
       margin-bottom: 20px;
     }
     
     .dashboard { display: none; }
-    .dashboard.active { display: block; }
+    .dashboard.active { display: flex; }
     
     .sidebar {
       position: fixed;
       top: 0;
       left: 0;
-      width: 260px;
+      width: 280px;
       height: 100vh;
       background: var(--bg-secondary);
       border-right: 1px solid var(--border);
-      padding: 20px;
+      padding: 24px;
       overflow-y: auto;
+      display: flex;
+      flex-direction: column;
     }
     
     .sidebar-header {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       margin-bottom: 30px;
       padding-bottom: 20px;
       border-bottom: 1px solid var(--border);
     }
     
-    .sidebar-header img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
+    .sidebar-header .logo-icon {
+      font-size: 32px;
     }
     
     .sidebar-header h2 {
-      font-size: 18px;
+      font-size: 20px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .nav-section {
+      margin-bottom: 24px;
+    }
+    
+    .nav-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+      padding-left: 12px;
     }
     
     .nav-item {
@@ -154,12 +179,13 @@
       align-items: center;
       gap: 12px;
       padding: 12px 16px;
-      border-radius: 8px;
+      border-radius: 10px;
       color: var(--text-secondary);
       text-decoration: none;
       margin-bottom: 4px;
       cursor: pointer;
       transition: all 0.2s;
+      font-size: 14px;
     }
     
     .nav-item:hover {
@@ -172,29 +198,26 @@
       color: white;
     }
     
+    .nav-item .icon { font-size: 18px; }
+    
     .user-info {
-      position: absolute;
-      bottom: 20px;
-      left: 20px;
-      right: 20px;
+      margin-top: auto;
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px;
+      padding: 14px;
       background: var(--bg-card);
-      border-radius: 8px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
     }
     
     .user-info img {
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
     }
     
-    .user-info-text {
-      flex: 1;
-      overflow: hidden;
-    }
+    .user-info-text { flex: 1; overflow: hidden; }
     
     .user-info-name {
       font-weight: 600;
@@ -204,22 +227,28 @@
       text-overflow: ellipsis;
     }
     
+    .user-info-role {
+      font-size: 12px;
+      color: var(--accent-cyan);
+    }
+    
     .logout-btn {
       background: none;
       border: none;
       color: var(--text-secondary);
       cursor: pointer;
       padding: 8px;
-      border-radius: 4px;
-      transition: color 0.2s;
+      border-radius: 6px;
+      transition: all 0.2s;
     }
     
-    .logout-btn:hover { color: var(--danger); }
+    .logout-btn:hover { color: var(--danger); background: rgba(240, 71, 71, 0.1); }
     
     .main-content {
-      margin-left: 260px;
+      margin-left: 280px;
       padding: 30px;
       min-height: 100vh;
+      flex: 1;
     }
     
     .page-header {
@@ -231,9 +260,7 @@
       margin-bottom: 8px;
     }
     
-    .page-header p {
-      color: var(--text-secondary);
-    }
+    .page-header p { color: var(--text-secondary); }
     
     .stats-grid {
       display: grid;
@@ -243,16 +270,31 @@
     }
     
     .stat-card {
-      background: var(--bg-card);
+      background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
       padding: 24px;
-      border-radius: 12px;
+      border-radius: 16px;
       border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-primary));
     }
     
     .stat-card-value {
-      font-size: 32px;
+      font-size: 36px;
       font-weight: 700;
       margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
     
     .stat-card-label {
@@ -262,33 +304,31 @@
     
     .card {
       background: var(--bg-card);
-      border-radius: 12px;
+      border-radius: 16px;
       border: 1px solid var(--border);
-      margin-bottom: 20px;
+      margin-bottom: 24px;
+      overflow: hidden;
     }
     
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px;
+      padding: 20px 24px;
       border-bottom: 1px solid var(--border);
+      background: var(--bg-secondary);
     }
     
-    .card-header h3 {
-      font-size: 18px;
-    }
+    .card-header h3 { font-size: 18px; }
     
-    .card-body {
-      padding: 20px;
-    }
+    .card-body { padding: 24px; }
     
     .btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 18px;
-      border-radius: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s;
@@ -297,11 +337,19 @@
     }
     
     .btn-primary {
-      background: var(--accent-primary);
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
       color: white;
     }
     
-    .btn-primary:hover { background: var(--accent-secondary); }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(88, 101, 242, 0.4);
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, var(--success), #3aa576);
+      color: white;
+    }
     
     .btn-danger {
       background: var(--danger);
@@ -317,73 +365,366 @@
     .btn-ghost:hover {
       background: var(--bg-secondary);
       color: var(--text-primary);
+      border-color: var(--border-light);
+    }
+    
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
     }
     
     .page { display: none; }
     .page.active { display: block; }
     
-    .guild-list {
+    .server-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    
+    .server-card {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 20px;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .server-card:hover {
+      border-color: var(--accent-primary);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(88, 101, 242, 0.2);
+    }
+    
+    .server-card-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .server-card-header img {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--bg-card);
+    }
+    
+    .server-card-header .placeholder-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: white;
+    }
+    
+    .server-card-info h4 {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+    
+    .server-card-info p {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+    
+    .server-card-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .server-stat {
+      text-align: center;
+    }
+    
+    .server-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+    
+    .server-stat-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+    
+    .character-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 16px;
+    }
+    
+    .character-card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      border: 2px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .character-card:hover {
+      border-color: var(--accent-cyan);
+    }
+    
+    .character-card.selected {
+      border-color: var(--success);
+      background: rgba(67, 181, 129, 0.1);
+    }
+    
+    .character-card.disabled {
+      opacity: 0.5;
+      border-color: var(--danger);
+    }
+    
+    .character-emoji {
+      font-size: 40px;
+      margin-bottom: 8px;
+    }
+    
+    .character-name {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .character-game {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+    
+    .feature-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 16px;
     }
     
-    .guild-card {
+    .feature-item {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 16px 20px;
       display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 16px;
-      background: var(--bg-secondary);
-      border-radius: 10px;
+      justify-content: space-between;
       border: 1px solid var(--border);
     }
     
-    .guild-card img {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: var(--bg-card);
+    .feature-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
     
-    .guild-card-info h4 {
-      font-size: 16px;
-      margin-bottom: 4px;
+    .feature-icon {
+      font-size: 24px;
     }
     
-    .guild-card-info p {
-      color: var(--text-secondary);
+    .feature-name {
+      font-weight: 500;
+    }
+    
+    .feature-desc {
       font-size: 12px;
+      color: var(--text-secondary);
     }
     
-    .bundle-list {
+    .toggle-switch {
+      position: relative;
+      width: 52px;
+      height: 28px;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--border);
+      transition: 0.3s;
+      border-radius: 28px;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+      background: linear-gradient(135deg, var(--success), #3aa576);
+    }
+    
+    input:checked + .toggle-slider:before {
+      transform: translateX(24px);
+    }
+    
+    .permission-list {
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
     
-    .bundle-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px;
+    .permission-item {
       background: var(--bg-secondary);
-      border-radius: 10px;
+      border-radius: 12px;
+      padding: 16px 20px;
       border: 1px solid var(--border);
     }
     
-    .bundle-item-info h4 {
-      font-size: 16px;
+    .permission-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    
+    .permission-title {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .permission-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    
+    .permission-badge.super { background: rgba(240, 71, 71, 0.2); color: var(--danger); }
+    .permission-badge.admin { background: rgba(250, 166, 26, 0.2); color: var(--warning); }
+    .permission-badge.mod { background: rgba(67, 181, 129, 0.2); color: var(--success); }
+    
+    .permission-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    
+    .bundle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    
+    .bundle-card {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    
+    .bundle-card:hover {
+      border-color: var(--accent-primary);
+    }
+    
+    .bundle-card-header {
+      padding: 20px;
+      background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .bundle-card-header h4 {
+      font-size: 18px;
       margin-bottom: 4px;
     }
     
-    .bundle-item-info p {
+    .bundle-card-header p {
+      font-size: 13px;
       color: var(--text-secondary);
+    }
+    
+    .bundle-characters {
+      padding: 16px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-height: 60px;
+    }
+    
+    .bundle-char-tag {
+      background: var(--bg-card);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .bundle-card-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+    }
+    
+    .item-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    
+    .item-card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    
+    .item-emoji {
+      font-size: 36px;
+      margin-bottom: 12px;
+    }
+    
+    .item-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .item-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    
+    .item-cost {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
       font-size: 13px;
     }
     
-    .bundle-actions {
-      display: flex;
-      gap: 8px;
+    .item-cost span {
+      color: var(--accent-cyan);
+      font-weight: 600;
     }
     
     .modal-overlay {
@@ -392,7 +733,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.8);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -409,19 +750,36 @@
     
     .modal {
       background: var(--bg-card);
-      border-radius: 12px;
-      padding: 24px;
-      max-width: 500px;
-      width: 90%;
+      border-radius: 16px;
+      padding: 28px;
+      max-width: 600px;
+      width: 95%;
+      max-height: 90vh;
+      overflow-y: auto;
       border: 1px solid var(--border);
     }
     
-    .modal h3 {
-      margin-bottom: 20px;
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    
+    .modal-header h3 {
+      font-size: 22px;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 24px;
+      cursor: pointer;
     }
     
     .form-group {
-      margin-bottom: 16px;
+      margin-bottom: 20px;
     }
     
     .form-group label {
@@ -435,12 +793,13 @@
     .form-group textarea,
     .form-group select {
       width: 100%;
-      padding: 12px;
+      padding: 14px;
       background: var(--bg-secondary);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
       color: var(--text-primary);
       font-size: 14px;
+      transition: border-color 0.2s;
     }
     
     .form-group input:focus,
@@ -450,60 +809,113 @@
       border-color: var(--accent-primary);
     }
     
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
     .modal-actions {
       display: flex;
       justify-content: flex-end;
       gap: 12px;
-      margin-top: 20px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
     }
     
-    .character-tags {
+    .tab-bar {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 8px;
-    }
-    
-    .character-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      gap: 4px;
       background: var(--bg-secondary);
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 13px;
+      padding: 6px;
+      border-radius: 12px;
+      margin-bottom: 24px;
     }
     
-    .character-tag button {
-      background: none;
-      border: none;
-      color: var(--danger);
+    .tab-item {
+      padding: 10px 20px;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 16px;
-      line-height: 1;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+    
+    .tab-item:hover {
+      color: var(--text-primary);
+    }
+    
+    .tab-item.active {
+      background: var(--accent-primary);
+      color: white;
+    }
+    
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0 16px;
+      margin-bottom: 20px;
+    }
+    
+    .search-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 14px 0;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+    
+    .search-box input:focus {
+      outline: none;
     }
     
     .empty-state {
       text-align: center;
-      padding: 40px;
+      padding: 60px 20px;
       color: var(--text-secondary);
+    }
+    
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
     }
     
     .config-info {
       background: var(--bg-secondary);
-      padding: 16px;
-      border-radius: 8px;
-      font-family: monospace;
+      padding: 20px;
+      border-radius: 12px;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 13px;
       margin-top: 20px;
     }
     
     .config-info p {
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     
     .config-info strong {
-      color: var(--accent-primary);
+      color: var(--accent-cyan);
+    }
+    
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    
+    .back-btn:hover {
+      color: var(--accent-cyan);
     }
     
     @media (max-width: 768px) {
@@ -511,18 +923,14 @@
         position: static;
         width: 100%;
         height: auto;
-        padding-bottom: 80px;
       }
       
       .main-content {
         margin-left: 0;
       }
       
-      .user-info {
-        position: relative;
-        bottom: auto;
-        left: auto;
-        right: auto;
+      .dashboard {
+        flex-direction: column;
       }
     }
   </style>
@@ -534,8 +942,8 @@
 
   <div class="login-container hidden" id="loginContainer">
     <div class="login-card">
-      <h1>Admin Dashboard</h1>
-      <p>Sign in with Discord to manage your ZooBot servers and bundles.</p>
+      <h1>ZooBot Admin</h1>
+      <p>Sign in with Discord to access the administration dashboard for your ZooBot servers.</p>
       <div id="loginError" class="error-message" style="display: none;"></div>
       <a href="/admin/login" class="discord-btn">
         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -550,29 +958,61 @@
   <div class="dashboard" id="dashboard">
     <aside class="sidebar">
       <div class="sidebar-header">
-        <img src="https://cdn.discordapp.com/embed/avatars/0.png" alt="ZooBot">
+        <span class="logo-icon">🦁</span>
         <h2>ZooBot Admin</h2>
       </div>
       
       <nav>
-        <a class="nav-item active" data-page="overview">
-          <span>Overview</span>
-        </a>
-        <a class="nav-item" data-page="servers">
-          <span>Servers</span>
-        </a>
-        <a class="nav-item" data-page="bundles">
-          <span>Bundles</span>
-        </a>
-        <a class="nav-item" data-page="settings">
-          <span>Settings</span>
-        </a>
+        <div class="nav-section">
+          <div class="nav-section-title">Dashboard</div>
+          <a class="nav-item active" data-page="overview">
+            <span class="icon">📊</span>
+            <span>Overview</span>
+          </a>
+          <a class="nav-item" data-page="servers">
+            <span class="icon">🌐</span>
+            <span>Servers</span>
+          </a>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-section-title">Content</div>
+          <a class="nav-item" data-page="characters">
+            <span class="icon">🎮</span>
+            <span>Characters</span>
+          </a>
+          <a class="nav-item" data-page="bundles">
+            <span class="icon">📦</span>
+            <span>Bundles</span>
+          </a>
+          <a class="nav-item" data-page="items">
+            <span class="icon">🧪</span>
+            <span>Items</span>
+          </a>
+        </div>
+        
+        <div class="nav-section">
+          <div class="nav-section-title">Settings</div>
+          <a class="nav-item" data-page="features">
+            <span class="icon">⚙️</span>
+            <span>Features</span>
+          </a>
+          <a class="nav-item" data-page="permissions">
+            <span class="icon">🔐</span>
+            <span>Permissions</span>
+          </a>
+          <a class="nav-item" data-page="settings">
+            <span class="icon">🛠️</span>
+            <span>Configuration</span>
+          </a>
+        </div>
       </nav>
       
       <div class="user-info">
         <img src="" alt="" id="userAvatar">
         <div class="user-info-text">
           <div class="user-info-name" id="userName">Loading...</div>
+          <div class="user-info-role">Super Admin</div>
         </div>
         <button class="logout-btn" onclick="logout()" title="Logout">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -587,22 +1027,26 @@
     <main class="main-content">
       <div class="page active" id="page-overview">
         <div class="page-header">
-          <h1>Overview</h1>
-          <p>Welcome to your ZooBot admin dashboard</p>
+          <h1>Dashboard Overview</h1>
+          <p>Welcome back! Here's a summary of your ZooBot administration.</p>
         </div>
         
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-card-value" id="statGuilds">-</div>
-            <div class="stat-card-label">Servers</div>
+            <div class="stat-card-label">Connected Servers</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-value" id="statCharacters">-</div>
+            <div class="stat-card-label">Total Characters</div>
           </div>
           <div class="stat-card">
             <div class="stat-card-value" id="statBundles">-</div>
-            <div class="stat-card-label">Bundles</div>
+            <div class="stat-card-label">Active Bundles</div>
           </div>
           <div class="stat-card">
-            <div class="stat-card-value" id="statCollectibles">-</div>
-            <div class="stat-card-label">Collectibles</div>
+            <div class="stat-card-value" id="statItems">-</div>
+            <div class="stat-card-label">Shop Items</div>
           </div>
         </div>
         
@@ -610,47 +1054,156 @@
           <div class="card-header">
             <h3>Quick Actions</h3>
           </div>
+          <div class="card-body" style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button class="btn btn-primary" onclick="showPage('servers')">Manage Servers</button>
+            <button class="btn btn-primary" onclick="showPage('characters')">Browse Characters</button>
+            <button class="btn btn-ghost" onclick="showPage('bundles')">Create Bundle</button>
+            <button class="btn btn-ghost" onclick="showPage('features')">Configure Features</button>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h3>Recent Servers</h3>
+            <button class="btn btn-ghost btn-sm" onclick="showPage('servers')">View All</button>
+          </div>
           <div class="card-body">
-            <button class="btn btn-primary" onclick="showPage('bundles')">Manage Bundles</button>
-            <button class="btn btn-ghost" onclick="showPage('servers')">View Servers</button>
+            <div class="server-grid" id="recentServers">
+              <div class="empty-state">Loading servers...</div>
+            </div>
           </div>
         </div>
       </div>
       
       <div class="page" id="page-servers">
         <div class="page-header">
-          <h1>Your Servers</h1>
-          <p>Servers where you have administrator permissions</p>
+          <h1>Server Management</h1>
+          <p>Manage all Discord servers where you have administrator access</p>
         </div>
         
-        <div class="guild-list" id="guildList">
-          <div class="empty-state">Loading servers...</div>
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" id="serverSearch" placeholder="Search servers..." oninput="filterServers()">
+        </div>
+        
+        <div class="server-grid" id="serverGrid">
+          <div class="empty-state">
+            <div class="icon">🌐</div>
+            <p>Loading your servers...</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="page" id="page-characters">
+        <div class="page-header">
+          <h1>Character Management</h1>
+          <p>Browse and manage all 51+ characters available in ZooBot</p>
+        </div>
+        
+        <div class="tab-bar" id="characterTabs">
+          <div class="tab-item active" data-filter="all">All Characters</div>
+          <div class="tab-item" data-filter="drop">Drops</div>
+          <div class="tab-item" data-filter="crate">Crates</div>
+          <div class="tab-item" data-filter="starter">Starters</div>
+          <div class="tab-item" data-filter="event">Events</div>
+        </div>
+        
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" id="characterSearch" placeholder="Search characters..." oninput="filterCharacters()">
+        </div>
+        
+        <div class="character-grid" id="characterGrid">
+          <div class="empty-state">
+            <div class="icon">🎮</div>
+            <p>Loading characters...</p>
+          </div>
         </div>
       </div>
       
       <div class="page" id="page-bundles">
         <div class="page-header">
-          <h1>Bundles</h1>
-          <p>Manage character bundles for your servers</p>
+          <h1>Bundle Management</h1>
+          <p>Create and manage character bundles for your servers</p>
+        </div>
+        
+        <div style="margin-bottom: 24px;">
+          <button class="btn btn-primary" onclick="showCreateBundleModal()">
+            <span>+</span> Create New Bundle
+          </button>
+        </div>
+        
+        <div class="bundle-grid" id="bundleGrid">
+          <div class="empty-state">
+            <div class="icon">📦</div>
+            <p>Loading bundles...</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="page" id="page-items">
+        <div class="page-header">
+          <h1>Item Shop</h1>
+          <p>View and manage all shop items available in ZooBot</p>
+        </div>
+        
+        <div class="tab-bar" id="itemTabs">
+          <div class="tab-item active" data-category="all">All Items</div>
+          <div class="tab-item" data-category="healing">Healing</div>
+          <div class="tab-item" data-category="energy">Energy</div>
+          <div class="tab-item" data-category="buff">Buffs</div>
+          <div class="tab-item" data-category="special">Special</div>
+        </div>
+        
+        <div class="item-grid" id="itemGrid">
+          <div class="empty-state">
+            <div class="icon">🧪</div>
+            <p>Loading items...</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="page" id="page-features">
+        <div class="page-header">
+          <h1>Feature Settings</h1>
+          <p>Enable or disable ZooBot features globally or per-server</p>
         </div>
         
         <div class="card">
           <div class="card-header">
-            <h3>All Bundles</h3>
-            <button class="btn btn-primary" onclick="showCreateBundleModal()">Create Bundle</button>
+            <h3>Core Features</h3>
           </div>
           <div class="card-body">
-            <div class="bundle-list" id="bundleList">
-              <div class="empty-state">Loading bundles...</div>
+            <div class="feature-grid" id="featureGrid">
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h3>Notification Settings</h3>
+          </div>
+          <div class="card-body">
+            <div class="feature-grid" id="notificationGrid">
             </div>
           </div>
         </div>
       </div>
       
+      <div class="page" id="page-permissions">
+        <div class="page-header">
+          <h1>Permissions & Roles</h1>
+          <p>Understand the permission hierarchy and role capabilities in ZooBot</p>
+        </div>
+        
+        <div class="permission-list" id="permissionList">
+        </div>
+      </div>
+      
       <div class="page" id="page-settings">
         <div class="page-header">
-          <h1>Settings</h1>
-          <p>Dashboard configuration and information</p>
+          <h1>Configuration</h1>
+          <p>System configuration and OAuth settings</p>
         </div>
         
         <div class="card">
@@ -662,13 +1215,44 @@
             <div class="config-info" id="settingsConfig"></div>
           </div>
         </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h3>System Status</h3>
+          </div>
+          <div class="card-body">
+            <div class="feature-grid">
+              <div class="feature-item">
+                <div class="feature-info">
+                  <span class="feature-icon">🗄️</span>
+                  <div>
+                    <div class="feature-name">MongoDB</div>
+                    <div class="feature-desc" id="mongoStatus">Checking...</div>
+                  </div>
+                </div>
+              </div>
+              <div class="feature-item">
+                <div class="feature-info">
+                  <span class="feature-icon">🤖</span>
+                  <div>
+                    <div class="feature-name">Discord Bot</div>
+                    <div class="feature-desc" id="botStatus">Checking...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   </div>
 
   <div class="modal-overlay" id="bundleModal">
     <div class="modal">
-      <h3 id="bundleModalTitle">Create Bundle</h3>
+      <div class="modal-header">
+        <h3 id="bundleModalTitle">Create Bundle</h3>
+        <button class="modal-close" onclick="closeBundleModal()">&times;</button>
+      </div>
       <form id="bundleForm">
         <input type="hidden" id="bundleId">
         <div class="form-group">
@@ -680,24 +1264,121 @@
           <textarea id="bundleDescription" rows="3" placeholder="Describe this bundle..."></textarea>
         </div>
         <div class="form-group">
-          <label>Characters</label>
-          <select id="characterSelect">
-            <option value="">Add a character...</option>
-          </select>
-          <div class="character-tags" id="characterTags"></div>
+          <label>Select Characters</label>
+          <div class="search-box" style="margin-bottom: 12px;">
+            <span>🔍</span>
+            <input type="text" id="bundleCharSearch" placeholder="Search characters...">
+          </div>
+          <div class="character-grid" id="bundleCharacterSelect" style="max-height: 300px; overflow-y: auto;"></div>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" onclick="closeBundleModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="bundleSubmitBtn">Create</button>
+          <button type="submit" class="btn btn-primary" id="bundleSubmitBtn">Create Bundle</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="characterModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="characterModalTitle">Character Details</h3>
+        <button class="modal-close" onclick="closeCharacterModal()">&times;</button>
+      </div>
+      <div id="characterModalContent">
+      </div>
     </div>
   </div>
 
   <script>
     let currentUser = null;
     let characters = [];
-    let selectedCharacters = [];
+    let bundles = [];
+    let guilds = [];
+    let items = [];
+    let selectedBundleCharacters = new Set();
+
+    const FEATURES = [
+      { id: 'dropsEnabled', name: 'Character Drops', icon: '🎯', desc: 'Allow characters to drop in channels' },
+      { id: 'battlesEnabled', name: 'Battles', icon: '⚔️', desc: 'Enable player vs player battles' },
+      { id: 'tradingEnabled', name: 'Trading', icon: '🔄', desc: 'Allow player trading' },
+      { id: 'marketEnabled', name: 'Marketplace', icon: '🏪', desc: 'Enable item marketplace' },
+      { id: 'clanSystemEnabled', name: 'Clans', icon: '👥', desc: 'Enable clan system' },
+      { id: 'questsEnabled', name: 'Quests', icon: '📜', desc: 'Enable quest system' },
+      { id: 'workSystemEnabled', name: 'Work', icon: '💼', desc: 'Enable work system' },
+      { id: 'minigamesEnabled', name: 'Minigames', icon: '🎲', desc: 'Enable minigames' },
+      { id: 'triviaEnabled', name: 'Trivia', icon: '❓', desc: 'Enable trivia games' },
+      { id: 'dailyRewardsEnabled', name: 'Daily Rewards', icon: '🎁', desc: 'Enable daily rewards' },
+      { id: 'leaderboardsEnabled', name: 'Leaderboards', icon: '🏆', desc: 'Show leaderboards' },
+      { id: 'eventsEnabled', name: 'Events', icon: '🎉', desc: 'Enable special events' }
+    ];
+
+    const NOTIFICATIONS = [
+      { id: 'pingOnDrops', name: 'Drop Notifications', icon: '🔔', desc: 'Ping role on drops' },
+      { id: 'pingOnEvents', name: 'Event Notifications', icon: '📢', desc: 'Ping role on events' },
+      { id: 'pingOnGiveaways', name: 'Giveaway Notifications', icon: '🎁', desc: 'Ping role on giveaways' },
+      { id: 'welcomeNewPlayers', name: 'Welcome Messages', icon: '👋', desc: 'Welcome new players' }
+    ];
+
+    const PERMISSIONS = [
+      {
+        title: 'Super Admin',
+        badge: 'super',
+        capabilities: [
+          'Full access to all bot features and commands',
+          'Manage global bot settings and economy',
+          'Create and delete characters globally',
+          'Ban users from the bot globally',
+          'Access admin dashboard and statistics',
+          'Approve user-submitted content'
+        ]
+      },
+      {
+        title: 'Global Bot Admin',
+        badge: 'admin',
+        capabilities: [
+          'Moderate users across all servers',
+          'Access moderation commands globally',
+          'View and manage user reports',
+          'Approve submitted characters and items',
+          'Access server configuration'
+        ]
+      },
+      {
+        title: 'Server Admin',
+        badge: 'mod',
+        capabilities: [
+          'Configure bot settings for their server',
+          'Manage server-specific features',
+          'Moderate users within their server',
+          'Set up drop channels and roles',
+          'Create server-specific bundles'
+        ]
+      },
+      {
+        title: 'Zoo Admin Role',
+        badge: 'mod',
+        capabilities: [
+          'Moderate users in their server',
+          'Use moderation commands locally',
+          'Help manage bot features',
+          'Assist with player issues'
+        ]
+      }
+    ];
+
+    const SHOP_ITEMS = [
+      { id: 'health_potion', name: 'Health Potion', emoji: '🧪', desc: 'Restores 50 HP', cost: { coins: 100 }, category: 'healing' },
+      { id: 'super_health_potion', name: 'Super Health Potion', emoji: '💊', desc: 'Restores 100 HP', cost: { coins: 250 }, category: 'healing' },
+      { id: 'max_health_potion', name: 'Max Health Potion', emoji: '🍷', desc: 'Fully restores HP', cost: { gems: 5 }, category: 'healing' },
+      { id: 'energy_drink', name: 'Energy Drink', emoji: '🥤', desc: 'Restores 25 energy', cost: { coins: 150 }, category: 'energy' },
+      { id: 'mega_energy_drink', name: 'Mega Energy Drink', emoji: '⚡', desc: 'Restores 50 energy', cost: { gems: 3 }, category: 'energy' },
+      { id: 'attack_boost', name: 'Attack Boost', emoji: '⚔️', desc: '+25% damage for 3 turns', cost: { coins: 200 }, category: 'buff' },
+      { id: 'defense_boost', name: 'Defense Boost', emoji: '🛡️', desc: '-25% damage taken for 3 turns', cost: { coins: 200 }, category: 'buff' },
+      { id: 'critical_boost', name: 'Critical Boost', emoji: '💫', desc: '+25% crit chance for 3 turns', cost: { gems: 4 }, category: 'buff' },
+      { id: 'cleanse', name: 'Cleanse', emoji: '✨', desc: 'Remove negative effects', cost: { coins: 150 }, category: 'special' },
+      { id: 'revive', name: 'Revive', emoji: '💚', desc: 'Revive with 50% HP', cost: { gems: 10 }, category: 'special' }
+    ];
 
     async function checkAuth() {
       try {
@@ -735,11 +1416,8 @@
             configEl.style.display = 'block';
             configEl.innerHTML = `
               <p><strong>Redirect URI:</strong> ${config.redirectUri}</p>
-              <p><strong>Base URL:</strong> ${config.baseUrl}</p>
               <p><strong>Client ID Set:</strong> ${config.clientIdSet ? 'Yes' : 'No'}</p>
-              <p><strong>Client Secret Set:</strong> ${config.clientSecretSet ? 'Yes' : 'No'}</p>
               <p><strong>MongoDB:</strong> ${config.mongoConnected ? 'Connected' : 'Not Connected'}</p>
-              <p style="margin-top: 12px; color: #faa61a;">Make sure the Redirect URI above matches exactly in your Discord application OAuth2 settings!</p>
             `;
           });
       }
@@ -750,10 +1428,10 @@
         'no_code': 'No authorization code received from Discord.',
         'state_mismatch': 'Security check failed. Please try again.',
         'missing_credentials': 'Discord OAuth credentials not configured.',
-        'token_exchange_failed': 'Failed to authenticate with Discord. Check your redirect URI matches your Discord app settings.',
+        'token_exchange_failed': 'Failed to authenticate with Discord.',
         'fetch_user_failed': 'Failed to get user info from Discord.',
-        'not_authorized': 'You are not authorized to access this dashboard. Only Super Admins can log in.',
-        'session_save_failed': 'Failed to save session. Database might be unavailable.',
+        'not_authorized': 'You are not authorized. Only Super Admins can access this dashboard.',
+        'session_save_failed': 'Failed to save session.',
         'access_denied': 'Access was denied by Discord.'
       };
       return messages[error] || `An error occurred: ${error}`;
@@ -767,10 +1445,20 @@
       document.getElementById('userAvatar').src = currentUser.avatar;
       document.getElementById('userName').textContent = currentUser.username;
       
-      loadStats();
-      loadGuilds();
-      loadBundles();
-      loadCharacters();
+      loadAllData();
+      setupEventListeners();
+    }
+
+    async function loadAllData() {
+      await Promise.all([
+        loadStats(),
+        loadGuilds(),
+        loadCharacters(),
+        loadBundles()
+      ]);
+      renderFeatures();
+      renderPermissions();
+      renderItems();
       loadSettings();
     }
 
@@ -779,9 +1467,10 @@
         const res = await fetch('/api/admin/stats');
         const data = await res.json();
         if (data.success) {
-          document.getElementById('statGuilds').textContent = data.stats.guilds;
-          document.getElementById('statBundles').textContent = data.stats.bundles;
-          document.getElementById('statCollectibles').textContent = data.stats.collectibles;
+          document.getElementById('statGuilds').textContent = data.stats.guilds || 0;
+          document.getElementById('statBundles').textContent = data.stats.bundles || 0;
+          document.getElementById('statCharacters').textContent = data.stats.characters || characters.length || 51;
+          document.getElementById('statItems').textContent = SHOP_ITEMS.length;
         }
       } catch (e) {
         console.error('Failed to load stats:', e);
@@ -792,56 +1481,13 @@
       try {
         const res = await fetch('/api/admin/guilds');
         const data = await res.json();
-        
-        const container = document.getElementById('guildList');
-        
-        if (!data.success || data.guilds.length === 0) {
-          container.innerHTML = '<div class="empty-state">No servers found where you have admin permissions.</div>';
-          return;
+        if (data.success) {
+          guilds = data.guilds;
+          renderServers();
+          renderRecentServers();
         }
-        
-        container.innerHTML = data.guilds.map(g => `
-          <div class="guild-card">
-            <img src="${g.icon || 'https://cdn.discordapp.com/embed/avatars/0.png'}" alt="${g.name}">
-            <div class="guild-card-info">
-              <h4>${escapeHtml(g.name)}</h4>
-              <p>${g.owner ? 'Owner' : 'Administrator'}</p>
-            </div>
-          </div>
-        `).join('');
       } catch (e) {
         console.error('Failed to load guilds:', e);
-        document.getElementById('guildList').innerHTML = '<div class="empty-state">Failed to load servers.</div>';
-      }
-    }
-
-    async function loadBundles() {
-      try {
-        const res = await fetch('/api/admin/bundles');
-        const data = await res.json();
-        
-        const container = document.getElementById('bundleList');
-        
-        if (!data.success || data.bundles.length === 0) {
-          container.innerHTML = '<div class="empty-state">No bundles created yet.</div>';
-          return;
-        }
-        
-        container.innerHTML = data.bundles.map(b => `
-          <div class="bundle-item">
-            <div class="bundle-item-info">
-              <h4>${escapeHtml(b.name)}</h4>
-              <p>${b.characters?.length || 0} characters - ${b.description || 'No description'}</p>
-            </div>
-            <div class="bundle-actions">
-              <button class="btn btn-ghost" onclick="editBundle('${b._id}')">Edit</button>
-              <button class="btn btn-danger" onclick="deleteBundle('${b._id}')">Delete</button>
-            </div>
-          </div>
-        `).join('');
-      } catch (e) {
-        console.error('Failed to load bundles:', e);
-        document.getElementById('bundleList').innerHTML = '<div class="empty-state">Failed to load bundles.</div>';
       }
     }
 
@@ -851,94 +1497,418 @@
         const data = await res.json();
         if (data.success) {
           characters = data.characters;
-          updateCharacterSelect();
+          renderCharacters();
         }
       } catch (e) {
         console.error('Failed to load characters:', e);
       }
     }
 
+    async function loadBundles() {
+      try {
+        const res = await fetch('/api/admin/bundles');
+        const data = await res.json();
+        if (data.success) {
+          bundles = data.bundles;
+          renderBundles();
+        }
+      } catch (e) {
+        console.error('Failed to load bundles:', e);
+      }
+    }
+
+    function renderServers() {
+      const container = document.getElementById('serverGrid');
+      if (guilds.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🌐</div>
+            <p>No servers found where you have admin access.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = guilds.map(g => `
+        <div class="server-card" onclick="openServerConfig('${g.id}')">
+          <div class="server-card-header">
+            ${g.icon ? `<img src="${g.icon}" alt="${g.name}">` : 
+              `<div class="placeholder-icon">${g.name.charAt(0).toUpperCase()}</div>`}
+            <div class="server-card-info">
+              <h4>${g.name}</h4>
+              <p>${g.owner ? 'Owner' : 'Administrator'}</p>
+            </div>
+          </div>
+          <div class="server-card-stats">
+            <div class="server-stat">
+              <div class="server-stat-value">-</div>
+              <div class="server-stat-label">Players</div>
+            </div>
+            <div class="server-stat">
+              <div class="server-stat-value">-</div>
+              <div class="server-stat-label">Characters</div>
+            </div>
+            <div class="server-stat">
+              <div class="server-stat-value">-</div>
+              <div class="server-stat-label">Battles</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderRecentServers() {
+      const container = document.getElementById('recentServers');
+      const recent = guilds.slice(0, 3);
+      
+      if (recent.length === 0) {
+        container.innerHTML = `<div class="empty-state"><p>No servers found.</p></div>`;
+        return;
+      }
+      
+      container.innerHTML = recent.map(g => `
+        <div class="server-card" onclick="openServerConfig('${g.id}')">
+          <div class="server-card-header">
+            ${g.icon ? `<img src="${g.icon}" alt="${g.name}">` : 
+              `<div class="placeholder-icon">${g.name.charAt(0).toUpperCase()}</div>`}
+            <div class="server-card-info">
+              <h4>${g.name}</h4>
+              <p>${g.owner ? 'Owner' : 'Administrator'}</p>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderCharacters(filter = 'all') {
+      const container = document.getElementById('characterGrid');
+      const searchTerm = document.getElementById('characterSearch')?.value?.toLowerCase() || '';
+      
+      let filtered = characters;
+      if (filter !== 'all') {
+        filtered = characters.filter(c => c.obtainable === filter);
+      }
+      if (searchTerm) {
+        filtered = filtered.filter(c => 
+          c.name.toLowerCase().includes(searchTerm) || 
+          (c.game && c.game.toLowerCase().includes(searchTerm))
+        );
+      }
+      
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🎮</div>
+            <p>No characters found.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = filtered.map(c => `
+        <div class="character-card" onclick="showCharacterDetails('${c.name}')">
+          <div class="character-emoji">${c.emoji || '🎭'}</div>
+          <div class="character-name">${c.name}</div>
+          <div class="character-game">${c.game || 'ZooBot'}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderBundles() {
+      const container = document.getElementById('bundleGrid');
+      
+      if (bundles.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📦</div>
+            <p>No bundles created yet. Click "Create New Bundle" to get started.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = bundles.map(b => `
+        <div class="bundle-card">
+          <div class="bundle-card-header">
+            <h4>${b.name}</h4>
+            <p>${b.description || 'No description'}</p>
+          </div>
+          <div class="bundle-characters">
+            ${(b.characters || []).slice(0, 8).map(c => {
+              const char = characters.find(ch => ch.name === c);
+              return `<span class="bundle-char-tag">${char?.emoji || '🎭'} ${c}</span>`;
+            }).join('')}
+            ${b.characters?.length > 8 ? `<span class="bundle-char-tag">+${b.characters.length - 8} more</span>` : ''}
+          </div>
+          <div class="bundle-card-footer">
+            <button class="btn btn-ghost btn-sm" onclick="editBundle('${b._id}')">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteBundle('${b._id}')">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderFeatures() {
+      const coreContainer = document.getElementById('featureGrid');
+      coreContainer.innerHTML = FEATURES.map(f => `
+        <div class="feature-item">
+          <div class="feature-info">
+            <span class="feature-icon">${f.icon}</span>
+            <div>
+              <div class="feature-name">${f.name}</div>
+              <div class="feature-desc">${f.desc}</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="feature-${f.id}" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      `).join('');
+      
+      const notifContainer = document.getElementById('notificationGrid');
+      notifContainer.innerHTML = NOTIFICATIONS.map(n => `
+        <div class="feature-item">
+          <div class="feature-info">
+            <span class="feature-icon">${n.icon}</span>
+            <div>
+              <div class="feature-name">${n.name}</div>
+              <div class="feature-desc">${n.desc}</div>
+            </div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notif-${n.id}">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      `).join('');
+    }
+
+    function renderPermissions() {
+      const container = document.getElementById('permissionList');
+      container.innerHTML = PERMISSIONS.map(p => `
+        <div class="permission-item">
+          <div class="permission-header">
+            <div class="permission-title">
+              <span>${p.title}</span>
+              <span class="permission-badge ${p.badge}">${p.badge.toUpperCase()}</span>
+            </div>
+          </div>
+          <ul class="permission-desc" style="list-style: none; padding: 0; margin-top: 12px;">
+            ${p.capabilities.map(c => `<li style="margin-bottom: 8px; padding-left: 20px; position: relative;">
+              <span style="position: absolute; left: 0;">✓</span> ${c}
+            </li>`).join('')}
+          </ul>
+        </div>
+      `).join('');
+    }
+
+    function renderItems(category = 'all') {
+      const container = document.getElementById('itemGrid');
+      let filtered = SHOP_ITEMS;
+      if (category !== 'all') {
+        filtered = SHOP_ITEMS.filter(i => i.category === category);
+      }
+      
+      container.innerHTML = filtered.map(i => `
+        <div class="item-card">
+          <div class="item-emoji">${i.emoji}</div>
+          <div class="item-name">${i.name}</div>
+          <div class="item-desc">${i.desc}</div>
+          <div class="item-cost">
+            ${i.cost.coins ? `<span>🪙 ${i.cost.coins}</span>` : ''}
+            ${i.cost.gems ? `<span>💎 ${i.cost.gems}</span>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
     async function loadSettings() {
       try {
         const res = await fetch('/admin/config');
         const config = await res.json();
+        
         document.getElementById('settingsConfig').innerHTML = `
-          <p><strong>Redirect URI:</strong> ${config.redirectUri}</p>
           <p><strong>Base URL:</strong> ${config.baseUrl}</p>
-          <p><strong>MongoDB:</strong> ${config.mongoConnected ? 'Connected' : 'Not Connected'}</p>
-          <p style="margin-top: 12px;">Add this redirect URI to your Discord application OAuth2 settings.</p>
+          <p><strong>Redirect URI:</strong> ${config.redirectUri}</p>
+          <p><strong>Client ID Set:</strong> ${config.clientIdSet ? 'Yes' : 'No'}</p>
+          <p><strong>Client Secret Set:</strong> ${config.clientSecretSet ? 'Yes' : 'No'}</p>
         `;
+        
+        document.getElementById('mongoStatus').textContent = config.mongoConnected ? 'Connected' : 'Not Connected';
+        document.getElementById('mongoStatus').style.color = config.mongoConnected ? 'var(--success)' : 'var(--danger)';
+        
+        document.getElementById('botStatus').textContent = 'Running';
+        document.getElementById('botStatus').style.color = 'var(--success)';
       } catch (e) {
         console.error('Failed to load settings:', e);
       }
     }
 
-    function updateCharacterSelect() {
-      const select = document.getElementById('characterSelect');
-      const available = characters.filter(c => !selectedCharacters.includes(c.name));
-      select.innerHTML = '<option value="">Add a character...</option>' +
-        available.map(c => `<option value="${escapeHtml(c.name)}">${c.emoji || ''} ${escapeHtml(c.name)}</option>`).join('');
+    function setupEventListeners() {
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const page = item.dataset.page;
+          if (page) showPage(page);
+        });
+      });
+      
+      document.querySelectorAll('#characterTabs .tab-item').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('#characterTabs .tab-item').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          renderCharacters(tab.dataset.filter);
+        });
+      });
+      
+      document.querySelectorAll('#itemTabs .tab-item').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('#itemTabs .tab-item').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          renderItems(tab.dataset.category);
+        });
+      });
+      
+      document.getElementById('bundleForm').addEventListener('submit', handleBundleSubmit);
     }
 
-    function updateCharacterTags() {
-      const container = document.getElementById('characterTags');
-      container.innerHTML = selectedCharacters.map(name => `
-        <span class="character-tag">
-          ${escapeHtml(name)}
-          <button type="button" onclick="removeCharacter('${escapeHtml(name)}')">&times;</button>
-        </span>
-      `).join('');
-    }
-
-    function removeCharacter(name) {
-      selectedCharacters = selectedCharacters.filter(c => c !== name);
-      updateCharacterTags();
-      updateCharacterSelect();
-    }
-
-    function showPage(page) {
+    function showPage(pageId) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       
-      document.getElementById('page-' + page).classList.add('active');
-      document.querySelector(`.nav-item[data-page="${page}"]`).classList.add('active');
+      document.getElementById(`page-${pageId}`).classList.add('active');
+      document.querySelector(`.nav-item[data-page="${pageId}"]`)?.classList.add('active');
+    }
+
+    function filterServers() {
+      const term = document.getElementById('serverSearch').value.toLowerCase();
+      const cards = document.querySelectorAll('#serverGrid .server-card');
+      cards.forEach(card => {
+        const name = card.querySelector('h4')?.textContent.toLowerCase() || '';
+        card.style.display = name.includes(term) ? '' : 'none';
+      });
+    }
+
+    function filterCharacters() {
+      const activeTab = document.querySelector('#characterTabs .tab-item.active');
+      const filter = activeTab?.dataset.filter || 'all';
+      renderCharacters(filter);
+    }
+
+    function openServerConfig(serverId) {
+      console.log('Opening config for server:', serverId);
+    }
+
+    function showCharacterDetails(name) {
+      const char = characters.find(c => c.name === name);
+      if (!char) return;
+      
+      document.getElementById('characterModalTitle').textContent = char.name;
+      document.getElementById('characterModalContent').innerHTML = `
+        <div style="text-align: center; margin-bottom: 24px;">
+          <div style="font-size: 64px; margin-bottom: 16px;">${char.emoji || '🎭'}</div>
+          <h2>${char.name}</h2>
+          <p style="color: var(--text-secondary);">${char.game || 'ZooBot'}</p>
+        </div>
+        <div class="feature-grid">
+          <div class="feature-item">
+            <div class="feature-info">
+              <span class="feature-icon">🎯</span>
+              <div>
+                <div class="feature-name">Obtainable</div>
+                <div class="feature-desc">${char.obtainable || 'drop'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('characterModal').classList.add('active');
+    }
+
+    function closeCharacterModal() {
+      document.getElementById('characterModal').classList.remove('active');
     }
 
     function showCreateBundleModal() {
       document.getElementById('bundleModalTitle').textContent = 'Create Bundle';
-      document.getElementById('bundleSubmitBtn').textContent = 'Create';
-      document.getElementById('bundleForm').reset();
+      document.getElementById('bundleSubmitBtn').textContent = 'Create Bundle';
       document.getElementById('bundleId').value = '';
-      selectedCharacters = [];
-      updateCharacterTags();
-      updateCharacterSelect();
+      document.getElementById('bundleName').value = '';
+      document.getElementById('bundleDescription').value = '';
+      selectedBundleCharacters = new Set();
+      renderBundleCharacterSelect();
       document.getElementById('bundleModal').classList.add('active');
     }
 
-    async function editBundle(id) {
-      try {
-        const res = await fetch('/api/admin/bundles');
-        const data = await res.json();
-        const bundle = data.bundles.find(b => b._id === id);
-        
-        if (!bundle) return;
-        
-        document.getElementById('bundleModalTitle').textContent = 'Edit Bundle';
-        document.getElementById('bundleSubmitBtn').textContent = 'Save';
-        document.getElementById('bundleId').value = id;
-        document.getElementById('bundleName').value = bundle.name;
-        document.getElementById('bundleDescription').value = bundle.description || '';
-        selectedCharacters = bundle.characters || [];
-        updateCharacterTags();
-        updateCharacterSelect();
-        document.getElementById('bundleModal').classList.add('active');
-      } catch (e) {
-        console.error('Failed to load bundle:', e);
+    function renderBundleCharacterSelect() {
+      const container = document.getElementById('bundleCharacterSelect');
+      container.innerHTML = characters.map(c => `
+        <div class="character-card ${selectedBundleCharacters.has(c.name) ? 'selected' : ''}" 
+             onclick="toggleBundleCharacter('${c.name}')">
+          <div class="character-emoji">${c.emoji || '🎭'}</div>
+          <div class="character-name">${c.name}</div>
+        </div>
+      `).join('');
+    }
+
+    function toggleBundleCharacter(name) {
+      if (selectedBundleCharacters.has(name)) {
+        selectedBundleCharacters.delete(name);
+      } else {
+        selectedBundleCharacters.add(name);
       }
+      renderBundleCharacterSelect();
     }
 
     function closeBundleModal() {
       document.getElementById('bundleModal').classList.remove('active');
+    }
+
+    async function handleBundleSubmit(e) {
+      e.preventDefault();
+      
+      const id = document.getElementById('bundleId').value;
+      const name = document.getElementById('bundleName').value;
+      const description = document.getElementById('bundleDescription').value;
+      const chars = Array.from(selectedBundleCharacters);
+      
+      try {
+        const url = id ? `/api/admin/bundles/${id}` : '/api/admin/bundles';
+        const method = id ? 'PUT' : 'POST';
+        
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description, characters: chars })
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+          closeBundleModal();
+          loadBundles();
+          loadStats();
+        } else {
+          alert(data.error || 'Failed to save bundle');
+        }
+      } catch (e) {
+        console.error('Failed to save bundle:', e);
+        alert('Failed to save bundle');
+      }
+    }
+
+    function editBundle(id) {
+      const bundle = bundles.find(b => b._id === id);
+      if (!bundle) return;
+      
+      document.getElementById('bundleModalTitle').textContent = 'Edit Bundle';
+      document.getElementById('bundleSubmitBtn').textContent = 'Save Changes';
+      document.getElementById('bundleId').value = id;
+      document.getElementById('bundleName').value = bundle.name;
+      document.getElementById('bundleDescription').value = bundle.description || '';
+      selectedBundleCharacters = new Set(bundle.characters || []);
+      renderBundleCharacterSelect();
+      document.getElementById('bundleModal').classList.add('active');
     }
 
     async function deleteBundle(id) {
@@ -959,53 +1929,6 @@
     function logout() {
       window.location.href = '/admin/logout';
     }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    document.getElementById('characterSelect').addEventListener('change', function() {
-      if (this.value && !selectedCharacters.includes(this.value)) {
-        selectedCharacters.push(this.value);
-        updateCharacterTags();
-        updateCharacterSelect();
-      }
-      this.value = '';
-    });
-
-    document.getElementById('bundleForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      
-      const id = document.getElementById('bundleId').value;
-      const name = document.getElementById('bundleName').value;
-      const description = document.getElementById('bundleDescription').value;
-      
-      try {
-        const method = id ? 'PUT' : 'POST';
-        const url = id ? `/api/admin/bundles/${id}` : '/api/admin/bundles';
-        
-        const res = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description, characters: selectedCharacters })
-        });
-        
-        const data = await res.json();
-        if (data.success) {
-          closeBundleModal();
-          loadBundles();
-          loadStats();
-        }
-      } catch (e) {
-        console.error('Failed to save bundle:', e);
-      }
-    });
-
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', () => showPage(item.dataset.page));
-    });
 
     checkAuth();
   </script>

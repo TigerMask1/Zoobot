@@ -605,21 +605,41 @@ function setupAdminRoutes(app, discordClient = null) {
   });
   
   app.get('/api/admin/stats', authMiddleware, async (req, res) => {
-    if (!isMongoConnected()) {
-      return res.json({ success: false, error: 'Database not connected' });
-    }
-    
     try {
-      const db = getMongoDatabase();
+      let bundleCount = 0;
+      let collectibleCount = 0;
       
-      const [bundleCount, collectibleCount] = await Promise.all([
-        db.collection(ADMIN_BUNDLES_COLLECTION).countDocuments(),
-        db.collection('collectibleItems').countDocuments({ status: 'active' })
-      ]);
+      if (isMongoConnected()) {
+        const db = getMongoDatabase();
+        [bundleCount, collectibleCount] = await Promise.all([
+          db.collection(ADMIN_BUNDLES_COLLECTION).countDocuments(),
+          db.collection('collectibleItems').countDocuments({ status: 'active' })
+        ]);
+      }
       
       let guildCount = 0;
       if (discordClient && discordClient.guilds) {
         guildCount = discordClient.guilds.cache.size;
+      }
+      
+      let characterCount = 0;
+      try {
+        const characterManager = require('./characterManager.js');
+        const chars = characterManager.getCharacters();
+        characterCount = Array.isArray(chars) ? chars.length : 0;
+      } catch (e) {
+        console.error('[AdminDashboard] Error loading characters:', e.message);
+        characterCount = 0;
+      }
+      
+      let itemCount = 0;
+      try {
+        const itemsSystem = require('./itemsSystem.js');
+        const allItems = itemsSystem.getAllShopItems ? itemsSystem.getAllShopItems() : [];
+        itemCount = Array.isArray(allItems) ? allItems.length : 0;
+      } catch (e) {
+        console.error('[AdminDashboard] Error loading items:', e.message);
+        itemCount = 0;
       }
       
       res.json({
@@ -627,7 +647,9 @@ function setupAdminRoutes(app, discordClient = null) {
         stats: {
           bundles: bundleCount,
           collectibles: collectibleCount,
-          guilds: guildCount
+          guilds: guildCount,
+          characters: characterCount,
+          items: itemCount
         }
       });
     } catch (error) {
