@@ -9,6 +9,7 @@ const { getEmojiForCharacter } = require('./emojiAssetManager.js');
 const { getServerGame, DEFAULT_GAME } = require('./serverConfigManager.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
 const { generateST } = require('./utils/shared.js');
+const { tryDropCollectibleFromCrate } = require('./collectibleItemsSystem.js');
 
 const CRATE_TYPES = {
   bronze: {
@@ -234,6 +235,16 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
     }
   }
   
+  const serverGame = serverId ? (getServerGame(serverId) || DEFAULT_GAME) : DEFAULT_GAME;
+  try {
+    const collectibleDrop = await tryDropCollectibleFromCrate(userId, serverGame, crateType, serverId);
+    if (collectibleDrop) {
+      rewards += `\n\n${collectibleDrop.message}`;
+    }
+  } catch (error) {
+    console.error('[CrateSystem] Error dropping collectible item:', error);
+  }
+  
   return {
     success: true,
     message: rewards
@@ -271,6 +282,7 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
   let totalCoins = 0;
   let totalTokens = 0;
   let charactersGained = [];
+  let collectiblesGained = [];
   let totalGems = 0;
   
   const serverGame = serverId ? (getServerGame(serverId) || DEFAULT_GAME) : DEFAULT_GAME;
@@ -329,6 +341,15 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
       } else {
         totalGems += 50;
       }
+    }
+    
+    try {
+      const collectibleDrop = await tryDropCollectibleFromCrate(userId, serverGame, crateType, serverId);
+      if (collectibleDrop) {
+        collectiblesGained.push(collectibleDrop.item);
+      }
+    } catch (error) {
+      console.error('[CrateSystem] Error dropping collectible item in bulk:', error);
     }
   }
   
@@ -402,10 +423,18 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
     });
   }
   
+  if (collectiblesGained.length > 0) {
+    summary += `\n🎁 **Collectible Items Obtained:**\n`;
+    collectiblesGained.forEach((item, i) => {
+      summary += `${i + 1}. ${item.emoji || '📦'} ${item.name}\n`;
+    });
+  }
+  
   return {
     success: true,
     message: summary,
-    charactersGained: charactersGained.length
+    charactersGained: charactersGained.length,
+    collectiblesGained: collectiblesGained.length
   };
 }
 
