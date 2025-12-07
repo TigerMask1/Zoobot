@@ -12,9 +12,16 @@ const DISCORD_CDN = 'https://cdn.discordapp.com';
 const ADMIN_SESSIONS_COLLECTION = 'adminSessions';
 
 function getBaseUrl() {
-  return process.env.WEBSITE_URL || 
-         process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` :
-         `http://localhost:${process.env.PORT || 5000}`;
+  if (process.env.WEBSITE_URL) {
+    return process.env.WEBSITE_URL;
+  }
+  if (process.env.RENDER_EXTERNAL_URL) {
+    return process.env.RENDER_EXTERNAL_URL;
+  }
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    return `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  }
+  return `http://localhost:${process.env.PORT || 5000}`;
 }
 
 function getRedirectUri() {
