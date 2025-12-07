@@ -777,6 +777,23 @@
     .hidden {
       display: none !important;
     }
+
+    .btn:focus {
+      outline: none;
+      box-shadow: none;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .toggle:focus {
+      outline: none;
+    }
+
+    .item-card:focus {
+      outline: none;
+    }
   </style>
 </head>
 <body>
@@ -920,8 +937,13 @@
 
         <div id="charactersView" class="hidden">
           <div class="page-header">
-            <h1 class="page-title">Global Characters</h1>
-            <p class="page-subtitle">Manage all available characters</p>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <h1 class="page-title">Global Characters</h1>
+                <p class="page-subtitle">Manage all available characters</p>
+              </div>
+              <button class="btn btn-primary" onclick="showCharacterSubmitForm()">Submit Character</button>
+            </div>
           </div>
           <div class="search-box">
             <span class="search-icon">O</span>
@@ -932,8 +954,13 @@
 
         <div id="collectiblesView" class="hidden">
           <div class="page-header">
-            <h1 class="page-title">Global Collectibles</h1>
-            <p class="page-subtitle">Manage all available collectibles</p>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <h1 class="page-title">Global Collectibles</h1>
+                <p class="page-subtitle">Manage all available collectibles</p>
+              </div>
+              <button class="btn btn-primary" onclick="showCollectibleSubmitForm()">Submit Collectible</button>
+            </div>
           </div>
           <div class="search-box">
             <span class="search-icon">O</span>
@@ -1544,6 +1571,140 @@
 
     document.getElementById('globalCharacterSearch')?.addEventListener('input', renderGlobalCharacters);
     document.getElementById('globalCollectibleSearch')?.addEventListener('input', renderGlobalCollectibles);
+
+    function showCharacterSubmitForm() {
+      const formHtml = `
+        <form id="characterSubmitForm" onsubmit="submitCharacter(event)">
+          <div class="form-group">
+            <label class="form-label">Character Name *</label>
+            <input type="text" name="name" class="form-input" required maxlength="50" placeholder="Enter character name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Emoji *</label>
+            <input type="text" name="emoji" class="form-input" required placeholder="Enter an emoji (e.g. 🦊)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-input" rows="3" placeholder="Describe your character..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Rarity</label>
+            <select name="rarity" class="form-select">
+              <option value="common">Common</option>
+              <option value="uncommon">Uncommon</option>
+              <option value="rare">Rare</option>
+              <option value="epic">Epic</option>
+              <option value="legendary">Legendary</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;">Submit Character</button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          </div>
+        </form>
+      `;
+      openModal('Submit Character', formHtml);
+    }
+
+    function showCollectibleSubmitForm() {
+      const formHtml = `
+        <form id="collectibleSubmitForm" onsubmit="submitCollectible(event)">
+          <div class="form-group">
+            <label class="form-label">Collectible Name *</label>
+            <input type="text" name="name" class="form-input" required maxlength="50" placeholder="Enter collectible name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Emoji *</label>
+            <input type="text" name="emoji" class="form-input" required placeholder="Enter an emoji (e.g. 🎁)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-input" rows="3" placeholder="Describe your collectible..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Rarity</label>
+            <select name="rarity" class="form-select">
+              <option value="common">Common</option>
+              <option value="uncommon">Uncommon</option>
+              <option value="rare">Rare</option>
+              <option value="epic">Epic</option>
+              <option value="legendary">Legendary</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button type="submit" class="btn btn-primary" style="flex: 1;">Submit Collectible</button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          </div>
+        </form>
+      `;
+      openModal('Submit Collectible', formHtml);
+    }
+
+    async function submitCharacter(event) {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+      
+      const data = {
+        name: formData.get('name'),
+        emoji: formData.get('emoji'),
+        description: formData.get('description') || '',
+        rarity: formData.get('rarity')
+      };
+
+      try {
+        const response = await fetch(`${API_BASE}/characters/submissions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          closeModal();
+          alert('Character submitted successfully! It will be reviewed by an admin.');
+        } else {
+          alert('Failed to submit: ' + (result.message || result.error || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error('Failed to submit character:', err);
+        alert('Failed to submit character. Please try again.');
+      }
+    }
+
+    async function submitCollectible(event) {
+      event.preventDefault();
+      const form = event.target;
+      const formData = new FormData(form);
+      
+      const data = {
+        name: formData.get('name'),
+        emoji: formData.get('emoji'),
+        description: formData.get('description') || '',
+        rarity: formData.get('rarity')
+      };
+
+      try {
+        const response = await fetch(`${API_BASE}/collectibles/submissions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          closeModal();
+          alert('Collectible submitted successfully! It will be reviewed by an admin.');
+        } else {
+          alert('Failed to submit: ' + (result.message || result.error || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error('Failed to submit collectible:', err);
+        alert('Failed to submit collectible. Please try again.');
+      }
+    }
 
     document.getElementById('modal').addEventListener('click', (e) => {
       if (e.target.id === 'modal') {

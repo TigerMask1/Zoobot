@@ -8,6 +8,43 @@ const {
 } = require('./schemas.js');
 const { loadData, saveDataImmediate } = require('../dataManager.js');
 const { sendMailToAll, addMailToUser } = require('../mailSystem.js');
+const CHARACTERS = require('../characters.js');
+
+async function backfillGlobalCharacters() {
+  if (!isMongoConnected()) {
+    console.log('[Dashboard] MongoDB not connected, skipping character backfill');
+    return;
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const existingCount = await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).countDocuments();
+    
+    if (existingCount > 0) {
+      console.log(`[Dashboard] ${existingCount} characters already exist, skipping backfill`);
+      return;
+    }
+    
+    console.log(`[Dashboard] Backfilling ${CHARACTERS.length} characters from characters.js...`);
+    
+    const charactersToInsert = CHARACTERS.map(char => ({
+      name: char.name,
+      emoji: char.emoji,
+      customEmojiId: char.customEmojiId || null,
+      obtainable: char.obtainable,
+      rarity: 'common',
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }));
+    
+    await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).insertMany(charactersToInsert);
+    console.log(`[Dashboard] Successfully backfilled ${CHARACTERS.length} characters`);
+  } catch (error) {
+    console.error('[Dashboard] Error backfilling characters:', error);
+  }
+}
 
 async function sendSubmissionNotification(userId, type, itemName, status, reason = null) {
   try {
@@ -112,6 +149,8 @@ async function initDashboardIndexes() {
     await db.collection(COLLECTIONS.COLLECTIBLE_SUBMISSIONS).createIndex({ createdAt: -1 });
     
     console.log('[Dashboard] MongoDB indexes created successfully');
+    
+    await backfillGlobalCharacters();
   } catch (error) {
     console.error('[Dashboard] Error creating indexes:', error);
   }
@@ -994,6 +1033,7 @@ async function getDashboardStats() {
 
 module.exports = {
   initDashboardIndexes,
+  backfillGlobalCharacters,
   
   getAllGlobalCharacters,
   getGlobalCharacterById,

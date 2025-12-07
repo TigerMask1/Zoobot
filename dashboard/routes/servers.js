@@ -37,7 +37,7 @@ router.get('/', authMiddleware, async (req, res) => {
     
     res.json({
       success: true,
-      servers: serversWithConfig.filter(s => s.botInstalled)
+      servers: serversWithConfig
     });
   } catch (error) {
     console.error('[Dashboard Servers] Error getting servers:', error);
