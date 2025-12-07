@@ -179,8 +179,19 @@ async function getAllGlobalCharacters(filters = {}) {
   }
 }
 
+function isValidObjectId(id) {
+  if (!id) return false;
+  if (typeof id !== 'string') return false;
+  return /^[a-fA-F0-9]{24}$/.test(id);
+}
+
 async function getGlobalCharacterById(characterId) {
   if (!isMongoConnected()) return null;
+  
+  if (!isValidObjectId(characterId)) {
+    console.log('[Dashboard] Invalid ObjectId format:', characterId);
+    return null;
+  }
   
   const db = getMongoDatabase();
   
@@ -224,6 +235,10 @@ async function updateGlobalCharacter(characterId, updates) {
     return { success: false, message: 'Database not connected' };
   }
   
+  if (!isValidObjectId(characterId)) {
+    return { success: false, message: 'Invalid character ID format' };
+  }
+  
   const db = getMongoDatabase();
   updates.updatedAt = new Date();
   
@@ -242,6 +257,10 @@ async function updateGlobalCharacter(characterId, updates) {
 async function deleteGlobalCharacter(characterId) {
   if (!isMongoConnected()) {
     return { success: false, message: 'Database not connected' };
+  }
+  
+  if (!isValidObjectId(characterId)) {
+    return { success: false, message: 'Invalid character ID format' };
   }
   
   const db = getMongoDatabase();
@@ -283,6 +302,11 @@ async function getAllGlobalCollectibles(filters = {}) {
 async function getGlobalCollectibleById(collectibleId) {
   if (!isMongoConnected()) return null;
   
+  if (!isValidObjectId(collectibleId)) {
+    console.log('[Dashboard] Invalid ObjectId format for collectible:', collectibleId);
+    return null;
+  }
+  
   const db = getMongoDatabase();
   
   try {
@@ -322,6 +346,10 @@ async function updateGlobalCollectible(collectibleId, updates) {
     return { success: false, message: 'Database not connected' };
   }
   
+  if (!isValidObjectId(collectibleId)) {
+    return { success: false, message: 'Invalid collectible ID format' };
+  }
+  
   const db = getMongoDatabase();
   updates.updatedAt = new Date();
   
@@ -340,6 +368,10 @@ async function updateGlobalCollectible(collectibleId, updates) {
 async function deleteGlobalCollectible(collectibleId) {
   if (!isMongoConnected()) {
     return { success: false, message: 'Database not connected' };
+  }
+  
+  if (!isValidObjectId(collectibleId)) {
+    return { success: false, message: 'Invalid collectible ID format' };
   }
   
   const db = getMongoDatabase();
@@ -676,6 +708,10 @@ async function approveCharacterSubmission(submissionId, approvedBy) {
     return { success: false, message: 'Database not connected' };
   }
   
+  if (!isValidObjectId(submissionId)) {
+    return { success: false, message: 'Invalid submission ID format' };
+  }
+  
   const db = getMongoDatabase();
   
   try {
@@ -730,6 +766,10 @@ async function approveCharacterSubmission(submissionId, approvedBy) {
 async function rejectCharacterSubmission(submissionId, rejectedBy, reason) {
   if (!isMongoConnected()) {
     return { success: false, message: 'Database not connected' };
+  }
+  
+  if (!isValidObjectId(submissionId)) {
+    return { success: false, message: 'Invalid submission ID format' };
   }
   
   const db = getMongoDatabase();
@@ -812,6 +852,10 @@ async function approveCollectibleSubmission(submissionId, approvedBy) {
     return { success: false, message: 'Database not connected' };
   }
   
+  if (!isValidObjectId(submissionId)) {
+    return { success: false, message: 'Invalid submission ID format' };
+  }
+  
   const db = getMongoDatabase();
   
   try {
@@ -870,6 +914,10 @@ async function approveCollectibleSubmission(submissionId, approvedBy) {
 async function rejectCollectibleSubmission(submissionId, rejectedBy, reason) {
   if (!isMongoConnected()) {
     return { success: false, message: 'Database not connected' };
+  }
+  
+  if (!isValidObjectId(submissionId)) {
+    return { success: false, message: 'Invalid submission ID format' };
   }
   
   const db = getMongoDatabase();
@@ -1223,6 +1271,7 @@ module.exports = {
   backfillGlobalCharacters,
   backfillServersFromBot,
   getAllServerConfigs,
+  isValidObjectId,
   
   getAllGlobalCharacters,
   getGlobalCharacterById,

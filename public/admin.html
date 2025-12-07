@@ -1574,7 +1574,7 @@
 
     async function checkAuth() {
       try {
-        const res = await fetch('/api/admin/me');
+        const res = await fetch('/admin/me');
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
@@ -1657,7 +1657,7 @@
 
     async function loadStats() {
       try {
-        const res = await fetch('/api/admin/stats');
+        const res = await fetch('/admin/api/stats');
         const data = await res.json();
         if (data.success) {
           document.getElementById('statGuilds').textContent = data.stats.guilds || 0;
@@ -1672,7 +1672,7 @@
 
     async function loadGuilds() {
       try {
-        const res = await fetch('/api/admin/guilds');
+        const res = await fetch('/admin/guilds');
         const data = await res.json();
         if (data.success) {
           guilds = data.guilds;
@@ -1686,7 +1686,7 @@
 
     async function loadCharacters() {
       try {
-        const res = await fetch('/api/admin/characters');
+        const res = await fetch('/admin/api/characters');
         const data = await res.json();
         if (data.success) {
           characters = data.characters;
@@ -1699,7 +1699,7 @@
 
     async function loadBundles() {
       try {
-        const res = await fetch('/api/admin/bundles');
+        const res = await fetch('/admin/api/bundles');
         const data = await res.json();
         if (data.success) {
           bundles = data.bundles;
@@ -2034,7 +2034,7 @@
     
     async function loadServerConfig(serverId) {
       try {
-        const res = await fetch('/api/admin/server/' + serverId + '/config');
+        const res = await fetch('/admin/api/servers/' + serverId);
         if (res.ok) {
           const data = await res.json();
           if (data.success) {
@@ -2118,10 +2118,10 @@
       });
       
       try {
-        const res = await fetch('/api/admin/server/' + currentServerId + '/config', {
-          method: 'PUT',
+        const res = await fetch('/admin/api/servers/' + currentServerId + '/features', {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ features, characters: Array.from(serverCharacters) })
+          body: JSON.stringify(features)
         });
         
         const data = await res.json();
@@ -2140,10 +2140,10 @@
       const bundleId = document.getElementById('serverBundleSelect').value;
       
       try {
-        const res = await fetch('/api/admin/server/' + currentServerId + '/bundle', {
+        const res = await fetch('/admin/api/servers/' + currentServerId + '/characters', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bundleId })
+          body: JSON.stringify({ ids: Array.from(serverCharacters) })
         });
         
         const data = await res.json();
@@ -2292,7 +2292,7 @@
 
     async function loadCollectibles() {
       try {
-        const res = await fetch('/api/admin/collectibles');
+        const res = await fetch('/admin/api/collectibles');
         const data = await res.json();
         if (data.success) {
           collectibles = data.items || [];
@@ -2348,7 +2348,7 @@
       };
       
       try {
-        const res = await fetch('/api/admin/collectibles', {
+        const res = await fetch('/admin/api/collectibles', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -2370,7 +2370,7 @@
 
     async function loadCharacterSubmissions() {
       try {
-        const res = await fetch('/api/admin/character-submissions');
+        const res = await fetch('/admin/api/characters/submissions/list');
         const data = await res.json();
         if (data.success) {
           characterSubmissions = data.submissions || [];
@@ -2413,7 +2413,7 @@
 
     async function loadCollectibleSubmissions() {
       try {
-        const res = await fetch('/api/admin/collectible-submissions');
+        const res = await fetch('/admin/api/collectibles/submissions/list');
         const data = await res.json();
         if (data.success) {
           collectibleSubmissions = data.submissions || [];
@@ -2457,7 +2457,7 @@
 
     async function approveCollectibleSubmission(id) {
       try {
-        const res = await fetch('/api/admin/collectible-submissions/' + id + '/approve', { method: 'POST' });
+        const res = await fetch('/admin/api/collectibles/submissions/' + id + '/approve', { method: 'POST' });
         const data = await res.json();
         if (data.success) {
           loadCollectibleSubmissions();
@@ -2471,7 +2471,7 @@
     async function rejectCollectibleSubmission(id) {
       const reason = prompt('Reason for rejection (optional):');
       try {
-        const res = await fetch('/api/admin/collectible-submissions/' + id + '/reject', {
+        const res = await fetch('/admin/api/collectibles/submissions/' + id + '/reject', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reason })
@@ -2490,7 +2490,7 @@
       if (!confirm('This will set all servers without existing configuration to use ZooBot characters. Continue?')) return;
       
       try {
-        const res = await fetch('/api/admin/backfill-servers', { method: 'POST' });
+        const res = await fetch('/admin/api/servers/backfill', { method: 'POST' });
         const data = await res.json();
         if (data.success) {
           alert(data.message);
