@@ -1399,13 +1399,24 @@
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tabName = btn.dataset.tab;
-        if (!tabName) return;
+        const submissionsTab = btn.dataset.submissionsTab;
+        
+        if (tabName) {
+          // Server config tabs
+          const parent = btn.closest('.tab-nav');
+          parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
 
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-        document.getElementById(`${tabName}Tab`).classList.remove('hidden');
+          document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+          const targetTab = document.getElementById(`${tabName}Tab`);
+          if (targetTab) targetTab.classList.remove('hidden');
+        } else if (submissionsTab) {
+          // Submissions tabs
+          const parent = btn.closest('.tab-nav');
+          parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          loadSubmissions(submissionsTab);
+        }
       });
     });
 
@@ -1472,7 +1483,7 @@
       `).join('');
     }
 
-    async function loadSubmissions() {
+    async function loadSubmissions(type = 'all') {
       try {
         const [charsRes, collectsRes] = await Promise.all([
           fetch(`${API_BASE}/characters/submissions/list?status=pending`),
@@ -1482,7 +1493,16 @@
         const charsData = await charsRes.json();
         const collectsData = await collectsRes.json();
 
-        renderSubmissions(charsData.submissions || [], collectsData.submissions || []);
+        let characters = charsData.submissions || [];
+        let collectibles = collectsData.submissions || [];
+        
+        if (type === 'characters') {
+          renderSubmissions(characters, []);
+        } else if (type === 'collectibles') {
+          renderSubmissions([], collectibles);
+        } else {
+          renderSubmissions(characters, collectibles);
+        }
       } catch (err) {
         console.error('Failed to load submissions:', err);
       }

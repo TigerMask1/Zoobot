@@ -1031,9 +1031,104 @@ async function getDashboardStats() {
   }
 }
 
+async function backfillServersFromBot(discordClient) {
+  if (!isMongoConnected()) {
+    console.log('[Dashboard] MongoDB not connected, skipping server backfill');
+    return { success: false, message: 'MongoDB not connected' };
+  }
+  
+  if (!discordClient) {
+    console.log('[Dashboard] Discord client not available, skipping server backfill');
+    return { success: false, message: 'Discord client not available' };
+  }
+  
+  const db = getMongoDatabase();
+  let backfilledCount = 0;
+  let updatedCount = 0;
+  
+  try {
+    const guilds = discordClient.guilds.cache;
+    console.log(`[Dashboard] Backfilling ${guilds.size} servers from Discord client...`);
+    
+    for (const [guildId, guild] of guilds) {
+      const existingConfig = await db.collection(COLLECTIONS.SERVER_CONFIGS).findOne({ serverId: guildId });
+      
+      if (!existingConfig) {
+        const newConfig = {
+          serverId: guildId,
+          serverName: guild.name,
+          serverIcon: guild.iconURL(),
+          ownerId: guild.ownerId,
+          selectedCharacterIds: [],
+          selectedCollectibleIds: [],
+          channels: {},
+          features: { ...DEFAULT_FEATURES },
+          pingSettings: { ...DEFAULT_PING_SETTINGS },
+          moderationSettings: {
+            maxWarningsBeforeBan: 5,
+            autoModEnabled: false,
+            profanityFilter: false
+          },
+          commandSettings: {
+            prefix: '!',
+            disabledCommands: [],
+            commandCooldowns: {}
+          },
+          serverAdmins: [],
+          zooAdminRoleName: 'zooadmin',
+          setupComplete: false,
+          botInstalledAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        await db.collection(COLLECTIONS.SERVER_CONFIGS).insertOne(newConfig);
+        backfilledCount++;
+      } else {
+        await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+          { serverId: guildId },
+          {
+            $set: {
+              serverName: guild.name,
+              serverIcon: guild.iconURL(),
+              ownerId: guild.ownerId,
+              updatedAt: new Date()
+            }
+          }
+        );
+        updatedCount++;
+      }
+    }
+    
+    console.log(`[Dashboard] Server backfill complete: ${backfilledCount} new, ${updatedCount} updated`);
+    return { success: true, backfilled: backfilledCount, updated: updatedCount };
+  } catch (error) {
+    console.error('[Dashboard] Error backfilling servers:', error);
+    return { success: false, message: 'Failed to backfill servers' };
+  }
+}
+
+async function getAllServerConfigs() {
+  if (!isMongoConnected()) return [];
+  
+  const db = getMongoDatabase();
+  
+  try {
+    return await db.collection(COLLECTIONS.SERVER_CONFIGS)
+      .find({})
+      .sort({ serverName: 1 })
+      .toArray();
+  } catch (error) {
+    console.error('[Dashboard] Error getting all server configs:', error);
+    return [];
+  }
+}
+
 module.exports = {
   initDashboardIndexes,
   backfillGlobalCharacters,
+  backfillServersFromBot,
+  getAllServerConfigs,
   
   getAllGlobalCharacters,
   getGlobalCharacterById,

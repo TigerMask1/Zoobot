@@ -522,6 +522,13 @@ client.on('clientReady', async () => {
     } catch (error) {
       console.warn('⚠️ Could not load submissions from MongoDB');
     }
+    
+    try {
+      await dashboardDb.backfillServersFromBot(client);
+      console.log('✅ Dashboard server backfill complete');
+    } catch (error) {
+      console.warn('⚠️ Could not backfill servers to dashboard:', error.message);
+    }
   } else {
     console.log('ℹ️ Skipping MongoDB-dependent systems (server configs, games, submissions)');
   }
