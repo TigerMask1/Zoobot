@@ -519,17 +519,15 @@ function setupAdminRoutes(app, discordClient = null) {
   app.get('/api/admin/guilds', authMiddleware, async (req, res) => {
     const guilds = await fetchDiscordGuilds(req.user.accessToken);
     
-    const adminGuilds = guilds.filter(g => {
-      const permissions = BigInt(g.permissions);
-      const ADMINISTRATOR = BigInt(0x8);
-      const MANAGE_GUILD = BigInt(0x20);
-      return (permissions & ADMINISTRATOR) === ADMINISTRATOR || 
-             (permissions & MANAGE_GUILD) === MANAGE_GUILD;
+    const ownedGuildsWithBot = guilds.filter(g => {
+      const isOwner = g.owner === true;
+      const botInstalled = discordClient && discordClient.guilds && discordClient.guilds.cache.has(g.id);
+      return isOwner && botInstalled;
     });
     
     res.json({
       success: true,
-      guilds: adminGuilds.map(g => ({
+      guilds: ownedGuildsWithBot.map(g => ({
         id: g.id,
         name: g.name,
         icon: g.icon ? 
