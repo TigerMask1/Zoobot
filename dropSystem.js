@@ -1,7 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { saveData, saveDataImmediate } = require('./dataManager.js');
 const characterManager = require('./characterManager.js');
-const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerGame, hasSelectedGame, DEFAULT_GAME, getServerSelectedCharacters, hasServerSelectedCharacters } = require('./serverConfigManager.js');
+const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerGame, hasSelectedGame, DEFAULT_GAME, getServerSelectedCharacters, hasServerSelectedCharacters, isDashboardSetupComplete } = require('./serverConfigManager.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
 const { isKeyRushActive, getKeyRushTimeRemaining } = require('./characterKeySystem.js');
 const { getDroppableCollectibleItems, awardCollectibleItem, getRarityTier } = require('./collectibleItemsSystem.js');
@@ -41,6 +41,11 @@ async function payForDrops(serverId, userId, data) {
   
   if (!isServerSetup(serverId)) {
     return { success: false, message: '❌ Server not set up yet! Complete setup with `!setup` before activating drops.' };
+  }
+  
+  const dashboardSetupComplete = await isDashboardSetupComplete(serverId);
+  if (!dashboardSetupComplete) {
+    return { success: false, message: '❌ Dashboard setup not complete! Visit the admin dashboard to configure your server and select at least 5 characters before activating drops.' };
   }
   
   if (!hasSelectedGame(serverId)) {
@@ -123,6 +128,14 @@ async function startDropsForServer(serverId, sendResumeNotification = false) {
   if (!isMainServer(serverId) && !isServerSetup(serverId)) {
     console.log(`⚠️ Server ${serverId} not set up yet, skipping drops`);
     return;
+  }
+
+  if (!isMainServer(serverId)) {
+    const dashboardSetupComplete = await isDashboardSetupComplete(serverId);
+    if (!dashboardSetupComplete) {
+      console.log(`⚠️ Server ${serverId}: Dashboard setup not complete (needs 5+ characters), skipping drops`);
+      return;
+    }
   }
 
   if (!isMainServer(serverId) && !hasSelectedGame(serverId)) {

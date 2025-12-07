@@ -1124,6 +1124,100 @@ async function getAllServerConfigs() {
   }
 }
 
+async function setServerCharacters(serverId, characterIds) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { 
+        $set: { 
+          selectedCharacterIds: characterIds || [],
+          updatedAt: new Date()
+        }
+      },
+      { upsert: true }
+    );
+    
+    await checkAndUpdateSetupStatus(serverId);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error setting server characters:', error);
+    return { success: false, message: 'Failed to set characters' };
+  }
+}
+
+async function setServerCollectibles(serverId, collectibleIds) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { 
+        $set: { 
+          selectedCollectibleIds: collectibleIds || [],
+          updatedAt: new Date()
+        }
+      },
+      { upsert: true }
+    );
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error setting server collectibles:', error);
+    return { success: false, message: 'Failed to set collectibles' };
+  }
+}
+
+async function completeServerSetup(serverId) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const config = await db.collection(COLLECTIONS.SERVER_CONFIGS).findOne({ serverId });
+    
+    if (!config) {
+      return { success: false, message: 'Server config not found' };
+    }
+    
+    const characterCount = config.selectedCharacterIds?.length || 0;
+    if (characterCount < MINIMUM_CHARACTERS_REQUIRED) {
+      return { 
+        success: false, 
+        message: `Need at least ${MINIMUM_CHARACTERS_REQUIRED} characters to complete setup` 
+      };
+    }
+    
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { 
+        $set: { 
+          setupComplete: true,
+          setupCompletedAt: new Date(),
+          updatedAt: new Date()
+        }
+      }
+    );
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error completing server setup:', error);
+    return { success: false, message: 'Failed to complete setup' };
+  }
+}
+
 module.exports = {
   initDashboardIndexes,
   backfillGlobalCharacters,
@@ -1149,6 +1243,9 @@ module.exports = {
   removeCharacterFromServer,
   addCollectibleToServer,
   removeCollectibleFromServer,
+  setServerCharacters,
+  setServerCollectibles,
+  completeServerSetup,
   isServerSetupComplete,
   getServerCharacters,
   getServerCollectibles,

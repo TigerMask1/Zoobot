@@ -762,7 +762,7 @@ async function getServerSelectedCharacters(serverId) {
     }
     
     const { ObjectId } = require('mongodb');
-    const globalCharsCollection = await getCollection('dashboardGlobalCharacters');
+    const globalCharsCollection = await getCollection('globalCharacters');
     
     const characterIds = config.selectedCharacterIds.map(id => {
       try {
@@ -772,16 +772,32 @@ async function getServerSelectedCharacters(serverId) {
       }
     });
     
-    const characters = await globalCharsCollection.find({
+    const dashboardChars = await globalCharsCollection.find({
       _id: { $in: characterIds },
       status: { $ne: 'deleted' }
     }).toArray();
     
-    return characters.map(c => ({
-      name: c.name,
-      emoji: c.emoji,
-      rarity: c.rarity
-    }));
+    const characterManager = require('./characterManager.js');
+    const botCharacters = characterManager.getCharacters();
+    const botCharMap = new Map(botCharacters.map(c => [c.name.toLowerCase(), c]));
+    
+    const validatedChars = dashboardChars
+      .map(dashChar => {
+        const botChar = botCharMap.get(dashChar.name.toLowerCase());
+        if (botChar) {
+          return {
+            name: botChar.name,
+            emoji: botChar.emoji || dashChar.emoji,
+            rarity: dashChar.rarity || botChar.rarity || 'common',
+            obtainable: botChar.obtainable,
+            game: botChar.game
+          };
+        }
+        return null;
+      })
+      .filter(c => c !== null);
+    
+    return validatedChars.length > 0 ? validatedChars : null;
   } catch (error) {
     console.error('Error getting server selected characters:', error);
     return null;
@@ -796,6 +812,36 @@ async function hasServerSelectedCharacters(serverId) {
   } catch (error) {
     console.error('Error checking server selected characters:', error);
     return false;
+  }
+}
+
+async function isDashboardSetupComplete(serverId) {
+  const MINIMUM_CHARACTERS_REQUIRED = 5;
+  
+  if (isMainServer(serverId)) return true;
+  
+  try {
+    const collection = await getCollection('dashboardServerConfigs');
+    const config = await collection.findOne({ serverId });
+    
+    if (!config) return false;
+    
+    const characterCount = config.selectedCharacterIds?.length || 0;
+    return characterCount >= MINIMUM_CHARACTERS_REQUIRED;
+  } catch (error) {
+    console.error('Error checking dashboard setup status:', error);
+    return false;
+  }
+}
+
+async function getDashboardServerConfig(serverId) {
+  try {
+    const collection = await getCollection('dashboardServerConfigs');
+    const config = await collection.findOne({ serverId });
+    return config || null;
+  } catch (error) {
+    console.error('Error getting dashboard server config:', error);
+    return null;
   }
 }
 
@@ -858,6 +904,8 @@ module.exports = {
   isRegisteredServerOwner,
   getServerSelectedCharacters,
   hasServerSelectedCharacters,
+  isDashboardSetupComplete,
+  getDashboardServerConfig,
   DEFAULT_FEATURE_SETTINGS,
   MAIN_SERVER_ID,
   SUPER_ADMINS,

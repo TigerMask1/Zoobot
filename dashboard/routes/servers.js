@@ -82,6 +82,23 @@ router.get('/:serverId', authMiddleware, async (req, res) => {
     const characters = await db.getServerCharacters(serverId);
     const collectibles = await db.getServerCollectibles(serverId);
     
+    const formattedChars = characters.map(c => ({
+      id: c._id.toString(),
+      name: c.name,
+      emoji: c.emoji,
+      imageUrl: c.imageUrl,
+      rarity: c.rarity,
+      obtainable: c.obtainable
+    }));
+    
+    const formattedCollectibles = collectibles.map(c => ({
+      id: c._id.toString(),
+      name: c.name,
+      emoji: c.emoji,
+      imageUrl: c.imageUrl,
+      rarity: c.rarity
+    }));
+    
     res.json({
       success: true,
       server: {
@@ -89,8 +106,8 @@ router.get('/:serverId', authMiddleware, async (req, res) => {
         name: config.serverName,
         icon: config.serverIcon,
         setupComplete: config.setupComplete,
-        characterCount: characters.length,
-        collectibleCount: collectibles.length,
+        characterCount: formattedChars.length,
+        collectibleCount: formattedCollectibles.length,
         minimumRequired: MINIMUM_CHARACTERS_REQUIRED,
         config: {
           channels: config.channels || {},
@@ -101,8 +118,8 @@ router.get('/:serverId', authMiddleware, async (req, res) => {
           serverAdmins: config.serverAdmins || [],
           zooAdminRoleName: config.zooAdminRoleName || 'zooadmin'
         },
-        characters,
-        collectibles
+        characters: formattedChars,
+        collectibles: formattedCollectibles
       }
     });
   } catch (error) {
@@ -111,9 +128,9 @@ router.get('/:serverId', authMiddleware, async (req, res) => {
   }
 });
 
-router.put('/:serverId/features', authMiddleware, async (req, res) => {
+router.patch('/:serverId/features', authMiddleware, async (req, res) => {
   const { serverId } = req.params;
-  const { features } = req.body;
+  const features = req.body;
   
   try {
     const guilds = await fetchDiscordGuilds(req.user.accessToken);
@@ -136,9 +153,9 @@ router.put('/:serverId/features', authMiddleware, async (req, res) => {
   }
 });
 
-router.put('/:serverId/channels', authMiddleware, async (req, res) => {
+router.patch('/:serverId/channels', authMiddleware, async (req, res) => {
   const { serverId } = req.params;
-  const { channels } = req.body;
+  const channels = req.body;
   
   try {
     const guilds = await fetchDiscordGuilds(req.user.accessToken);
@@ -161,9 +178,9 @@ router.put('/:serverId/channels', authMiddleware, async (req, res) => {
   }
 });
 
-router.put('/:serverId/ping-settings', authMiddleware, async (req, res) => {
+router.patch('/:serverId/ping-settings', authMiddleware, async (req, res) => {
   const { serverId } = req.params;
-  const { pingSettings } = req.body;
+  const pingSettings = req.body;
   
   try {
     const guilds = await fetchDiscordGuilds(req.user.accessToken);
@@ -183,6 +200,64 @@ router.put('/:serverId/ping-settings', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Dashboard Servers] Error updating ping settings:', error);
     res.status(500).json({ success: false, error: 'Failed to update ping settings' });
+  }
+});
+
+router.put('/:serverId/characters', authMiddleware, async (req, res) => {
+  const { serverId } = req.params;
+  const { ids } = req.body;
+  
+  try {
+    const guilds = await fetchDiscordGuilds(req.user.accessToken);
+    const guild = guilds.find(g => g.id === serverId && g.owner);
+    
+    if (!guild && !req.user.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+    
+    const result = await db.setServerCharacters(serverId, ids || []);
+    
+    if (result.success && discordClient) {
+      discordClient.emit('dashboardConfigUpdate', { 
+        serverId, 
+        type: 'charactersUpdated', 
+        data: { characterIds: ids } 
+      });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[Dashboard Servers] Error updating characters:', error);
+    res.status(500).json({ success: false, error: 'Failed to update characters' });
+  }
+});
+
+router.put('/:serverId/collectibles', authMiddleware, async (req, res) => {
+  const { serverId } = req.params;
+  const { ids } = req.body;
+  
+  try {
+    const guilds = await fetchDiscordGuilds(req.user.accessToken);
+    const guild = guilds.find(g => g.id === serverId && g.owner);
+    
+    if (!guild && !req.user.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+    
+    const result = await db.setServerCollectibles(serverId, ids || []);
+    
+    if (result.success && discordClient) {
+      discordClient.emit('dashboardConfigUpdate', { 
+        serverId, 
+        type: 'collectiblesUpdated', 
+        data: { collectibleIds: ids } 
+      });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[Dashboard Servers] Error updating collectibles:', error);
+    res.status(500).json({ success: false, error: 'Failed to update collectibles' });
   }
 });
 
@@ -298,7 +373,48 @@ router.delete('/:serverId/collectibles/:collectibleId', authMiddleware, async (r
   }
 });
 
-router.get('/:serverId/channels-list', authMiddleware, async (req, res) => {
+router.post('/:serverId/complete-setup', authMiddleware, async (req, res) => {
+  const { serverId } = req.params;
+  
+  try {
+    const guilds = await fetchDiscordGuilds(req.user.accessToken);
+    const guild = guilds.find(g => g.id === serverId && g.owner);
+    
+    if (!guild && !req.user.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+    
+    const config = await db.getServerConfig(serverId);
+    if (!config) {
+      return res.status(404).json({ success: false, error: 'Server config not found' });
+    }
+    
+    const characterCount = config.selectedCharacterIds?.length || 0;
+    if (characterCount < MINIMUM_CHARACTERS_REQUIRED) {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Need at least ${MINIMUM_CHARACTERS_REQUIRED} characters to complete setup` 
+      });
+    }
+    
+    const result = await db.completeServerSetup(serverId);
+    
+    if (result.success && discordClient) {
+      discordClient.emit('dashboardConfigUpdate', { 
+        serverId, 
+        type: 'setupCompleted', 
+        data: {} 
+      });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[Dashboard Servers] Error completing setup:', error);
+    res.status(500).json({ success: false, error: 'Failed to complete setup' });
+  }
+});
+
+router.get('/:serverId/channels', authMiddleware, async (req, res) => {
   const { serverId } = req.params;
   
   try {
@@ -326,7 +442,7 @@ router.get('/:serverId/channels-list', authMiddleware, async (req, res) => {
   }
 });
 
-router.get('/:serverId/roles-list', authMiddleware, async (req, res) => {
+router.get('/:serverId/roles', authMiddleware, async (req, res) => {
   const { serverId } = req.params;
   
   try {

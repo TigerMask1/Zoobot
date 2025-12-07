@@ -7,29 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css">
   <style>
     :root {
-      --primary: #F59E0B;
-      --primary-dark: #D97706;
-      --bg-primary: #FFFFFF;
-      --bg-secondary: #F8FAFC;
-      --bg-tertiary: #F1F5F9;
-      --bg-card: #FFFFFF;
-      --text-primary: #1E293B;
-      --text-secondary: #64748B;
-      --text-muted: #94A3B8;
-      --success: #10B981;
-      --warning: #F59E0B;
-      --error: #EF4444;
-      --border: #E2E8F0;
-      --border-color: #E2E8F0;
-      --accent: var(--primary);
-      --accent-hover: var(--primary-dark);
-      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    
-    [data-theme="dark"] {
       --primary: #00D9FF;
       --primary-dark: #00BFDF;
       --bg-primary: #0f1419;
@@ -39,18 +18,34 @@
       --text-primary: #ffffff;
       --text-secondary: #9ca3af;
       --text-muted: #6b7280;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --error: #EF4444;
       --border: #374151;
       --border-color: rgba(0, 217, 255, 0.15);
       --accent: var(--primary);
       --accent-hover: var(--primary-dark);
       --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
     }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    
+    [data-theme="light"] {
+      --primary: #F59E0B;
+      --primary-dark: #D97706;
+      --bg-primary: #FFFFFF;
+      --bg-secondary: #F8FAFC;
+      --bg-tertiary: #F1F5F9;
+      --bg-card: #FFFFFF;
+      --text-primary: #1E293B;
+      --text-secondary: #64748B;
+      --text-muted: #94A3B8;
+      --border: #E2E8F0;
+      --border-color: #E2E8F0;
+      --accent: var(--primary);
+      --accent-hover: var(--primary-dark);
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -60,22 +55,15 @@
       line-height: 1.6;
     }
 
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
-
     .header {
       background: var(--bg-secondary);
       border-bottom: 1px solid var(--border);
-      padding: 16px 0;
-      position: sticky;
+      padding: 16px 24px;
+      position: fixed;
       top: 0;
+      left: 0;
+      right: 0;
       z-index: 100;
-    }
-
-    .header-content {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -91,6 +79,8 @@
       text-decoration: none;
     }
 
+    .logo img { width: 36px; height: 36px; border-radius: 8px; }
+
     .user-info {
       display: flex;
       align-items: center;
@@ -104,9 +94,7 @@
       border: 2px solid var(--accent);
     }
 
-    .user-name {
-      font-weight: 500;
-    }
+    .user-name { font-weight: 500; }
 
     .badge {
       display: inline-block;
@@ -136,105 +124,49 @@
       text-decoration: none;
     }
 
-    .btn-primary {
-      background: var(--accent);
-      color: var(--bg-primary);
-    }
+    .btn-primary { background: var(--accent); color: var(--bg-primary); }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-danger { background: var(--error); color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
 
-    .btn-primary:hover {
-      background: var(--accent-hover);
-      transform: translateY(-1px);
-    }
-
-    .btn-secondary {
+    .theme-toggle {
       background: var(--bg-tertiary);
-      color: var(--text-primary);
       border: 1px solid var(--border);
-    }
-
-    .btn-secondary:hover {
-      background: var(--border);
-    }
-
-    .btn-danger {
-      background: var(--error);
-      color: white;
-    }
-
-    .btn-danger:hover {
-      background: #dc2626;
-    }
-
-    .btn-success {
-      background: var(--success);
-      color: white;
-    }
-
-    .btn-sm {
-      padding: 6px 12px;
-      font-size: 12px;
-    }
-
-    .main {
-      padding: 32px 0;
-    }
-
-    .login-container {
+      border-radius: 50px;
+      padding: 8px 12px;
+      cursor: pointer;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      min-height: 60vh;
-      text-align: center;
-    }
-
-    .login-card {
-      background: var(--bg-secondary);
-      border-radius: 16px;
-      padding: 48px;
-      max-width: 400px;
-      width: 100%;
-      box-shadow: var(--card-shadow);
-    }
-
-    .login-title {
-      font-size: 28px;
-      margin-bottom: 12px;
-    }
-
-    .login-description {
+      gap: 6px;
       color: var(--text-secondary);
-      margin-bottom: 32px;
+      transition: all 0.2s;
     }
 
-    .discord-btn {
-      background: #5865F2;
-      color: white;
-      width: 100%;
-      justify-content: center;
-      padding: 14px 24px;
-      font-size: 16px;
-    }
+    .theme-toggle:hover { background: var(--border); color: var(--text-primary); }
 
-    .discord-btn:hover {
-      background: #4752c4;
+    .layout {
+      display: flex;
+      margin-top: 73px;
+      min-height: calc(100vh - 73px);
     }
 
     .sidebar {
-      position: fixed;
-      left: 0;
-      top: 73px;
       width: 260px;
-      height: calc(100vh - 73px);
       background: var(--bg-secondary);
       border-right: 1px solid var(--border);
       padding: 24px 16px;
+      position: fixed;
+      left: 0;
+      top: 73px;
+      height: calc(100vh - 73px);
       overflow-y: auto;
     }
 
-    .sidebar-section {
-      margin-bottom: 24px;
-    }
+    .sidebar-section { margin-bottom: 24px; }
 
     .sidebar-title {
       font-size: 11px;
@@ -252,63 +184,38 @@
       padding: 12px;
       border-radius: 8px;
       color: var(--text-secondary);
-      text-decoration: none;
       cursor: pointer;
       transition: all 0.2s;
       margin-bottom: 4px;
     }
 
-    .nav-item:hover {
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-    }
+    .nav-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+    .nav-item.active { background: var(--accent); color: var(--bg-primary); }
 
-    .nav-item.active {
-      background: var(--accent);
-      color: var(--bg-primary);
-    }
+    .nav-icon { width: 20px; height: 20px; }
 
     .content {
+      flex: 1;
       margin-left: 260px;
       padding: 32px;
     }
 
     .page-header {
       margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    .page-title {
-      font-size: 28px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    .page-subtitle {
-      color: var(--text-secondary);
-    }
-
-    .grid {
-      display: grid;
-      gap: 24px;
-    }
-
-    .grid-2 {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .grid-3 {
-      grid-template-columns: repeat(3, 1fr);
-    }
-
-    .grid-4 {
-      grid-template-columns: repeat(4, 1fr);
-    }
+    .page-title { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .page-subtitle { color: var(--text-secondary); }
 
     .card {
       background: var(--bg-secondary);
       border-radius: 12px;
       padding: 24px;
       border: 1px solid var(--border);
+      margin-bottom: 24px;
     }
 
     .card-header {
@@ -318,16 +225,19 @@
       margin-bottom: 16px;
     }
 
-    .card-title {
-      font-size: 18px;
-      font-weight: 600;
-    }
+    .card-title { font-size: 18px; font-weight: 600; }
+
+    .grid { display: grid; gap: 24px; }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .grid-auto { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
 
     .server-card {
       display: flex;
       align-items: center;
       gap: 16px;
-      padding: 16px;
+      padding: 20px;
       background: var(--bg-secondary);
       border-radius: 12px;
       border: 1px solid var(--border);
@@ -335,38 +245,9 @@
       transition: all 0.2s;
     }
 
-    .server-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
-    }
-
-    .server-card.setup-pending {
-      border: 2px solid var(--warning);
-      background: rgba(245, 158, 11, 0.05);
-    }
-
-    .server-card.setup-pending:hover {
-      border-color: var(--warning);
-      background: rgba(245, 158, 11, 0.1);
-    }
-
-    .theme-toggle {
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border);
-      border-radius: 50px;
-      padding: 8px 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-secondary);
-      transition: all 0.2s;
-    }
-
-    .theme-toggle:hover {
-      background: var(--border);
-      color: var(--text-primary);
-    }
+    .server-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .server-card.setup-pending { border: 2px solid var(--warning); }
+    .server-card.not-installed { border: 2px dashed var(--text-muted); opacity: 0.7; }
 
     .server-icon {
       width: 56px;
@@ -379,30 +260,14 @@
       font-size: 24px;
       font-weight: 700;
       color: var(--accent);
+      overflow: hidden;
     }
 
-    .server-icon img {
-      width: 100%;
-      height: 100%;
-      border-radius: 12px;
-      object-fit: cover;
-    }
+    .server-icon img { width: 100%; height: 100%; object-fit: cover; }
 
-    .server-info {
-      flex: 1;
-    }
-
-    .server-name {
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    .server-stats {
-      display: flex;
-      gap: 16px;
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
+    .server-info { flex: 1; }
+    .server-name { font-weight: 600; margin-bottom: 4px; }
+    .server-stats { display: flex; gap: 16px; font-size: 13px; color: var(--text-secondary); }
 
     .status-indicator {
       width: 8px;
@@ -412,113 +277,135 @@
       margin-right: 6px;
     }
 
-    .status-ready {
-      background: var(--success);
-    }
-
-    .status-setup {
-      background: var(--warning);
-    }
-
-    .toggle {
-      position: relative;
-      width: 48px;
-      height: 26px;
-      background: var(--bg-tertiary);
-      border-radius: 13px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-
-    .toggle.active {
-      background: var(--accent);
-    }
-
-    .toggle::after {
-      content: '';
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      width: 20px;
-      height: 20px;
-      background: white;
-      border-radius: 50%;
-      transition: transform 0.3s;
-    }
-
-    .toggle.active::after {
-      transform: translateX(22px);
-    }
-
-    .feature-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .feature-row:last-child {
-      border-bottom: none;
-    }
-
-    .feature-info h4 {
-      margin-bottom: 4px;
-    }
-
-    .feature-info p {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
+    .status-ready { background: var(--success); }
+    .status-setup { background: var(--warning); }
+    .status-not-installed { background: var(--text-muted); }
 
     .item-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
       gap: 16px;
     }
 
     .item-card {
       background: var(--bg-tertiary);
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 16px;
       text-align: center;
       border: 2px solid transparent;
       cursor: pointer;
       transition: all 0.2s;
+      position: relative;
     }
 
-    .item-card:hover {
-      border-color: var(--accent);
+    .item-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .item-card.selected { border-color: var(--success); background: rgba(16, 185, 129, 0.1); }
+
+    .item-image {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 12px;
+      border-radius: 8px;
+      background: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      overflow: hidden;
     }
 
-    .item-card.selected {
-      border-color: var(--success);
-      background: rgba(16, 185, 129, 0.1);
-    }
+    .item-image img { width: 100%; height: 100%; object-fit: cover; }
 
-    .item-emoji {
-      font-size: 32px;
-      margin-bottom: 8px;
-    }
-
-    .item-name {
-      font-weight: 500;
-      font-size: 14px;
-      margin-bottom: 4px;
-    }
+    .item-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
 
     .item-rarity {
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
     }
 
-    .rarity-common { color: #9ca3af; }
-    .rarity-uncommon { color: #10b981; }
-    .rarity-rare { color: #3b82f6; }
-    .rarity-epic { color: #8b5cf6; }
-    .rarity-legendary { color: #f59e0b; }
-    .rarity-mythic { color: #ef4444; }
+    .rarity-common { color: #9ca3af; background: rgba(156, 163, 175, 0.1); }
+    .rarity-uncommon { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+    .rarity-rare { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+    .rarity-ultra { color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
+    .rarity-epic { color: #ec4899; background: rgba(236, 72, 153, 0.1); }
+    .rarity-legendary { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+
+    .item-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .item-card:hover .item-actions { opacity: 1; }
+
+    .item-action-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .item-action-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .item-action-btn.delete:hover { color: var(--error); border-color: var(--error); }
+
+    .search-box {
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px 12px 44px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .search-input:focus { outline: none; border-color: var(--accent); }
+
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+    }
+
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .filter-select {
+      padding: 8px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .filter-select:focus { outline: none; border-color: var(--accent); }
 
     .tab-nav {
       display: flex;
@@ -535,12 +422,11 @@
       cursor: pointer;
       font-weight: 500;
       position: relative;
+      font-size: 14px;
     }
 
-    .tab-btn.active {
-      color: var(--accent);
-    }
-
+    .tab-btn:hover { color: var(--text-primary); }
+    .tab-btn.active { color: var(--accent); }
     .tab-btn.active::after {
       content: '';
       position: absolute;
@@ -557,7 +443,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.8);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -567,20 +453,20 @@
       transition: all 0.3s;
     }
 
-    .modal-overlay.active {
-      opacity: 1;
-      visibility: visible;
-    }
+    .modal-overlay.active { opacity: 1; visibility: visible; }
 
     .modal {
       background: var(--bg-secondary);
       border-radius: 16px;
       padding: 32px;
-      max-width: 600px;
+      max-width: 700px;
       width: 90%;
-      max-height: 80vh;
+      max-height: 85vh;
       overflow-y: auto;
+      border: 1px solid var(--border);
     }
+
+    .modal-large { max-width: 900px; }
 
     .modal-header {
       display: flex;
@@ -589,26 +475,24 @@
       margin-bottom: 24px;
     }
 
+    .modal-title { font-size: 20px; font-weight: 600; }
+
     .modal-close {
       background: none;
       border: none;
       color: var(--text-secondary);
       font-size: 24px;
       cursor: pointer;
+      padding: 4px;
     }
 
-    .form-group {
-      margin-bottom: 20px;
-    }
+    .modal-close:hover { color: var(--text-primary); }
 
-    .form-label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 500;
-      font-size: 14px;
-    }
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+    .form-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
-    .form-input {
+    .form-input, .form-textarea, .form-select {
       width: 100%;
       padding: 12px 16px;
       background: var(--bg-tertiary);
@@ -618,21 +502,53 @@
       font-size: 14px;
     }
 
-    .form-input:focus {
+    .form-input:focus, .form-textarea:focus, .form-select:focus {
       outline: none;
       border-color: var(--accent);
     }
 
-    .form-select {
-      width: 100%;
-      padding: 12px 16px;
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text-primary);
-      font-size: 14px;
-      cursor: pointer;
+    .form-textarea { min-height: 100px; resize: vertical; font-family: inherit; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
     }
+
+    .toggle-container:last-child { border-bottom: none; }
+
+    .toggle-info h4 { margin-bottom: 4px; }
+    .toggle-info p { font-size: 13px; color: var(--text-secondary); }
+
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: var(--bg-tertiary);
+      border-radius: 13px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .toggle.active { background: var(--accent); }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .toggle.active::after { transform: translateX(22px); }
 
     .alert {
       padding: 16px;
@@ -643,23 +559,10 @@
       gap: 12px;
     }
 
-    .alert-error {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid var(--error);
-      color: var(--error);
-    }
-
-    .alert-success {
-      background: rgba(16, 185, 129, 0.1);
-      border: 1px solid var(--success);
-      color: var(--success);
-    }
-
-    .alert-warning {
-      background: rgba(245, 158, 11, 0.1);
-      border: 1px solid var(--warning);
-      color: var(--warning);
-    }
+    .alert-error { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--error); color: var(--error); }
+    .alert-success { background: rgba(16, 185, 129, 0.1); border: 1px solid var(--success); color: var(--success); }
+    .alert-warning { background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning); color: var(--warning); }
+    .alert-info { background: rgba(0, 217, 255, 0.1); border: 1px solid var(--accent); color: var(--accent); }
 
     .loading {
       display: flex;
@@ -677,9 +580,7 @@
       animation: spin 1s linear infinite;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     .empty-state {
       text-align: center;
@@ -687,54 +588,45 @@
       color: var(--text-secondary);
     }
 
-    .empty-state-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
+    .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+
+    .setup-wizard {
+      max-width: 800px;
+      margin: 0 auto;
     }
 
-    .search-box {
-      position: relative;
+    .setup-step {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 32px;
+      border: 1px solid var(--border);
       margin-bottom: 24px;
     }
 
-    .search-input {
-      width: 100%;
-      padding: 12px 16px 12px 44px;
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text-primary);
-      font-size: 14px;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-    }
-
-    .counter {
+    .setup-step-header {
       display: flex;
       align-items: center;
       gap: 16px;
-      padding: 16px;
-      background: var(--bg-tertiary);
-      border-radius: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 24px;
     }
 
-    .counter-value {
-      font-size: 24px;
+    .setup-step-number {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--bg-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-weight: 700;
-      color: var(--accent);
+      font-size: 18px;
     }
 
-    .counter-label {
-      color: var(--text-secondary);
-      font-size: 14px;
-    }
+    .setup-step-number.completed { background: var(--success); }
+    .setup-step-number.pending { background: var(--bg-tertiary); color: var(--text-muted); }
+
+    .setup-step-title { font-size: 20px; font-weight: 600; }
 
     .progress-bar {
       height: 8px;
@@ -750,312 +642,561 @@
       transition: width 0.3s;
     }
 
+    .counter {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .counter-value { font-size: 24px; font-weight: 700; color: var(--accent); }
+    .counter-label { color: var(--text-secondary); font-size: 14px; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .stat-value { font-size: 28px; font-weight: 700; color: var(--accent); }
+    .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+    .login-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .login-card {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 48px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--border);
+    }
+
+    .login-title { font-size: 28px; margin-bottom: 12px; }
+    .login-description { color: var(--text-secondary); margin-bottom: 32px; }
+
+    .discord-btn {
+      background: #5865F2;
+      color: white;
+      width: 100%;
+      justify-content: center;
+      padding: 14px 24px;
+      font-size: 16px;
+    }
+
+    .discord-btn:hover { background: #4752c4; }
+
+    .hidden { display: none !important; }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 8px 0;
+      margin-bottom: 16px;
+      transition: color 0.2s;
+    }
+
+    .back-btn:hover { color: var(--accent); }
+
+    .channel-select-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .channel-select-row:last-child { border-bottom: none; }
+    .channel-label { flex: 1; font-weight: 500; }
+    .channel-select { flex: 2; }
+
+    .rate-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rate-input input {
+      width: 80px;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      text-align: center;
+    }
+
+    .rate-input input:focus { outline: none; border-color: var(--accent); }
+
     @media (max-width: 1024px) {
-      .sidebar {
-        width: 200px;
-      }
-      .content {
-        margin-left: 200px;
-      }
-      .grid-4 {
-        grid-template-columns: repeat(2, 1fr);
-      }
+      .sidebar { width: 200px; }
+      .content { margin-left: 200px; }
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
     @media (max-width: 768px) {
-      .sidebar {
-        display: none;
-      }
-      .content {
-        margin-left: 0;
-      }
-      .grid-2, .grid-3, .grid-4 {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .btn:focus {
-      outline: none;
-      box-shadow: none;
-    }
-
-    .btn:active {
-      transform: scale(0.98);
-    }
-
-    .toggle:focus {
-      outline: none;
-    }
-
-    .item-card:focus {
-      outline: none;
+      .sidebar { display: none; }
+      .content { margin-left: 0; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <header class="header">
-    <div class="container header-content">
-      <a href="/" class="logo">
-        <img src="/logo.png" alt="ZooBot" style="width: 36px; height: 36px; border-radius: 8px;">
-        <span>ZooBot</span>
-      </a>
-      <div id="userSection" class="user-info hidden">
-        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-          <svg id="sunIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-          </svg>
-          <svg id="moonIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        </button>
-        <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
-        <span id="userName" class="user-name"></span>
-        <span id="userBadge" class="badge badge-admin hidden">Admin</span>
-        <a href="/admin/logout" class="btn btn-secondary btn-sm">Logout</a>
-      </div>
+  <header class="header" id="header">
+    <a href="/" class="logo">
+      <img src="/logo.png" alt="ZooBot">
+      <span>ZooBot Dashboard</span>
+    </a>
+    <div id="userSection" class="user-info hidden">
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+        <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+      <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
+      <span id="userName" class="user-name"></span>
+      <span id="userBadge" class="badge badge-admin hidden">Admin</span>
+      <a href="/admin/logout" class="btn btn-secondary btn-sm">Logout</a>
     </div>
   </header>
 
-  <main class="main">
-    <div id="loginView" class="login-container hidden">
-      <div class="login-card">
-        <h1 class="login-title">Welcome to ZooBot</h1>
-        <p class="login-description">Sign in with Discord to manage your servers</p>
-        <a href="/admin/login" class="btn discord-btn">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
-          </svg>
-          Login with Discord
-        </a>
-        <div id="loginError" class="alert alert-error hidden" style="margin-top: 24px;"></div>
-      </div>
-    </div>
-
-    <div id="loadingView" class="loading">
-      <div class="spinner"></div>
-    </div>
-
-    <div id="dashboardView" class="hidden">
-      <nav class="sidebar">
-        <div class="sidebar-section">
-          <div class="sidebar-title">Navigation</div>
-          <div class="nav-item active" data-view="servers">Servers</div>
-          <div id="navCharacters" class="nav-item hidden" data-view="characters">Characters</div>
-          <div id="navCollectibles" class="nav-item hidden" data-view="collectibles">Collectibles</div>
-          <div id="navSubmissions" class="nav-item hidden" data-view="submissions">Submissions</div>
-        </div>
-      </nav>
-
-      <div class="content">
-        <div id="serversView">
-          <div class="page-header">
-            <h1 class="page-title">Your Servers</h1>
-            <p class="page-subtitle">Select a server to configure</p>
-          </div>
-          <div id="serversList" class="grid grid-2"></div>
-        </div>
-
-        <div id="serverConfigView" class="hidden">
-          <div class="page-header">
-            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
-              <button id="backToServers" class="btn btn-secondary btn-sm">Back</button>
-              <h1 id="serverConfigTitle" class="page-title"></h1>
-            </div>
-            <div id="setupAlert" class="alert alert-warning hidden">
-              <span>Setup Required: Add at least 5 characters to complete server setup</span>
-            </div>
-          </div>
-
-          <div class="tab-nav">
-            <button class="tab-btn active" data-tab="features">Features</button>
-            <button class="tab-btn" data-tab="characters">Characters</button>
-            <button class="tab-btn" data-tab="collectibles">Collectibles</button>
-            <button class="tab-btn" data-tab="channels">Channels</button>
-          </div>
-
-          <div id="featuresTab" class="tab-content">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">Feature Settings</h3>
-              </div>
-              <div id="featuresList"></div>
-            </div>
-          </div>
-
-          <div id="charactersTab" class="tab-content hidden">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">Server Characters</h3>
-                <div id="characterCounter" class="counter-label"></div>
-              </div>
-              <div class="progress-bar" style="margin-bottom: 24px;">
-                <div id="characterProgress" class="progress-fill" style="width: 0%;"></div>
-              </div>
-              <div class="search-box">
-                <span class="search-icon">O</span>
-                <input type="text" id="characterSearch" class="search-input" placeholder="Search characters...">
-              </div>
-              <div id="characterGrid" class="item-grid"></div>
-            </div>
-          </div>
-
-          <div id="collectiblesTab" class="tab-content hidden">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">Server Collectibles</h3>
-                <div id="collectibleCounter" class="counter-label"></div>
-              </div>
-              <div class="search-box">
-                <span class="search-icon">O</span>
-                <input type="text" id="collectibleSearch" class="search-input" placeholder="Search collectibles...">
-              </div>
-              <div id="collectibleGrid" class="item-grid"></div>
-            </div>
-          </div>
-
-          <div id="channelsTab" class="tab-content hidden">
-            <div class="card">
-              <div class="card-header">
-                <h3 class="card-title">Channel Settings</h3>
-              </div>
-              <div id="channelSettings"></div>
-            </div>
-          </div>
-        </div>
-
-        <div id="charactersView" class="hidden">
-          <div class="page-header">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <div>
-                <h1 class="page-title">Global Characters</h1>
-                <p class="page-subtitle">Manage all available characters</p>
-              </div>
-              <button class="btn btn-primary" onclick="showCharacterSubmitForm()">Submit Character</button>
-            </div>
-          </div>
-          <div class="search-box">
-            <span class="search-icon">O</span>
-            <input type="text" id="globalCharacterSearch" class="search-input" placeholder="Search characters...">
-          </div>
-          <div id="globalCharacterGrid" class="item-grid"></div>
-        </div>
-
-        <div id="collectiblesView" class="hidden">
-          <div class="page-header">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <div>
-                <h1 class="page-title">Global Collectibles</h1>
-                <p class="page-subtitle">Manage all available collectibles</p>
-              </div>
-              <button class="btn btn-primary" onclick="showCollectibleSubmitForm()">Submit Collectible</button>
-            </div>
-          </div>
-          <div class="search-box">
-            <span class="search-icon">O</span>
-            <input type="text" id="globalCollectibleSearch" class="search-input" placeholder="Search collectibles...">
-          </div>
-          <div id="globalCollectibleGrid" class="item-grid"></div>
-        </div>
-
-        <div id="submissionsView" class="hidden">
-          <div class="page-header">
-            <h1 class="page-title">Pending Submissions</h1>
-            <p class="page-subtitle">Review and approve user submissions</p>
-          </div>
-          <div class="tab-nav">
-            <button class="tab-btn active" data-submissions-tab="characters">Characters</button>
-            <button class="tab-btn" data-submissions-tab="collectibles">Collectibles</button>
-          </div>
-          <div id="submissionsList"></div>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <div id="modal" class="modal-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 id="modalTitle"></h2>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-      </div>
-      <div id="modalContent"></div>
+  <div id="loginView" class="login-container hidden">
+    <div class="login-card">
+      <h1 class="login-title">Welcome to ZooBot</h1>
+      <p class="login-description">Sign in with Discord to manage your servers</p>
+      <a href="/admin/login" class="btn discord-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+        </svg>
+        Login with Discord
+      </a>
+      <div id="loginError" class="alert alert-error hidden" style="margin-top: 24px;"></div>
     </div>
   </div>
 
+  <div id="loadingView" class="loading">
+    <div class="spinner"></div>
+  </div>
+
+  <div id="dashboardView" class="layout hidden">
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Dashboard</div>
+        <div class="nav-item active" data-view="servers">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+          Your Servers
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Global Directory</div>
+        <div class="nav-item" data-view="characters">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Characters
+        </div>
+        <div class="nav-item" data-view="collectibles">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+          </svg>
+          Collectibles
+        </div>
+      </div>
+      <div class="sidebar-section" id="adminNavSection" style="display: none;">
+        <div class="sidebar-title">Admin</div>
+        <div class="nav-item" data-view="submissions">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="12" y1="18" x2="12" y2="12"></line>
+            <line x1="9" y1="15" x2="15" y2="15"></line>
+          </svg>
+          Submissions
+        </div>
+      </div>
+    </nav>
+
+    <main class="content">
+      <!-- Servers View -->
+      <div id="serversView">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Your Servers</h1>
+            <p class="page-subtitle">Select a server to configure ZooBot</p>
+          </div>
+        </div>
+        <div id="serversList" class="grid grid-2"></div>
+      </div>
+
+      <!-- Server Config View -->
+      <div id="serverConfigView" class="hidden">
+        <div class="back-btn" onclick="showView('servers')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+          Back to Servers
+        </div>
+        <div id="serverConfigContent"></div>
+      </div>
+
+      <!-- Characters Directory View -->
+      <div id="charactersView" class="hidden">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Character Directory</h1>
+            <p class="page-subtitle">Browse all available characters</p>
+          </div>
+          <button id="addCharacterBtn" class="btn btn-primary hidden" onclick="openCharacterModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add Character
+          </button>
+        </div>
+        <div class="search-box">
+          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" class="search-input" id="characterSearch" placeholder="Search characters..." oninput="filterCharacters()">
+        </div>
+        <div class="filter-bar">
+          <select class="filter-select" id="characterRarityFilter" onchange="filterCharacters()">
+            <option value="">All Rarities</option>
+            <option value="common">Common</option>
+            <option value="uncommon">Uncommon</option>
+            <option value="rare">Rare</option>
+            <option value="ultra rare">Ultra Rare</option>
+            <option value="epic">Epic</option>
+            <option value="legendary">Legendary</option>
+          </select>
+          <select class="filter-select" id="characterObtainableFilter" onchange="filterCharacters()">
+            <option value="">All Types</option>
+            <option value="drop">Drop</option>
+            <option value="crate">Crate</option>
+            <option value="event">Event</option>
+            <option value="starter">Starter</option>
+            <option value="exclusive">Exclusive</option>
+          </select>
+        </div>
+        <div id="charactersList" class="item-grid"></div>
+      </div>
+
+      <!-- Collectibles Directory View -->
+      <div id="collectiblesView" class="hidden">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Collectibles Directory</h1>
+            <p class="page-subtitle">Browse all available collectibles</p>
+          </div>
+          <button id="addCollectibleBtn" class="btn btn-primary hidden" onclick="openCollectibleModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add Collectible
+          </button>
+        </div>
+        <div class="search-box">
+          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" class="search-input" id="collectibleSearch" placeholder="Search collectibles..." oninput="filterCollectibles()">
+        </div>
+        <div class="filter-bar">
+          <select class="filter-select" id="collectibleRarityFilter" onchange="filterCollectibles()">
+            <option value="">All Rarities</option>
+            <option value="common">Common</option>
+            <option value="uncommon">Uncommon</option>
+            <option value="rare">Rare</option>
+            <option value="ultra rare">Ultra Rare</option>
+            <option value="epic">Epic</option>
+            <option value="legendary">Legendary</option>
+          </select>
+        </div>
+        <div id="collectiblesList" class="item-grid"></div>
+      </div>
+
+      <!-- Submissions View -->
+      <div id="submissionsView" class="hidden">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title">Pending Submissions</h1>
+            <p class="page-subtitle">Review and approve community submissions</p>
+          </div>
+        </div>
+        <div class="tab-nav">
+          <button class="tab-btn active" data-tab="char-submissions">Characters</button>
+          <button class="tab-btn" data-tab="collectible-submissions">Collectibles</button>
+        </div>
+        <div id="submissionsContent"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Character Modal -->
+  <div id="characterModal" class="modal-overlay">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2 class="modal-title" id="characterModalTitle">Add Character</h2>
+        <button class="modal-close" onclick="closeModal('characterModal')">&times;</button>
+      </div>
+      <form id="characterForm" onsubmit="saveCharacter(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Name *</label>
+            <input type="text" class="form-input" id="charName" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Emoji</label>
+            <input type="text" class="form-input" id="charEmoji" placeholder="🦁">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" id="charDescription" placeholder="Character description..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Image URL</label>
+          <input type="url" class="form-input" id="charImageUrl" placeholder="https://...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Rarity *</label>
+            <select class="form-select" id="charRarity" required>
+              <option value="common">Common</option>
+              <option value="uncommon">Uncommon</option>
+              <option value="rare">Rare</option>
+              <option value="ultra rare">Ultra Rare</option>
+              <option value="epic">Epic</option>
+              <option value="legendary">Legendary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Obtainable *</label>
+            <select class="form-select" id="charObtainable" required>
+              <option value="drop">Drop</option>
+              <option value="crate">Crate</option>
+              <option value="event">Event</option>
+              <option value="starter">Starter</option>
+              <option value="exclusive">Exclusive</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ability Name</label>
+          <input type="text" class="form-input" id="charAbilityName" placeholder="Special ability name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ability Description</label>
+          <textarea class="form-textarea" id="charAbilityDesc" placeholder="What does this ability do?"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">HP</label>
+            <input type="number" class="form-input" id="charHP" value="100" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Attack</label>
+            <input type="number" class="form-input" id="charAttack" value="10" min="1">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Defense</label>
+            <input type="number" class="form-input" id="charDefense" value="10" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Speed</label>
+            <input type="number" class="form-input" id="charSpeed" value="10" min="1">
+          </div>
+        </div>
+        <input type="hidden" id="charEditId">
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('characterModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Character</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Collectible Modal -->
+  <div id="collectibleModal" class="modal-overlay">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2 class="modal-title" id="collectibleModalTitle">Add Collectible</h2>
+        <button class="modal-close" onclick="closeModal('collectibleModal')">&times;</button>
+      </div>
+      <form id="collectibleForm" onsubmit="saveCollectible(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Name *</label>
+            <input type="text" class="form-input" id="collectName" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Emoji</label>
+            <input type="text" class="form-input" id="collectEmoji" placeholder="💎">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-textarea" id="collectDescription" placeholder="Collectible description..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Image URL</label>
+          <input type="url" class="form-input" id="collectImageUrl" placeholder="https://...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Rarity *</label>
+            <select class="form-select" id="collectRarity" required>
+              <option value="common">Common</option>
+              <option value="uncommon">Uncommon</option>
+              <option value="rare">Rare</option>
+              <option value="ultra rare">Ultra Rare</option>
+              <option value="epic">Epic</option>
+              <option value="legendary">Legendary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Base Value</label>
+            <input type="number" class="form-input" id="collectValue" value="100" min="1">
+          </div>
+        </div>
+        <div class="card" style="margin-top: 16px;">
+          <h4 style="margin-bottom: 16px;">Obtainability Settings</h4>
+          <div class="toggle-container">
+            <div class="toggle-info">
+              <h4>Droppable</h4>
+              <p>Can spawn in random drops</p>
+            </div>
+            <div class="toggle" id="collectDroppable" onclick="toggleSwitch(this)"></div>
+          </div>
+          <div class="toggle-container">
+            <div class="toggle-info">
+              <h4>Crate Obtainable</h4>
+              <p>Can be found in crates</p>
+            </div>
+            <div class="toggle" id="collectCrateObtainable" onclick="toggleSwitch(this)"></div>
+          </div>
+          <div class="toggle-container">
+            <div class="toggle-info">
+              <h4>Tradable</h4>
+              <p>Players can trade this item</p>
+            </div>
+            <div class="toggle active" id="collectTradable" onclick="toggleSwitch(this)"></div>
+          </div>
+          <div class="toggle-container">
+            <div class="toggle-info">
+              <h4>Sellable</h4>
+              <p>Players can sell this item</p>
+            </div>
+            <div class="toggle active" id="collectSellable" onclick="toggleSwitch(this)"></div>
+          </div>
+        </div>
+        <input type="hidden" id="collectEditId">
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('collectibleModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Collectible</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Server Item Selection Modal -->
+  <div id="itemSelectionModal" class="modal-overlay">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2 class="modal-title" id="itemSelectionTitle">Select Items</h2>
+        <button class="modal-close" onclick="closeModal('itemSelectionModal')">&times;</button>
+      </div>
+      <div class="search-box" style="margin-bottom: 16px;">
+        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" class="search-input" id="itemSelectionSearch" placeholder="Search..." oninput="filterSelectionItems()">
+      </div>
+      <div class="counter">
+        <span class="counter-value" id="selectedCount">0</span>
+        <span class="counter-label">items selected</span>
+      </div>
+      <div id="itemSelectionGrid" class="item-grid" style="max-height: 400px; overflow-y: auto;"></div>
+      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('itemSelectionModal')">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="confirmItemSelection()">Confirm Selection</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" style="position: fixed; bottom: 24px; right: 24px; z-index: 2000;"></div>
+
   <script>
-    const API_BASE = '/admin/api';
     let currentUser = null;
-    let currentServer = null;
     let allCharacters = [];
     let allCollectibles = [];
-    let serverCharacters = [];
-    let serverCollectibles = [];
-
-    const FEATURES = [
-      { id: 'drops', name: 'Character Drops', description: 'Enable random character drops in chat' },
-      { id: 'battles', name: 'Battles', description: 'Allow users to battle their characters' },
-      { id: 'trading', name: 'Trading', description: 'Enable character trading between users' },
-      { id: 'quests', name: 'Quests', description: 'Daily and weekly quest system' },
-      { id: 'crates', name: 'Crates', description: 'Enable crate opening and rewards' },
-      { id: 'shop', name: 'Shop', description: 'In-game shop for purchasing items' },
-      { id: 'leaderboards', name: 'Leaderboards', description: 'Show competitive rankings' },
-      { id: 'events', name: 'Events', description: 'Special limited-time events' }
-    ];
-
-    function initTheme() {
-      const savedTheme = localStorage.getItem('zoobot-theme') || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-      updateThemeIcons(savedTheme);
-    }
-
-    function toggleTheme() {
-      const current = document.documentElement.getAttribute('data-theme') || 'light';
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('zoobot-theme', next);
-      updateThemeIcons(next);
-    }
-
-    function updateThemeIcons(theme) {
-      const sunIcon = document.getElementById('sunIcon');
-      const moonIcon = document.getElementById('moonIcon');
-      if (sunIcon && moonIcon) {
-        if (theme === 'dark') {
-          sunIcon.style.display = 'none';
-          moonIcon.style.display = 'block';
-        } else {
-          sunIcon.style.display = 'block';
-          moonIcon.style.display = 'none';
-        }
-      }
-    }
-
-    initTheme();
+    let currentServer = null;
+    let currentServerConfig = null;
+    let itemSelectionType = null;
+    let selectedItems = new Set();
 
     async function init() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+
       const urlParams = new URLSearchParams(window.location.search);
       const error = urlParams.get('error');
-      
       if (error) {
-        showLoginError(getErrorMessage(error));
-        showView('login');
-        return;
+        document.getElementById('loginError').textContent = getErrorMessage(error);
+        document.getElementById('loginError').classList.remove('hidden');
+        history.replaceState({}, '', '/admin');
       }
 
       try {
-        const response = await fetch(`${API_BASE}/auth/me`);
+        const response = await fetch('/admin/api/auth/me');
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
@@ -1064,677 +1205,1039 @@
             return;
           }
         }
-      } catch (err) {
-        console.error('Auth check failed:', err);
+        showLogin();
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        showLogin();
       }
-
-      showView('login');
     }
 
     function getErrorMessage(code) {
-      const messages = {
-        'no_code': 'Authorization failed. Please try again.',
+      const errors = {
+        'no_code': 'Authorization code missing',
         'state_mismatch': 'Security check failed. Please try again.',
-        'missing_credentials': 'Server configuration error.',
-        'token_exchange_failed': 'Failed to authenticate with Discord.',
-        'fetch_user_failed': 'Failed to fetch user data.',
-        'session_save_failed': 'Failed to create session.',
-        'access_denied': 'Access denied by Discord.'
+        'missing_credentials': 'Server configuration error',
+        'token_exchange_failed': 'Failed to authenticate with Discord',
+        'fetch_user_failed': 'Failed to get user info from Discord',
+        'session_save_failed': 'Failed to save session',
+        'access_denied': 'Access was denied'
       };
-      return messages[code] || 'An error occurred. Please try again.';
+      return errors[code] || 'An error occurred during login';
     }
 
-    function showLoginError(message) {
-      const el = document.getElementById('loginError');
-      el.textContent = message;
-      el.classList.remove('hidden');
-    }
-
-    function showView(view) {
+    function showLogin() {
       document.getElementById('loadingView').classList.add('hidden');
-      document.getElementById('loginView').classList.add('hidden');
       document.getElementById('dashboardView').classList.add('hidden');
-
-      if (view === 'login') {
-        document.getElementById('loginView').classList.remove('hidden');
-      } else if (view === 'loading') {
-        document.getElementById('loadingView').classList.remove('hidden');
-      } else if (view === 'dashboard') {
-        document.getElementById('dashboardView').classList.remove('hidden');
-      }
+      document.getElementById('loginView').classList.remove('hidden');
+      document.getElementById('header').classList.add('hidden');
     }
 
     function showDashboard() {
+      document.getElementById('loadingView').classList.add('hidden');
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('dashboardView').classList.remove('hidden');
+      document.getElementById('header').classList.remove('hidden');
+
+      document.getElementById('userSection').classList.remove('hidden');
       document.getElementById('userAvatar').src = currentUser.avatar;
       document.getElementById('userName').textContent = currentUser.username;
-      document.getElementById('userSection').classList.remove('hidden');
 
       if (currentUser.isSuperAdmin || currentUser.isGlobalAdmin) {
         document.getElementById('userBadge').classList.remove('hidden');
-        document.getElementById('navCharacters').classList.remove('hidden');
-        document.getElementById('navCollectibles').classList.remove('hidden');
-        document.getElementById('navSubmissions').classList.remove('hidden');
+        document.getElementById('adminNavSection').style.display = 'block';
+        document.getElementById('addCharacterBtn').classList.remove('hidden');
+        document.getElementById('addCollectibleBtn').classList.remove('hidden');
       }
 
-      showView('dashboard');
-      
-      const urlParams = new URLSearchParams(window.location.search);
-      const serverParam = urlParams.get('server');
-      if (serverParam) {
-        selectServer(serverParam);
-      } else {
-        loadServers();
+      loadServers();
+      loadCharacters();
+      loadCollectibles();
+
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+          document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+          item.classList.add('active');
+          showView(item.dataset.view);
+        });
+      });
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          loadSubmissions(btn.dataset.tab);
+        });
+      });
+    }
+
+    function showView(viewName) {
+      const views = ['servers', 'serverConfig', 'characters', 'collectibles', 'submissions'];
+      views.forEach(v => {
+        const el = document.getElementById(v + 'View');
+        if (el) el.classList.add('hidden');
+      });
+
+      const targetView = document.getElementById(viewName + 'View');
+      if (targetView) targetView.classList.remove('hidden');
+
+      if (viewName === 'submissions') {
+        loadSubmissions('char-submissions');
       }
     }
 
     async function loadServers() {
-      try {
-        const response = await fetch(`${API_BASE}/servers`);
-        const data = await response.json();
-
-        if (data.success) {
-          renderServers(data.servers);
-        }
-      } catch (err) {
-        console.error('Failed to load servers:', err);
-      }
-    }
-
-    function renderServers(servers) {
       const container = document.getElementById('serversList');
+      container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
-      if (servers.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state" style="grid-column: 1/-1;">
-            <div class="empty-state-icon">O</div>
-            <h3>No Servers Found</h3>
-            <p>You need to own a server with ZooBot installed to manage it here.</p>
-          </div>
-        `;
-        return;
-      }
+      try {
+        const response = await fetch('/admin/api/servers');
+        const data = await response.json();
 
-      container.innerHTML = servers.map(server => `
-        <div class="server-card ${!server.setupComplete ? 'setup-pending' : ''}" onclick="selectServer('${server.id}')">
-          <div class="server-icon">
-            ${server.icon ? `<img src="${server.icon}" alt="${server.name}">` : server.name.charAt(0)}
-          </div>
-          <div class="server-info">
-            <div class="server-name">${server.name}</div>
-            <div class="server-stats">
-              <span>
-                <span class="status-indicator ${server.setupComplete ? 'status-ready' : 'status-setup'}"></span>
-                ${server.setupComplete ? 'Ready' : 'Setup Required'}
-              </span>
-              <span>${server.characterCount} / ${server.minimumRequired} chars</span>
+        if (!data.success || !data.servers.length) {
+          container.innerHTML = `
+            <div class="empty-state" style="grid-column: 1/-1;">
+              <div class="empty-state-icon">🏠</div>
+              <h3>No Servers Found</h3>
+              <p>You need to own a Discord server with ZooBot installed to manage it here.</p>
             </div>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    async function selectServer(serverId) {
-      currentServer = serverId;
-      document.getElementById('serversView').classList.add('hidden');
-      document.getElementById('serverConfigView').classList.remove('hidden');
-
-      try {
-        const [serverRes, charsRes, collectsRes] = await Promise.all([
-          fetch(`${API_BASE}/servers/${serverId}`),
-          fetch(`${API_BASE}/characters`),
-          fetch(`${API_BASE}/collectibles`)
-        ]);
-
-        const serverData = await serverRes.json();
-        const charsData = await charsRes.json();
-        const collectsData = await collectsRes.json();
-
-        if (serverData.success) {
-          document.getElementById('serverConfigTitle').textContent = serverData.server.name;
-          
-          if (!serverData.server.setupComplete) {
-            document.getElementById('setupAlert').classList.remove('hidden');
-          } else {
-            document.getElementById('setupAlert').classList.add('hidden');
-          }
-
-          serverCharacters = serverData.server.characters || [];
-          serverCollectibles = serverData.server.collectibles || [];
-          
-          renderFeatures(serverData.server.config.features || {});
+          `;
+          return;
         }
 
-        if (charsData.success) {
-          allCharacters = charsData.characters;
-          renderCharacterGrid();
-        }
-
-        if (collectsData.success) {
-          allCollectibles = collectsData.collectibles;
-          renderCollectibleGrid();
-        }
-
-      } catch (err) {
-        console.error('Failed to load server config:', err);
-      }
-    }
-
-    function renderFeatures(features) {
-      const container = document.getElementById('featuresList');
-      container.innerHTML = FEATURES.map(feature => `
-        <div class="feature-row">
-          <div class="feature-info">
-            <h4>${feature.name}</h4>
-            <p>${feature.description}</p>
-          </div>
-          <div class="toggle ${features[feature.id] ? 'active' : ''}" 
-               onclick="toggleFeature('${feature.id}', this)"></div>
-        </div>
-      `).join('');
-    }
-
-    async function toggleFeature(featureId, element) {
-      const isActive = element.classList.contains('active');
-      element.classList.toggle('active');
-
-      try {
-        const response = await fetch(`${API_BASE}/servers/${currentServer}/features`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ features: { [featureId]: !isActive } })
-        });
-
-        if (!response.ok) {
-          element.classList.toggle('active');
-        }
-      } catch (err) {
-        console.error('Failed to update feature:', err);
-        element.classList.toggle('active');
-      }
-    }
-
-    function renderCharacterGrid() {
-      const container = document.getElementById('characterGrid');
-      const searchTerm = document.getElementById('characterSearch')?.value?.toLowerCase() || '';
-      
-      const filtered = allCharacters.filter(c => 
-        c.name.toLowerCase().includes(searchTerm)
-      );
-
-      const selectedIds = serverCharacters.map(c => c.id || c._id);
-      
-      document.getElementById('characterCounter').textContent = 
-        `${selectedIds.length} selected (min: 5)`;
-      
-      const progress = Math.min((selectedIds.length / 5) * 100, 100);
-      document.getElementById('characterProgress').style.width = `${progress}%`;
-
-      container.innerHTML = filtered.map(char => `
-        <div class="item-card ${selectedIds.includes(char.id) ? 'selected' : ''}" 
-             onclick="toggleCharacter('${char.id}')">
-          <div class="item-emoji">${char.emoji || 'O'}</div>
-          <div class="item-name">${char.name}</div>
-          <div class="item-rarity rarity-${char.rarity || 'common'}">${char.rarity || 'common'}</div>
-        </div>
-      `).join('');
-    }
-
-    async function toggleCharacter(charId) {
-      const selectedIds = serverCharacters.map(c => c.id || c._id);
-      const isSelected = selectedIds.includes(charId);
-
-      try {
-        const method = isSelected ? 'DELETE' : 'POST';
-        const response = await fetch(`${API_BASE}/servers/${currentServer}/characters/${charId}`, {
-          method
-        });
-
-        if (response.ok) {
-          if (isSelected) {
-            serverCharacters = serverCharacters.filter(c => (c.id || c._id) !== charId);
-          } else {
-            const char = allCharacters.find(c => c.id === charId);
-            if (char) serverCharacters.push(char);
-          }
-          renderCharacterGrid();
-        }
-      } catch (err) {
-        console.error('Failed to toggle character:', err);
-      }
-    }
-
-    function renderCollectibleGrid() {
-      const container = document.getElementById('collectibleGrid');
-      const searchTerm = document.getElementById('collectibleSearch')?.value?.toLowerCase() || '';
-      
-      const filtered = allCollectibles.filter(c => 
-        c.name.toLowerCase().includes(searchTerm)
-      );
-
-      const selectedIds = serverCollectibles.map(c => c.id || c._id);
-      
-      document.getElementById('collectibleCounter').textContent = 
-        `${selectedIds.length} selected`;
-
-      container.innerHTML = filtered.map(item => `
-        <div class="item-card ${selectedIds.includes(item.id) ? 'selected' : ''}" 
-             onclick="toggleCollectible('${item.id}')">
-          <div class="item-emoji">${item.emoji || 'O'}</div>
-          <div class="item-name">${item.name}</div>
-          <div class="item-rarity rarity-${item.rarity || 'common'}">${item.rarity || 'common'}</div>
-        </div>
-      `).join('');
-    }
-
-    async function toggleCollectible(itemId) {
-      const selectedIds = serverCollectibles.map(c => c.id || c._id);
-      const isSelected = selectedIds.includes(itemId);
-
-      try {
-        const method = isSelected ? 'DELETE' : 'POST';
-        const response = await fetch(`${API_BASE}/servers/${currentServer}/collectibles/${itemId}`, {
-          method
-        });
-
-        if (response.ok) {
-          if (isSelected) {
-            serverCollectibles = serverCollectibles.filter(c => (c.id || c._id) !== itemId);
-          } else {
-            const item = allCollectibles.find(c => c.id === itemId);
-            if (item) serverCollectibles.push(item);
-          }
-          renderCollectibleGrid();
-        }
-      } catch (err) {
-        console.error('Failed to toggle collectible:', err);
-      }
-    }
-
-    function openModal(title, content) {
-      document.getElementById('modalTitle').textContent = title;
-      document.getElementById('modalContent').innerHTML = content;
-      document.getElementById('modal').classList.add('active');
-    }
-
-    function closeModal() {
-      document.getElementById('modal').classList.remove('active');
-    }
-
-    document.getElementById('backToServers').addEventListener('click', () => {
-      currentServer = null;
-      document.getElementById('serverConfigView').classList.add('hidden');
-      document.getElementById('serversView').classList.remove('hidden');
-      loadServers();
-    });
-
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', () => {
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-
-        const view = item.dataset.view;
-        document.getElementById('serversView').classList.add('hidden');
-        document.getElementById('serverConfigView').classList.add('hidden');
-        document.getElementById('charactersView').classList.add('hidden');
-        document.getElementById('collectiblesView').classList.add('hidden');
-        document.getElementById('submissionsView').classList.add('hidden');
-
-        if (view === 'servers') {
-          currentServer = null;
-          document.getElementById('serversView').classList.remove('hidden');
-          loadServers();
-        } else if (view === 'characters') {
-          document.getElementById('charactersView').classList.remove('hidden');
-          loadGlobalCharacters();
-        } else if (view === 'collectibles') {
-          document.getElementById('collectiblesView').classList.remove('hidden');
-          loadGlobalCollectibles();
-        } else if (view === 'submissions') {
-          document.getElementById('submissionsView').classList.remove('hidden');
-          loadSubmissions();
-        }
-      });
-    });
-
-    // Server config tabs - scoped to serverConfigView
-    document.querySelectorAll('#serverConfigView .tab-nav .tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tabName = btn.dataset.tab;
-        if (!tabName) return;
-        
-        const parent = btn.closest('.tab-nav');
-        parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        const serverConfigView = document.getElementById('serverConfigView');
-        serverConfigView.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-        const targetTab = document.getElementById(`${tabName}Tab`);
-        if (targetTab) targetTab.classList.remove('hidden');
-      });
-    });
-
-    // Submissions tabs - scoped to submissionsView
-    document.querySelectorAll('#submissionsView .tab-nav .tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const submissionsTab = btn.dataset.submissionsTab;
-        if (!submissionsTab) return;
-        
-        const parent = btn.closest('.tab-nav');
-        parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        loadSubmissions(submissionsTab);
-      });
-    });
-
-    document.getElementById('characterSearch')?.addEventListener('input', renderCharacterGrid);
-    document.getElementById('collectibleSearch')?.addEventListener('input', renderCollectibleGrid);
-
-    async function loadGlobalCharacters() {
-      try {
-        const response = await fetch(`${API_BASE}/characters`);
-        const data = await response.json();
-        if (data.success) {
-          allCharacters = data.characters;
-          renderGlobalCharacters();
-        }
-      } catch (err) {
-        console.error('Failed to load characters:', err);
-      }
-    }
-
-    function renderGlobalCharacters() {
-      const container = document.getElementById('globalCharacterGrid');
-      const searchTerm = document.getElementById('globalCharacterSearch')?.value?.toLowerCase() || '';
-      
-      const filtered = allCharacters.filter(c => 
-        c.name.toLowerCase().includes(searchTerm)
-      );
-
-      container.innerHTML = filtered.map(char => `
-        <div class="item-card">
-          <div class="item-emoji">${char.emoji || 'O'}</div>
-          <div class="item-name">${char.name}</div>
-          <div class="item-rarity rarity-${char.rarity || 'common'}">${char.rarity || 'common'}</div>
-        </div>
-      `).join('');
-    }
-
-    async function loadGlobalCollectibles() {
-      try {
-        const response = await fetch(`${API_BASE}/collectibles`);
-        const data = await response.json();
-        if (data.success) {
-          allCollectibles = data.collectibles;
-          renderGlobalCollectibles();
-        }
-      } catch (err) {
-        console.error('Failed to load collectibles:', err);
-      }
-    }
-
-    function renderGlobalCollectibles() {
-      const container = document.getElementById('globalCollectibleGrid');
-      const searchTerm = document.getElementById('globalCollectibleSearch')?.value?.toLowerCase() || '';
-      
-      const filtered = allCollectibles.filter(c => 
-        c.name.toLowerCase().includes(searchTerm)
-      );
-
-      container.innerHTML = filtered.map(item => `
-        <div class="item-card">
-          <div class="item-emoji">${item.emoji || 'O'}</div>
-          <div class="item-name">${item.name}</div>
-          <div class="item-rarity rarity-${item.rarity || 'common'}">${item.rarity || 'common'}</div>
-        </div>
-      `).join('');
-    }
-
-    async function loadSubmissions(type = 'all') {
-      try {
-        const [charsRes, collectsRes] = await Promise.all([
-          fetch(`${API_BASE}/characters/submissions/list?status=pending`),
-          fetch(`${API_BASE}/collectibles/submissions/list?status=pending`)
-        ]);
-
-        const charsData = await charsRes.json();
-        const collectsData = await collectsRes.json();
-
-        let characters = charsData.submissions || [];
-        let collectibles = collectsData.submissions || [];
-        
-        if (type === 'characters') {
-          renderSubmissions(characters, []);
-        } else if (type === 'collectibles') {
-          renderSubmissions([], collectibles);
-        } else {
-          renderSubmissions(characters, collectibles);
-        }
-      } catch (err) {
-        console.error('Failed to load submissions:', err);
-      }
-    }
-
-    function renderSubmissions(characters, collectibles) {
-      const container = document.getElementById('submissionsList');
-      const allSubmissions = [
-        ...characters.map(s => ({ ...s, type: 'character' })),
-        ...collectibles.map(s => ({ ...s, type: 'collectible' }))
-      ];
-
-      if (allSubmissions.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">O</div>
-            <h3>No Pending Submissions</h3>
-            <p>All submissions have been reviewed.</p>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = allSubmissions.map(sub => `
-        <div class="card" style="margin-bottom: 16px;">
-          <div class="card-header">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-size: 24px;">${sub.emoji || 'O'}</span>
-              <div>
-                <h3 class="card-title">${sub.name}</h3>
-                <span class="badge" style="background: var(--bg-tertiary); color: var(--text-secondary);">
-                  ${sub.type}
+        container.innerHTML = data.servers.map(server => `
+          <div class="server-card ${!server.botInstalled ? 'not-installed' : server.setupComplete ? '' : 'setup-pending'}" 
+               onclick="${server.botInstalled ? `openServerConfig('${server.id}')` : 'showBotInvite()'}">
+            <div class="server-icon">
+              ${server.icon ? `<img src="${server.icon}" alt="${server.name}">` : server.name.charAt(0).toUpperCase()}
+            </div>
+            <div class="server-info">
+              <div class="server-name">${escapeHtml(server.name)}</div>
+              <div class="server-stats">
+                <span>
+                  <span class="status-indicator ${!server.botInstalled ? 'status-not-installed' : server.setupComplete ? 'status-ready' : 'status-setup'}"></span>
+                  ${!server.botInstalled ? 'Bot Not Installed' : server.setupComplete ? 'Ready' : 'Setup Required'}
                 </span>
+                ${server.botInstalled ? `<span>${server.characterCount} characters</span>` : ''}
               </div>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-success btn-sm" onclick="approveSubmission('${sub.id}', '${sub.type}')">
-                Approve
-              </button>
-              <button class="btn btn-danger btn-sm" onclick="rejectSubmission('${sub.id}', '${sub.type}')">
-                Reject
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load servers:', error);
+        container.innerHTML = '<div class="alert alert-error">Failed to load servers</div>';
+      }
+    }
+
+    function showBotInvite() {
+      showToast('Please add ZooBot to your server first!', 'warning');
+    }
+
+    async function openServerConfig(serverId) {
+      currentServer = serverId;
+      showView('serverConfig');
+
+      const container = document.getElementById('serverConfigContent');
+      container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      try {
+        const response = await fetch(`/admin/api/servers/${serverId}`);
+        const data = await response.json();
+
+        if (!data.success) {
+          container.innerHTML = '<div class="alert alert-error">Failed to load server configuration</div>';
+          return;
+        }
+
+        currentServerConfig = data.server;
+        renderServerConfig(data.server);
+      } catch (error) {
+        console.error('Failed to load server config:', error);
+        container.innerHTML = '<div class="alert alert-error">Failed to load server configuration</div>';
+      }
+    }
+
+    function renderServerConfig(server) {
+      const container = document.getElementById('serverConfigContent');
+      const isSetupComplete = server.setupComplete;
+
+      container.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+          <div class="server-icon" style="width: 64px; height: 64px;">
+            ${server.icon ? `<img src="${server.icon}" alt="${server.name}">` : server.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h1 class="page-title">${escapeHtml(server.name)}</h1>
+            <p class="page-subtitle">
+              <span class="status-indicator ${isSetupComplete ? 'status-ready' : 'status-setup'}"></span>
+              ${isSetupComplete ? 'Setup Complete - Bot Active' : 'Setup Required'}
+            </p>
+          </div>
+        </div>
+
+        ${!isSetupComplete ? `
+          <div class="alert alert-warning">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+              <line x1="12" y1="9" x2="12" y2="13"></line>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>Complete setup to activate ZooBot in this server. You need at least 5 characters.</span>
+          </div>
+        ` : ''}
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">${server.characterCount}</div>
+            <div class="stat-label">Characters</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${server.collectibleCount}</div>
+            <div class="stat-label">Collectibles</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${server.minimumRequired}</div>
+            <div class="stat-label">Min Required</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${isSetupComplete ? 'Active' : 'Inactive'}</div>
+            <div class="stat-label">Status</div>
+          </div>
+        </div>
+
+        <div class="tab-nav">
+          <button class="tab-btn active" data-config-tab="content">Content</button>
+          <button class="tab-btn" data-config-tab="channels">Channels</button>
+          <button class="tab-btn" data-config-tab="features">Features</button>
+          <button class="tab-btn" data-config-tab="settings">Settings</button>
+        </div>
+
+        <div id="configTabContent"></div>
+      `;
+
+      document.querySelectorAll('[data-config-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('[data-config-tab]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderConfigTab(btn.dataset.configTab);
+        });
+      });
+
+      renderConfigTab('content');
+    }
+
+    function renderConfigTab(tab) {
+      const container = document.getElementById('configTabContent');
+      const server = currentServerConfig;
+
+      switch (tab) {
+        case 'content':
+          container.innerHTML = `
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Server Characters</h3>
+                <button class="btn btn-primary btn-sm" onclick="openItemSelection('characters')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Add Characters
+                </button>
+              </div>
+              <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                Select which characters can appear in drops and crates for this server.
+              </p>
+              <div class="counter">
+                <span class="counter-value">${server.characters?.length || 0}</span>
+                <span class="counter-label">characters selected (minimum ${server.minimumRequired} required)</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${Math.min(100, ((server.characters?.length || 0) / server.minimumRequired) * 100)}%"></div>
+              </div>
+              <div id="serverCharactersList" class="item-grid" style="margin-top: 16px;">
+                ${renderServerItems(server.characters || [], 'character')}
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Server Collectibles</h3>
+                <button class="btn btn-primary btn-sm" onclick="openItemSelection('collectibles')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Add Collectibles
+                </button>
+              </div>
+              <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                Select which collectibles can be obtained in this server.
+              </p>
+              <div id="serverCollectiblesList" class="item-grid" style="margin-top: 16px;">
+                ${renderServerItems(server.collectibles || [], 'collectible')}
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 24px;">
+              <button class="btn btn-success" onclick="saveServerConfig()" ${(server.characters?.length || 0) < server.minimumRequired ? 'disabled' : ''}>
+                Save & Activate Server
               </button>
             </div>
+          `;
+          break;
+
+        case 'channels':
+          container.innerHTML = `
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Channel Configuration</h3>
+              </div>
+              <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                Configure which channels ZooBot uses for different features.
+              </p>
+              <div class="channel-select-row">
+                <span class="channel-label">Drop Channel</span>
+                <select class="form-select channel-select" id="dropChannel" onchange="updateServerChannel('dropChannelId', this.value)">
+                  <option value="">Select a channel...</option>
+                </select>
+              </div>
+              <div class="channel-select-row">
+                <span class="channel-label">Events Channel</span>
+                <select class="form-select channel-select" id="eventsChannel" onchange="updateServerChannel('eventsChannelId', this.value)">
+                  <option value="">Select a channel...</option>
+                </select>
+              </div>
+              <div class="channel-select-row">
+                <span class="channel-label">Updates Channel</span>
+                <select class="form-select channel-select" id="updatesChannel" onchange="updateServerChannel('updatesChannelId', this.value)">
+                  <option value="">Select a channel...</option>
+                </select>
+              </div>
+            </div>
+          `;
+          loadServerChannels();
+          break;
+
+        case 'features':
+          const features = server.config?.features || {};
+          container.innerHTML = `
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Feature Toggles</h3>
+              </div>
+              ${renderFeatureToggle('dropsEnabled', 'Drops', 'Random character drops in the drop channel', features.dropsEnabled)}
+              ${renderFeatureToggle('eventsEnabled', 'Events', 'Special timed events with bonus rewards', features.eventsEnabled)}
+              ${renderFeatureToggle('giveawaysEnabled', 'Giveaways', 'Automated giveaways for players', features.giveawaysEnabled)}
+              ${renderFeatureToggle('tradingEnabled', 'Trading', 'Allow players to trade characters', features.tradingEnabled)}
+              ${renderFeatureToggle('battlesEnabled', 'Battles', 'Character battle system', features.battlesEnabled)}
+              ${renderFeatureToggle('minigamesEnabled', 'Minigames', 'Fun minigames for coins', features.minigamesEnabled)}
+              ${renderFeatureToggle('dailyRewardsEnabled', 'Daily Rewards', 'Daily login rewards', features.dailyRewardsEnabled)}
+              ${renderFeatureToggle('questsEnabled', 'Quests', 'Daily and weekly quests', features.questsEnabled)}
+              ${renderFeatureToggle('leaderboardsEnabled', 'Leaderboards', 'Server leaderboards', features.leaderboardsEnabled)}
+            </div>
+          `;
+          break;
+
+        case 'settings':
+          const config = server.config || {};
+          container.innerHTML = `
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Notification Settings</h3>
+              </div>
+              ${renderFeatureToggle('pingOnDrops', 'Ping on Drops', 'Mention a role when drops spawn', config.pingSettings?.pingOnDrops)}
+              ${renderFeatureToggle('pingOnEvents', 'Ping on Events', 'Mention a role for events', config.pingSettings?.pingOnEvents)}
+              ${renderFeatureToggle('pingOnGiveaways', 'Ping on Giveaways', 'Mention a role for giveaways', config.pingSettings?.pingOnGiveaways)}
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Moderation</h3>
+              </div>
+              ${renderFeatureToggle('profanityFilter', 'Profanity Filter', 'Filter inappropriate content', config.features?.profanityFilter)}
+              ${renderFeatureToggle('autoModEnabled', 'Auto Moderation', 'Automatic spam detection', config.features?.autoModEnabled)}
+            </div>
+          `;
+          break;
+      }
+    }
+
+    function renderServerItems(items, type) {
+      if (!items.length) {
+        return `<div class="empty-state" style="grid-column: 1/-1; padding: 24px;">
+          <p>No ${type}s selected yet. Click the button above to add some!</p>
+        </div>`;
+      }
+
+      return items.map(item => `
+        <div class="item-card">
+          <div class="item-actions">
+            <button class="item-action-btn delete" onclick="removeServerItem('${type}', '${item.id}')" title="Remove">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
-          <p style="color: var(--text-secondary);">${sub.description || 'No description'}</p>
-          <div style="margin-top: 12px; font-size: 12px; color: var(--text-muted);">
-            Submitted by: ${sub.submittedByUsername || sub.submittedBy}
+          <div class="item-image">
+            ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}">` : (item.emoji || '❓')}
           </div>
+          <div class="item-name">${escapeHtml(item.name)}</div>
+          <span class="item-rarity rarity-${(item.rarity || 'common').replace(' ', '-')}">${item.rarity || 'common'}</span>
         </div>
       `).join('');
     }
 
-    async function approveSubmission(id, type) {
+    function renderFeatureToggle(key, title, description, enabled) {
+      return `
+        <div class="toggle-container">
+          <div class="toggle-info">
+            <h4>${title}</h4>
+            <p>${description}</p>
+          </div>
+          <div class="toggle ${enabled !== false ? 'active' : ''}" data-feature="${key}" onclick="toggleFeature(this, '${key}')"></div>
+        </div>
+      `;
+    }
+
+    async function toggleFeature(element, key) {
+      element.classList.toggle('active');
+      const enabled = element.classList.contains('active');
+
       try {
-        const endpoint = type === 'character' ? 'characters' : 'collectibles';
-        const response = await fetch(`${API_BASE}/${endpoint}/submissions/${id}/approve`, {
+        await fetch(`/admin/api/servers/${currentServer}/features`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [key]: enabled })
+        });
+        showToast('Feature updated', 'success');
+      } catch (error) {
+        element.classList.toggle('active');
+        showToast('Failed to update feature', 'error');
+      }
+    }
+
+    async function loadServerChannels() {
+      try {
+        const response = await fetch(`/admin/api/servers/${currentServer}/channels`);
+        const data = await response.json();
+
+        if (data.success && data.channels) {
+          const channels = data.channels;
+          ['dropChannel', 'eventsChannel', 'updatesChannel'].forEach(selectId => {
+            const select = document.getElementById(selectId);
+            if (select) {
+              channels.forEach(ch => {
+                const option = document.createElement('option');
+                option.value = ch.id;
+                option.textContent = '#' + ch.name;
+                select.appendChild(option);
+              });
+
+              const config = currentServerConfig.config?.channels || {};
+              const channelKey = selectId.replace('Channel', 'ChannelId');
+              if (config[channelKey]) {
+                select.value = config[channelKey];
+              }
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load channels:', error);
+      }
+    }
+
+    async function updateServerChannel(key, value) {
+      try {
+        await fetch(`/admin/api/servers/${currentServer}/channels`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [key]: value || null })
+        });
+        showToast('Channel updated', 'success');
+      } catch (error) {
+        showToast('Failed to update channel', 'error');
+      }
+    }
+
+    function openItemSelection(type) {
+      itemSelectionType = type;
+      selectedItems = new Set();
+
+      const existingItems = type === 'characters' 
+        ? (currentServerConfig.characters || []).map(c => c.id)
+        : (currentServerConfig.collectibles || []).map(c => c.id);
+
+      existingItems.forEach(id => selectedItems.add(id));
+
+      document.getElementById('itemSelectionTitle').textContent = 
+        type === 'characters' ? 'Select Characters' : 'Select Collectibles';
+
+      const items = type === 'characters' ? allCharacters : allCollectibles;
+      renderSelectionGrid(items);
+      updateSelectedCount();
+
+      document.getElementById('itemSelectionModal').classList.add('active');
+    }
+
+    function renderSelectionGrid(items) {
+      const container = document.getElementById('itemSelectionGrid');
+      container.innerHTML = items.map(item => `
+        <div class="item-card ${selectedItems.has(item.id) ? 'selected' : ''}" 
+             onclick="toggleItemSelection('${item.id}', this)">
+          <div class="item-image">
+            ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}">` : (item.emoji || '❓')}
+          </div>
+          <div class="item-name">${escapeHtml(item.name)}</div>
+          <span class="item-rarity rarity-${(item.rarity || 'common').replace(' ', '-')}">${item.rarity || 'common'}</span>
+        </div>
+      `).join('');
+    }
+
+    function toggleItemSelection(itemId, element) {
+      if (selectedItems.has(itemId)) {
+        selectedItems.delete(itemId);
+        element.classList.remove('selected');
+      } else {
+        selectedItems.add(itemId);
+        element.classList.add('selected');
+      }
+      updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+      document.getElementById('selectedCount').textContent = selectedItems.size;
+    }
+
+    function filterSelectionItems() {
+      const search = document.getElementById('itemSelectionSearch').value.toLowerCase();
+      const items = itemSelectionType === 'characters' ? allCharacters : allCollectibles;
+      const filtered = items.filter(item => item.name.toLowerCase().includes(search));
+      renderSelectionGrid(filtered);
+    }
+
+    async function confirmItemSelection() {
+      const endpoint = itemSelectionType === 'characters' ? 'characters' : 'collectibles';
+      const itemIds = Array.from(selectedItems);
+
+      try {
+        const response = await fetch(`/admin/api/servers/${currentServer}/${endpoint}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: itemIds })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast(`${itemSelectionType} updated successfully`, 'success');
+          closeModal('itemSelectionModal');
+          openServerConfig(currentServer);
+        } else {
+          showToast(data.error || 'Failed to update', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to save selection', 'error');
+      }
+    }
+
+    async function removeServerItem(type, itemId) {
+      const endpoint = type === 'character' ? 'characters' : 'collectibles';
+      
+      try {
+        const response = await fetch(`/admin/api/servers/${currentServer}/${endpoint}/${itemId}`, {
+          method: 'DELETE'
+        });
+
+        if (response.ok) {
+          showToast(`${type} removed`, 'success');
+          openServerConfig(currentServer);
+        } else {
+          showToast('Failed to remove item', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to remove item', 'error');
+      }
+    }
+
+    async function saveServerConfig() {
+      try {
+        const response = await fetch(`/admin/api/servers/${currentServer}/complete-setup`, {
           method: 'POST'
         });
 
-        if (response.ok) {
-          loadSubmissions();
+        const data = await response.json();
+        if (data.success) {
+          showToast('Server activated! ZooBot is now working in your server.', 'success');
+          openServerConfig(currentServer);
+        } else {
+          showToast(data.error || 'Failed to complete setup', 'error');
         }
-      } catch (err) {
-        console.error('Failed to approve submission:', err);
+      } catch (error) {
+        showToast('Failed to save configuration', 'error');
       }
     }
 
-    async function rejectSubmission(id, type) {
-      const reason = prompt('Enter rejection reason (optional):');
-      
+    async function loadCharacters() {
       try {
-        const endpoint = type === 'character' ? 'characters' : 'collectibles';
-        const response = await fetch(`${API_BASE}/${endpoint}/submissions/${id}/reject`, {
+        const response = await fetch('/admin/api/characters');
+        const data = await response.json();
+        if (data.success) {
+          allCharacters = data.characters;
+          renderCharacters(allCharacters);
+        }
+      } catch (error) {
+        console.error('Failed to load characters:', error);
+      }
+    }
+
+    function renderCharacters(characters) {
+      const container = document.getElementById('charactersList');
+      if (!characters.length) {
+        container.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;">
+          <div class="empty-state-icon">🎭</div>
+          <h3>No Characters</h3>
+          <p>No characters have been added yet.</p>
+        </div>`;
+        return;
+      }
+
+      container.innerHTML = characters.map(char => `
+        <div class="item-card" onclick="viewCharacter('${char.id}')">
+          ${(currentUser?.isSuperAdmin || currentUser?.isGlobalAdmin) ? `
+          <div class="item-actions">
+            <button class="item-action-btn" onclick="event.stopPropagation(); editCharacter('${char.id}')" title="Edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button class="item-action-btn delete" onclick="event.stopPropagation(); deleteCharacter('${char.id}')" title="Delete">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
+          ` : ''}
+          <div class="item-image">
+            ${char.imageUrl ? `<img src="${char.imageUrl}" alt="${char.name}">` : (char.emoji || '🎭')}
+          </div>
+          <div class="item-name">${escapeHtml(char.name)}</div>
+          <span class="item-rarity rarity-${(char.rarity || 'common').replace(' ', '-')}">${char.rarity || 'common'}</span>
+        </div>
+      `).join('');
+    }
+
+    function filterCharacters() {
+      const search = document.getElementById('characterSearch').value.toLowerCase();
+      const rarity = document.getElementById('characterRarityFilter').value;
+      const obtainable = document.getElementById('characterObtainableFilter').value;
+
+      const filtered = allCharacters.filter(char => {
+        const matchesSearch = char.name.toLowerCase().includes(search);
+        const matchesRarity = !rarity || char.rarity === rarity;
+        const matchesObtainable = !obtainable || char.obtainable === obtainable;
+        return matchesSearch && matchesRarity && matchesObtainable;
+      });
+
+      renderCharacters(filtered);
+    }
+
+    async function loadCollectibles() {
+      try {
+        const response = await fetch('/admin/api/collectibles');
+        const data = await response.json();
+        if (data.success) {
+          allCollectibles = data.collectibles;
+          renderCollectibles(allCollectibles);
+        }
+      } catch (error) {
+        console.error('Failed to load collectibles:', error);
+      }
+    }
+
+    function renderCollectibles(collectibles) {
+      const container = document.getElementById('collectiblesList');
+      if (!collectibles.length) {
+        container.innerHTML = `<div class="empty-state" style="grid-column: 1/-1;">
+          <div class="empty-state-icon">💎</div>
+          <h3>No Collectibles</h3>
+          <p>No collectibles have been added yet.</p>
+        </div>`;
+        return;
+      }
+
+      container.innerHTML = collectibles.map(item => `
+        <div class="item-card" onclick="viewCollectible('${item.id}')">
+          ${(currentUser?.isSuperAdmin || currentUser?.isGlobalAdmin) ? `
+          <div class="item-actions">
+            <button class="item-action-btn" onclick="event.stopPropagation(); editCollectible('${item.id}')" title="Edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button class="item-action-btn delete" onclick="event.stopPropagation(); deleteCollectible('${item.id}')" title="Delete">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
+          ` : ''}
+          <div class="item-image">
+            ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}">` : (item.emoji || '💎')}
+          </div>
+          <div class="item-name">${escapeHtml(item.name)}</div>
+          <span class="item-rarity rarity-${(item.rarity || 'common').replace(' ', '-')}">${item.rarity || 'common'}</span>
+        </div>
+      `).join('');
+    }
+
+    function filterCollectibles() {
+      const search = document.getElementById('collectibleSearch').value.toLowerCase();
+      const rarity = document.getElementById('collectibleRarityFilter').value;
+
+      const filtered = allCollectibles.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(search);
+        const matchesRarity = !rarity || item.rarity === rarity;
+        return matchesSearch && matchesRarity;
+      });
+
+      renderCollectibles(filtered);
+    }
+
+    function openCharacterModal(character = null) {
+      const modal = document.getElementById('characterModal');
+      const form = document.getElementById('characterForm');
+      form.reset();
+
+      if (character) {
+        document.getElementById('characterModalTitle').textContent = 'Edit Character';
+        document.getElementById('charEditId').value = character.id;
+        document.getElementById('charName').value = character.name || '';
+        document.getElementById('charEmoji').value = character.emoji || '';
+        document.getElementById('charDescription').value = character.description || '';
+        document.getElementById('charImageUrl').value = character.imageUrl || '';
+        document.getElementById('charRarity').value = character.rarity || 'common';
+        document.getElementById('charObtainable').value = character.obtainable || 'drop';
+        document.getElementById('charAbilityName').value = character.ability?.name || '';
+        document.getElementById('charAbilityDesc').value = character.ability?.description || '';
+        document.getElementById('charHP').value = character.stats?.hp || 100;
+        document.getElementById('charAttack').value = character.stats?.attack || 10;
+        document.getElementById('charDefense').value = character.stats?.defense || 10;
+        document.getElementById('charSpeed').value = character.stats?.speed || 10;
+      } else {
+        document.getElementById('characterModalTitle').textContent = 'Add Character';
+        document.getElementById('charEditId').value = '';
+      }
+
+      modal.classList.add('active');
+    }
+
+    async function editCharacter(id) {
+      const char = allCharacters.find(c => c.id === id);
+      if (char) openCharacterModal(char);
+    }
+
+    async function saveCharacter(event) {
+      event.preventDefault();
+
+      const editId = document.getElementById('charEditId').value;
+      const characterData = {
+        name: document.getElementById('charName').value,
+        emoji: document.getElementById('charEmoji').value,
+        description: document.getElementById('charDescription').value,
+        imageUrl: document.getElementById('charImageUrl').value,
+        rarity: document.getElementById('charRarity').value,
+        obtainable: document.getElementById('charObtainable').value,
+        ability: {
+          name: document.getElementById('charAbilityName').value,
+          description: document.getElementById('charAbilityDesc').value
+        },
+        stats: {
+          hp: parseInt(document.getElementById('charHP').value) || 100,
+          attack: parseInt(document.getElementById('charAttack').value) || 10,
+          defense: parseInt(document.getElementById('charDefense').value) || 10,
+          speed: parseInt(document.getElementById('charSpeed').value) || 10
+        }
+      };
+
+      try {
+        const url = editId ? `/admin/api/characters/${editId}` : '/admin/api/characters';
+        const method = editId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(characterData)
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast(editId ? 'Character updated' : 'Character created', 'success');
+          closeModal('characterModal');
+          loadCharacters();
+        } else {
+          showToast(data.error || 'Failed to save character', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to save character', 'error');
+      }
+    }
+
+    async function deleteCharacter(id) {
+      if (!confirm('Are you sure you want to delete this character?')) return;
+
+      try {
+        const response = await fetch(`/admin/api/characters/${id}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (data.success) {
+          showToast('Character deleted', 'success');
+          loadCharacters();
+        } else {
+          showToast(data.error || 'Failed to delete character', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to delete character', 'error');
+      }
+    }
+
+    function viewCharacter(id) {
+      const char = allCharacters.find(c => c.id === id);
+      if (char) {
+        alert(`${char.name}\n\nRarity: ${char.rarity}\nObtainable: ${char.obtainable}\n${char.description || ''}`);
+      }
+    }
+
+    function openCollectibleModal(collectible = null) {
+      const modal = document.getElementById('collectibleModal');
+      const form = document.getElementById('collectibleForm');
+      form.reset();
+
+      document.getElementById('collectDroppable').classList.remove('active');
+      document.getElementById('collectCrateObtainable').classList.remove('active');
+      document.getElementById('collectTradable').classList.add('active');
+      document.getElementById('collectSellable').classList.add('active');
+
+      if (collectible) {
+        document.getElementById('collectibleModalTitle').textContent = 'Edit Collectible';
+        document.getElementById('collectEditId').value = collectible.id;
+        document.getElementById('collectName').value = collectible.name || '';
+        document.getElementById('collectEmoji').value = collectible.emoji || '';
+        document.getElementById('collectDescription').value = collectible.description || '';
+        document.getElementById('collectImageUrl').value = collectible.imageUrl || '';
+        document.getElementById('collectRarity').value = collectible.rarity || 'common';
+        document.getElementById('collectValue').value = collectible.baseValue || 100;
+
+        if (collectible.droppable?.enabled) document.getElementById('collectDroppable').classList.add('active');
+        if (collectible.crateObtainable?.enabled) document.getElementById('collectCrateObtainable').classList.add('active');
+        if (collectible.tradable === false) document.getElementById('collectTradable').classList.remove('active');
+        if (collectible.sellable === false) document.getElementById('collectSellable').classList.remove('active');
+      } else {
+        document.getElementById('collectibleModalTitle').textContent = 'Add Collectible';
+        document.getElementById('collectEditId').value = '';
+      }
+
+      modal.classList.add('active');
+    }
+
+    async function editCollectible(id) {
+      const item = allCollectibles.find(c => c.id === id);
+      if (item) openCollectibleModal(item);
+    }
+
+    async function saveCollectible(event) {
+      event.preventDefault();
+
+      const editId = document.getElementById('collectEditId').value;
+      const collectibleData = {
+        name: document.getElementById('collectName').value,
+        emoji: document.getElementById('collectEmoji').value,
+        description: document.getElementById('collectDescription').value,
+        imageUrl: document.getElementById('collectImageUrl').value,
+        rarity: document.getElementById('collectRarity').value,
+        baseValue: parseInt(document.getElementById('collectValue').value) || 100,
+        droppable: {
+          enabled: document.getElementById('collectDroppable').classList.contains('active'),
+          probability: 1
+        },
+        crateObtainable: {
+          enabled: document.getElementById('collectCrateObtainable').classList.contains('active'),
+          probability: 1
+        },
+        tradable: document.getElementById('collectTradable').classList.contains('active'),
+        sellable: document.getElementById('collectSellable').classList.contains('active')
+      };
+
+      try {
+        const url = editId ? `/admin/api/collectibles/${editId}` : '/admin/api/collectibles';
+        const method = editId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(collectibleData)
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast(editId ? 'Collectible updated' : 'Collectible created', 'success');
+          closeModal('collectibleModal');
+          loadCollectibles();
+        } else {
+          showToast(data.error || 'Failed to save collectible', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to save collectible', 'error');
+      }
+    }
+
+    async function deleteCollectible(id) {
+      if (!confirm('Are you sure you want to delete this collectible?')) return;
+
+      try {
+        const response = await fetch(`/admin/api/collectibles/${id}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (data.success) {
+          showToast('Collectible deleted', 'success');
+          loadCollectibles();
+        } else {
+          showToast(data.error || 'Failed to delete collectible', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to delete collectible', 'error');
+      }
+    }
+
+    function viewCollectible(id) {
+      const item = allCollectibles.find(c => c.id === id);
+      if (item) {
+        alert(`${item.name}\n\nRarity: ${item.rarity}\nValue: ${item.baseValue} coins\n${item.description || ''}`);
+      }
+    }
+
+    async function loadSubmissions(tab) {
+      const container = document.getElementById('submissionsContent');
+      container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      const endpoint = tab === 'char-submissions' ? 'characters' : 'collectibles';
+
+      try {
+        const response = await fetch(`/admin/api/${endpoint}/submissions`);
+        const data = await response.json();
+
+        if (!data.success || !data.submissions?.length) {
+          container.innerHTML = `<div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <h3>No Pending Submissions</h3>
+            <p>All submissions have been reviewed.</p>
+          </div>`;
+          return;
+        }
+
+        container.innerHTML = `<div class="grid grid-2">
+          ${data.submissions.map(sub => `
+            <div class="card">
+              <div style="display: flex; gap: 16px; margin-bottom: 16px;">
+                <div class="item-image">
+                  ${sub.imageUrl ? `<img src="${sub.imageUrl}" alt="${sub.name}">` : (sub.emoji || '❓')}
+                </div>
+                <div>
+                  <h4>${escapeHtml(sub.name)}</h4>
+                  <p style="color: var(--text-secondary); font-size: 13px;">
+                    ${sub.rarity || 'common'} • Submitted by ${sub.submittedBy || 'Unknown'}
+                  </p>
+                </div>
+              </div>
+              <p style="margin-bottom: 16px;">${escapeHtml(sub.description || 'No description')}</p>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-success btn-sm" onclick="approveSubmission('${endpoint}', '${sub.id}')">Approve</button>
+                <button class="btn btn-danger btn-sm" onclick="rejectSubmission('${endpoint}', '${sub.id}')">Reject</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>`;
+      } catch (error) {
+        container.innerHTML = '<div class="alert alert-error">Failed to load submissions</div>';
+      }
+    }
+
+    async function approveSubmission(type, id) {
+      try {
+        const response = await fetch(`/admin/api/${type}/submissions/${id}/approve`, { method: 'POST' });
+        const data = await response.json();
+        if (data.success) {
+          showToast('Submission approved', 'success');
+          loadSubmissions(type === 'characters' ? 'char-submissions' : 'collectible-submissions');
+          if (type === 'characters') loadCharacters();
+          else loadCollectibles();
+        } else {
+          showToast(data.error || 'Failed to approve', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to approve submission', 'error');
+      }
+    }
+
+    async function rejectSubmission(type, id) {
+      const reason = prompt('Reason for rejection (optional):');
+      try {
+        const response = await fetch(`/admin/api/${type}/submissions/${id}/reject`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reason })
         });
-
-        if (response.ok) {
-          loadSubmissions();
-        }
-      } catch (err) {
-        console.error('Failed to reject submission:', err);
-      }
-    }
-
-    document.getElementById('globalCharacterSearch')?.addEventListener('input', renderGlobalCharacters);
-    document.getElementById('globalCollectibleSearch')?.addEventListener('input', renderGlobalCollectibles);
-
-    function showCharacterSubmitForm() {
-      const formHtml = `
-        <form id="characterSubmitForm" onsubmit="submitCharacter(event)">
-          <div class="form-group">
-            <label class="form-label">Character Name *</label>
-            <input type="text" name="name" class="form-input" required maxlength="50" placeholder="Enter character name">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Emoji *</label>
-            <input type="text" name="emoji" class="form-input" required placeholder="Enter an emoji (e.g. 🦊)">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea name="description" class="form-input" rows="3" placeholder="Describe your character..."></textarea>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Rarity</label>
-            <select name="rarity" class="form-select">
-              <option value="common">Common</option>
-              <option value="uncommon">Uncommon</option>
-              <option value="rare">Rare</option>
-              <option value="epic">Epic</option>
-              <option value="legendary">Legendary</option>
-            </select>
-          </div>
-          <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn btn-primary" style="flex: 1;">Submit Character</button>
-            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-          </div>
-        </form>
-      `;
-      openModal('Submit Character', formHtml);
-    }
-
-    function showCollectibleSubmitForm() {
-      const formHtml = `
-        <form id="collectibleSubmitForm" onsubmit="submitCollectible(event)">
-          <div class="form-group">
-            <label class="form-label">Collectible Name *</label>
-            <input type="text" name="name" class="form-input" required maxlength="50" placeholder="Enter collectible name">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Emoji *</label>
-            <input type="text" name="emoji" class="form-input" required placeholder="Enter an emoji (e.g. 🎁)">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea name="description" class="form-input" rows="3" placeholder="Describe your collectible..."></textarea>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Rarity</label>
-            <select name="rarity" class="form-select">
-              <option value="common">Common</option>
-              <option value="uncommon">Uncommon</option>
-              <option value="rare">Rare</option>
-              <option value="epic">Epic</option>
-              <option value="legendary">Legendary</option>
-            </select>
-          </div>
-          <div style="display: flex; gap: 12px; margin-top: 24px;">
-            <button type="submit" class="btn btn-primary" style="flex: 1;">Submit Collectible</button>
-            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-          </div>
-        </form>
-      `;
-      openModal('Submit Collectible', formHtml);
-    }
-
-    async function submitCharacter(event) {
-      event.preventDefault();
-      const form = event.target;
-      const formData = new FormData(form);
-      
-      const data = {
-        name: formData.get('name'),
-        emoji: formData.get('emoji'),
-        description: formData.get('description') || '',
-        rarity: formData.get('rarity')
-      };
-
-      try {
-        const response = await fetch(`${API_BASE}/characters/submissions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-
-        const result = await response.json();
-        
-        if (result.success) {
-          closeModal();
-          alert('Character submitted successfully! It will be reviewed by an admin.');
+        const data = await response.json();
+        if (data.success) {
+          showToast('Submission rejected', 'success');
+          loadSubmissions(type === 'characters' ? 'char-submissions' : 'collectible-submissions');
         } else {
-          alert('Failed to submit: ' + (result.message || result.error || 'Unknown error'));
+          showToast(data.error || 'Failed to reject', 'error');
         }
-      } catch (err) {
-        console.error('Failed to submit character:', err);
-        alert('Failed to submit character. Please try again.');
+      } catch (error) {
+        showToast('Failed to reject submission', 'error');
       }
     }
 
-    async function submitCollectible(event) {
-      event.preventDefault();
-      const form = event.target;
-      const formData = new FormData(form);
-      
-      const data = {
-        name: formData.get('name'),
-        emoji: formData.get('emoji'),
-        description: formData.get('description') || '',
-        rarity: formData.get('rarity')
-      };
-
-      try {
-        const response = await fetch(`${API_BASE}/collectibles/submissions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-
-        const result = await response.json();
-        
-        if (result.success) {
-          closeModal();
-          alert('Collectible submitted successfully! It will be reviewed by an admin.');
-        } else {
-          alert('Failed to submit: ' + (result.message || result.error || 'Unknown error'));
-        }
-      } catch (err) {
-        console.error('Failed to submit collectible:', err);
-        alert('Failed to submit collectible. Please try again.');
-      }
+    function toggleSwitch(element) {
+      element.classList.toggle('active');
     }
 
-    document.getElementById('modal').addEventListener('click', (e) => {
-      if (e.target.id === 'modal') {
-        closeModal();
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const newTheme = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `alert alert-${type}`;
+      toast.style.marginBottom = '8px';
+      toast.innerHTML = message;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-overlay')) {
+        e.target.classList.remove('active');
       }
     });
 
