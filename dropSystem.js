@@ -1,7 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { saveData, saveDataImmediate } = require('./dataManager.js');
 const characterManager = require('./characterManager.js');
-const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerGame, hasSelectedGame, DEFAULT_GAME } = require('./serverConfigManager.js');
+const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerGame, hasSelectedGame, DEFAULT_GAME, getServerSelectedCharacters, hasServerSelectedCharacters } = require('./serverConfigManager.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
 const { isKeyRushActive, getKeyRushTimeRemaining } = require('./characterKeySystem.js');
 const { getDroppableCollectibleItems, awardCollectibleItem, getRarityTier } = require('./collectibleItemsSystem.js');
@@ -278,13 +278,28 @@ async function executeDrop(serverId) {
     
     const keyRushActive = isKeyRushActive(serverId);
     
+    // Get server-configured characters (for non-main servers that have set them up)
+    const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+    const gameChars = characterManager.getCharactersByGame(serverGame);
+    const gameCharNames = new Set(gameChars.map(c => c.name));
+    
+    let availableChars = null;
+    if (!isMainServer(serverId)) {
+      const selectedChars = await getServerSelectedCharacters(serverId);
+      if (selectedChars && selectedChars.length > 0) {
+        availableChars = selectedChars.filter(c => gameCharNames.has(c.name));
+      }
+    }
+    
+    // Fallback to game-based characters if no valid server-specific selection
+    if (!availableChars || availableChars.length === 0) {
+      availableChars = gameChars.map(c => ({ name: c.name, emoji: c.emoji, rarity: c.rarity }));
+    }
+    
     if (keyRushActive) {
       // During Key Rush, ONLY character keys drop
-      const serverGame = getServerGame(serverId) || DEFAULT_GAME;
-      const gameChars = characterManager.getCharactersByGame(serverGame);
-      
-      if (gameChars.length > 0) {
-        const randomChar = gameChars[Math.floor(Math.random() * gameChars.length)];
+      if (availableChars.length > 0) {
+        const randomChar = availableChars[Math.floor(Math.random() * availableChars.length)];
         characterName = randomChar.name;
         selectedDrop = { type: 'characterKey', min: 1, max: 1, emoji: '🔑', characterName, characterEmoji: randomChar.emoji };
       } else {
@@ -295,11 +310,8 @@ async function executeDrop(serverId) {
       selectedDrop = { type: 'shards', min: 1, max: 2, emoji: '🔷' };
     } else if (dropTypeRoll < 0.07) {
       // 5% chance: Character Keys (1-2 keys) - bonus keys even outside Key Rush!
-      const serverGame = getServerGame(serverId) || DEFAULT_GAME;
-      const gameChars = characterManager.getCharactersByGame(serverGame);
-      
-      if (gameChars.length > 0) {
-        const randomChar = gameChars[Math.floor(Math.random() * gameChars.length)];
+      if (availableChars.length > 0) {
+        const randomChar = availableChars[Math.floor(Math.random() * availableChars.length)];
         characterName = randomChar.name;
         selectedDrop = { type: 'characterKey', min: 1, max: 2, emoji: '🔑', characterName, characterEmoji: randomChar.emoji };
       } else {
@@ -307,14 +319,12 @@ async function executeDrop(serverId) {
       }
     } else if (dropTypeRoll < 0.62) {
       // 55% chance: Character Tokens
-      const serverGame = getServerGame(serverId) || DEFAULT_GAME;
-      const gameChars = characterManager.getCharactersByGame(serverGame);
-      const gameCharNames = new Set(gameChars.map(c => c.name));
+      const availableCharNames = new Set(availableChars.map(c => c.name));
       
       const allOwnedChars = new Set();
       Object.values(activeData.users).forEach(user => {
         user?.characters?.forEach(char => {
-          if (gameCharNames.has(char.name)) {
+          if (availableCharNames.has(char.name)) {
             allOwnedChars.add(char.name);
           }
         });
@@ -336,7 +346,6 @@ async function executeDrop(serverId) {
     }
     
     // Check for collectible item drop (separate roll with item-specific probability)
-    const serverGame = getServerGame(serverId) || DEFAULT_GAME;
     try {
       const droppableItems = await getDroppableCollectibleItems(serverGame);
       if (droppableItems.length > 0 && !keyRushActive) {

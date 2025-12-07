@@ -6,7 +6,7 @@ const { trackChallengeProgress } = require('./weeklyChallengeSystem.js');
 const { checkAchievements } = require('./achievementSystem.js');
 const { recordEvent } = require('./analyticsSystem.js');
 const { getEmojiForCharacter } = require('./emojiAssetManager.js');
-const { getServerGame, DEFAULT_GAME } = require('./serverConfigManager.js');
+const { getServerGame, DEFAULT_GAME, getServerSelectedCharacters, isMainServer } = require('./serverConfigManager.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
 const { generateST } = require('./utils/shared.js');
 const { tryDropCollectibleFromCrate } = require('./collectibleItemsSystem.js');
@@ -220,7 +220,22 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
   
   if (roll < crate.charChance) {
     const serverGame = serverId ? (getServerGame(serverId) || DEFAULT_GAME) : DEFAULT_GAME;
-    const crateChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
+    const crateEligibleChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
+    const crateEligibleNames = new Set(crateEligibleChars.map(c => c.name));
+    
+    let crateChars;
+    if (serverId && !isMainServer(serverId)) {
+      const selectedChars = await getServerSelectedCharacters(serverId);
+      if (selectedChars && selectedChars.length > 0) {
+        const intersected = selectedChars.filter(c => crateEligibleNames.has(c.name));
+        crateChars = intersected.length > 0 ? intersected : crateEligibleChars;
+      } else {
+        crateChars = crateEligibleChars;
+      }
+    } else {
+      crateChars = crateEligibleChars;
+    }
+    
     const ownedCharNames = user.characters.map(c => c.name);
     const availableChars = crateChars.filter(c => !ownedCharNames.includes(c.name));
     
@@ -311,6 +326,11 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
   
   const serverGame = serverId ? (getServerGame(serverId) || DEFAULT_GAME) : DEFAULT_GAME;
   
+  let serverSelectedChars = null;
+  if (serverId && !isMainServer(serverId)) {
+    serverSelectedChars = await getServerSelectedCharacters(serverId);
+  }
+  
   user[crateKey] -= quantity;
   
   for (let i = 0; i < quantity; i++) {
@@ -328,7 +348,17 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
     const roll = Math.random() * 100;
     
     if (roll < crate.charChance) {
-      const crateChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
+      const crateEligibleChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
+      const crateEligibleNames = new Set(crateEligibleChars.map(c => c.name));
+      
+      let crateChars;
+      if (serverSelectedChars && serverSelectedChars.length > 0) {
+        const intersected = serverSelectedChars.filter(c => crateEligibleNames.has(c.name));
+        crateChars = intersected.length > 0 ? intersected : crateEligibleChars;
+      } else {
+        crateChars = crateEligibleChars;
+      }
+      
       const ownedCharNames = user.characters.map(c => c.name);
       const availableChars = crateChars.filter(c => !ownedCharNames.includes(c.name));
       

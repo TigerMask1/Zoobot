@@ -752,6 +752,53 @@ function isRegisteredServerOwner(userId, serverId) {
   return config?.serverOwnerId === userId;
 }
 
+async function getServerSelectedCharacters(serverId) {
+  try {
+    const collection = await getCollection('dashboardServerConfigs');
+    const config = await collection.findOne({ serverId });
+    
+    if (!config || !config.selectedCharacterIds || config.selectedCharacterIds.length === 0) {
+      return null;
+    }
+    
+    const { ObjectId } = require('mongodb');
+    const globalCharsCollection = await getCollection('dashboardGlobalCharacters');
+    
+    const characterIds = config.selectedCharacterIds.map(id => {
+      try {
+        return new ObjectId(id);
+      } catch {
+        return id;
+      }
+    });
+    
+    const characters = await globalCharsCollection.find({
+      _id: { $in: characterIds },
+      status: { $ne: 'deleted' }
+    }).toArray();
+    
+    return characters.map(c => ({
+      name: c.name,
+      emoji: c.emoji,
+      rarity: c.rarity
+    }));
+  } catch (error) {
+    console.error('Error getting server selected characters:', error);
+    return null;
+  }
+}
+
+async function hasServerSelectedCharacters(serverId) {
+  try {
+    const collection = await getCollection('dashboardServerConfigs');
+    const config = await collection.findOne({ serverId });
+    return config?.selectedCharacterIds?.length > 0;
+  } catch (error) {
+    console.error('Error checking server selected characters:', error);
+    return false;
+  }
+}
+
 module.exports = {
   loadServerConfigs,
   saveServerConfig,
@@ -809,6 +856,8 @@ module.exports = {
   handleOwnershipTransfer,
   getServerOwnerId,
   isRegisteredServerOwner,
+  getServerSelectedCharacters,
+  hasServerSelectedCharacters,
   DEFAULT_FEATURE_SETTINGS,
   MAIN_SERVER_ID,
   SUPER_ADMINS,

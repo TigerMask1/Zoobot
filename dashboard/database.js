@@ -6,6 +6,83 @@ const {
   DEFAULT_PING_SETTINGS,
   MINIMUM_CHARACTERS_REQUIRED 
 } = require('./schemas.js');
+const { loadData, saveDataImmediate } = require('../dataManager.js');
+const { sendMailToAll, addMailToUser } = require('../mailSystem.js');
+
+async function sendSubmissionNotification(userId, type, itemName, status, reason = null) {
+  try {
+    const data = await loadData();
+    if (!data || !data.users) {
+      console.error('[Dashboard Mail] Failed to load user data');
+      return;
+    }
+    
+    if (!data.users[userId]) {
+      data.users[userId] = {
+        coins: 0,
+        gems: 0,
+        shards: 0,
+        trophies: 200,
+        ust: 0,
+        messageCount: 0,
+        pendingTokens: 0,
+        stBoosters: 0,
+        lastDailyClaim: null,
+        dailyStreak: 0,
+        highestDailyStreak: 0,
+        totalDailyClaims: 0,
+        mailbox: [],
+        characters: [],
+        questProgress: {
+          dropsCaught: 0,
+          battlesWon: 0,
+          cratesOpened: 0,
+          tradesCompleted: 0,
+          boostsUsed: 0,
+          currentWinStreak: 0,
+          maxWinStreak: 0,
+          charsReleased: 0,
+          tyrantCratesOpened: 0,
+          totalBattles: 0,
+          charsFromCrates: 0,
+          highLevelWin: 0
+        },
+        completedQuests: [],
+        bronzeCrates: 0,
+        silverCrates: 0,
+        goldCrates: 0,
+        emeraldCrates: 0,
+        legendaryCrates: 0,
+        tyrantCrates: 0,
+        tutorialStage: 'intro',
+        tutorialCompleted: false,
+        profileDisplayCharacter: null,
+        seasonPass: {}
+      };
+    }
+    
+    if (!data.users[userId].mailbox) {
+      data.users[userId].mailbox = [];
+    }
+    
+    let message, rewards = {};
+    
+    if (status === 'approved') {
+      message = `Your ${type} submission "${itemName}" has been approved and is now available in the game! Thank you for your contribution.`;
+      rewards = { gems: 10 };
+    } else {
+      message = `Your ${type} submission "${itemName}" was not approved.${reason ? ` Reason: ${reason}` : ''} Feel free to submit again with improvements!`;
+    }
+    
+    const mail = sendMailToAll(message, rewards, 'ZooBot Team');
+    addMailToUser(data.users[userId], mail);
+    
+    await saveDataImmediate(data);
+    console.log(`[Dashboard Mail] Sent ${status} notification to user ${userId} for ${type}: ${itemName}`);
+  } catch (error) {
+    console.error('[Dashboard Mail] Error sending notification:', error);
+  }
+}
 
 async function initDashboardIndexes() {
   if (!isMongoConnected()) return;
@@ -602,6 +679,8 @@ async function approveCharacterSubmission(submissionId, approvedBy) {
       }
     );
     
+    await sendSubmissionNotification(submission.submittedBy, 'character', submission.name, 'approved');
+    
     return { success: true, characterId: characterResult.characterId };
   } catch (error) {
     console.error('[Dashboard] Error approving submission:', error);
@@ -617,6 +696,13 @@ async function rejectCharacterSubmission(submissionId, rejectedBy, reason) {
   const db = getMongoDatabase();
   
   try {
+    const submission = await db.collection(COLLECTIONS.CHARACTER_SUBMISSIONS)
+      .findOne({ _id: new ObjectId(submissionId) });
+    
+    if (!submission) {
+      return { success: false, message: 'Submission not found' };
+    }
+    
     await db.collection(COLLECTIONS.CHARACTER_SUBMISSIONS).updateOne(
       { _id: new ObjectId(submissionId) },
       { 
@@ -629,6 +715,8 @@ async function rejectCharacterSubmission(submissionId, rejectedBy, reason) {
         }
       }
     );
+    
+    await sendSubmissionNotification(submission.submittedBy, 'character', submission.name, 'rejected', reason);
     
     return { success: true };
   } catch (error) {
@@ -731,6 +819,8 @@ async function approveCollectibleSubmission(submissionId, approvedBy) {
       }
     );
     
+    await sendSubmissionNotification(submission.submittedBy, 'collectible', submission.name, 'approved');
+    
     return { success: true, collectibleId: collectibleResult.collectibleId };
   } catch (error) {
     console.error('[Dashboard] Error approving collectible submission:', error);
@@ -746,6 +836,13 @@ async function rejectCollectibleSubmission(submissionId, rejectedBy, reason) {
   const db = getMongoDatabase();
   
   try {
+    const submission = await db.collection(COLLECTIONS.COLLECTIBLE_SUBMISSIONS)
+      .findOne({ _id: new ObjectId(submissionId) });
+    
+    if (!submission) {
+      return { success: false, message: 'Submission not found' };
+    }
+    
     await db.collection(COLLECTIONS.COLLECTIBLE_SUBMISSIONS).updateOne(
       { _id: new ObjectId(submissionId) },
       { 
@@ -758,6 +855,8 @@ async function rejectCollectibleSubmission(submissionId, rejectedBy, reason) {
         }
       }
     );
+    
+    await sendSubmissionNotification(submission.submittedBy, 'collectible', submission.name, 'rejected', reason);
     
     return { success: true };
   } catch (error) {
