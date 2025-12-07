@@ -1396,27 +1396,33 @@
       });
     });
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    // Server config tabs - scoped to serverConfigView
+    document.querySelectorAll('#serverConfigView .tab-nav .tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tabName = btn.dataset.tab;
-        const submissionsTab = btn.dataset.submissionsTab;
+        if (!tabName) return;
         
-        if (tabName) {
-          // Server config tabs
-          const parent = btn.closest('.tab-nav');
-          parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
+        const parent = btn.closest('.tab-nav');
+        parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
 
-          document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-          const targetTab = document.getElementById(`${tabName}Tab`);
-          if (targetTab) targetTab.classList.remove('hidden');
-        } else if (submissionsTab) {
-          // Submissions tabs
-          const parent = btn.closest('.tab-nav');
-          parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          loadSubmissions(submissionsTab);
-        }
+        const serverConfigView = document.getElementById('serverConfigView');
+        serverConfigView.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+        const targetTab = document.getElementById(`${tabName}Tab`);
+        if (targetTab) targetTab.classList.remove('hidden');
+      });
+    });
+
+    // Submissions tabs - scoped to submissionsView
+    document.querySelectorAll('#submissionsView .tab-nav .tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const submissionsTab = btn.dataset.submissionsTab;
+        if (!submissionsTab) return;
+        
+        const parent = btn.closest('.tab-nav');
+        parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadSubmissions(submissionsTab);
       });
     });
 
