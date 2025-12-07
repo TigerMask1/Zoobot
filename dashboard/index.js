@@ -30,15 +30,15 @@ function setupDashboardRoutes(app, discordClient) {
     setDiscordClient(discordClient);
   }
   
-  app.use('/dashboard/api', router);
+  app.use('/admin/api', router);
   
-  app.use('/dashboard', authRoutes.router);
+  app.use('/admin', authRoutes.router);
   
-  app.get('/dashboard', (req, res) => {
+  app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
   });
   
-  console.log('[Dashboard] Routes configured');
+  console.log('[Dashboard] Routes configured at /admin');
 }
 
 module.exports = {

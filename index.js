@@ -91,15 +91,11 @@ app.get('/:page.html', (req, res, next) => {
   }
 });
 
-const { setupAdminRoutes } = require('./adminDashboard.js');
-setupAdminRoutes(app, null);
-console.log('🔧 Admin dashboard routes configured');
-
 const { setupDashboardRoutes, setDiscordClient: setDashboardDiscordClient } = require('./dashboard/index.js');
 const dashboardDb = require('./dashboard/database.js');
 const { MINIMUM_CHARACTERS_REQUIRED } = require('./dashboard/schemas.js');
 setupDashboardRoutes(app, null);
-console.log('🔧 New dashboard routes configured');
+console.log('🔧 Dashboard routes configured at /admin');
 
 app.use((err, req, res, next) => {
   console.error('Server error:', err);

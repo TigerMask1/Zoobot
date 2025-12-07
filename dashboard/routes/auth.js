@@ -20,7 +20,7 @@ function getBaseUrl() {
 function getRedirectUri() {
   const baseUrl = getBaseUrl();
   const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  return `${cleanBase}/dashboard/callback`;
+  return `${cleanBase}/admin/callback`;
 }
 
 function httpsRequest(url, options = {}) {
@@ -283,29 +283,29 @@ router.get('/callback', async (req, res) => {
   res.clearCookie('oauth_state');
   
   if (oauthError) {
-    return res.redirect('/dashboard?error=' + encodeURIComponent(oauthError));
+    return res.redirect('/admin?error=' + encodeURIComponent(oauthError));
   }
   
   if (!code) {
-    return res.redirect('/dashboard?error=no_code');
+    return res.redirect('/admin?error=no_code');
   }
   
   if (!state || state !== savedState) {
-    return res.redirect('/dashboard?error=state_mismatch');
+    return res.redirect('/admin?error=state_mismatch');
   }
   
   if (!clientId || !clientSecret) {
-    return res.redirect('/dashboard?error=missing_credentials');
+    return res.redirect('/admin?error=missing_credentials');
   }
   
   const tokenData = await exchangeCodeForToken(code, clientId, clientSecret);
   if (!tokenData) {
-    return res.redirect('/dashboard?error=token_exchange_failed');
+    return res.redirect('/admin?error=token_exchange_failed');
   }
   
   const user = await fetchDiscordUser(tokenData.access_token);
   if (!user) {
-    return res.redirect('/dashboard?error=fetch_user_failed');
+    return res.redirect('/admin?error=fetch_user_failed');
   }
   
   const sessionId = await saveSession(user.id, {
@@ -315,7 +315,7 @@ router.get('/callback', async (req, res) => {
   });
   
   if (!sessionId) {
-    return res.redirect('/dashboard?error=session_save_failed');
+    return res.redirect('/admin?error=session_save_failed');
   }
   
   const jwtToken = generateJWT(user.id, sessionId, sessionSecret);
@@ -328,7 +328,7 @@ router.get('/callback', async (req, res) => {
   });
   
   console.log('[Dashboard Auth] Login successful for user:', user.username);
-  res.redirect('/dashboard');
+  res.redirect('/admin');
 });
 
 router.get('/logout', async (req, res) => {
@@ -343,7 +343,7 @@ router.get('/logout', async (req, res) => {
   }
   
   res.clearCookie('dashboard_token');
-  res.redirect('/dashboard');
+  res.redirect('/admin');
 });
 
 router.get('/me', authMiddleware, async (req, res) => {
