@@ -742,6 +742,231 @@ function setupAdminRoutes(app, discordClient = null) {
     }
   });
   
+  app.get('/api/admin/collectibles', authMiddleware, async (req, res) => {
+    try {
+      if (!isMongoConnected()) {
+        return res.json({ success: false, error: 'Database not connected' });
+      }
+      
+      const db = getMongoDatabase();
+      const { bundle, page = 1 } = req.query;
+      const pageNum = parseInt(page) || 1;
+      const limit = 20;
+      
+      const query = { status: 'active' };
+      if (bundle) {
+        query.$or = [{ bundle }, { isGlobal: true }];
+      }
+      
+      const total = await db.collection('collectibleItems').countDocuments(query);
+      const items = await db.collection('collectibleItems')
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip((pageNum - 1) * limit)
+        .limit(limit)
+        .toArray();
+      
+      res.json({ success: true, items, total, pages: Math.ceil(total / limit), page: pageNum });
+    } catch (error) {
+      console.error('[AdminDashboard] Error getting collectibles:', error);
+      res.json({ success: false, error: 'Failed to get collectibles' });
+    }
+  });
+  
+  app.post('/api/admin/collectibles', authMiddleware, async (req, res) => {
+    try {
+      if (!isMongoConnected()) {
+        return res.json({ success: false, error: 'Database not connected' });
+      }
+      
+      const db = getMongoDatabase();
+      const { name, description, imageUrl, emoji, rarity, bundle, isGlobal, droppable, crateObtainable, baseValue } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ success: false, error: 'Name is required' });
+      }
+      
+      const item = {
+        name,
+        description: description || '',
+        imageUrl: imageUrl || '',
+        emoji: emoji || '🎁',
+        rarity: rarity || 'common',
+        bundle: bundle || null,
+        isGlobal: isGlobal || false,
+        droppable: droppable || { enabled: false, probability: 5 },
+        crateObtainable: crateObtainable || { enabled: false, probability: 5, crates: [] },
+        tradable: true,
+        giftable: true,
+        sellable: true,
+        baseValue: baseValue || 100,
+        computedValue: baseValue || 100,
+        stackable: true,
+        ownerCount: 0,
+        totalQuantity: 0,
+        status: 'active',
+        createdBy: req.user.userId,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      const result = await db.collection('collectibleItems').insertOne(item);
+      res.json({ success: true, itemId: result.insertedId });
+    } catch (error) {
+      console.error('[AdminDashboard] Error creating collectible:', error);
+      res.json({ success: false, error: 'Failed to create collectible' });
+    }
+  });
+  
+  app.get('/api/admin/collectible-submissions', authMiddleware, async (req, res) => {
+    try {
+      if (!isMongoConnected()) {
+        return res.json({ success: false, error: 'Database not connected' });
+      }
+      
+      const db = getMongoDatabase();
+      const submissions = await db.collection('collectibleItemSubmissions')
+        .find({ status: 'pending' })
+        .sort({ submittedAt: -1 })
+        .toArray();
+      
+      res.json({ success: true, submissions });
+    } catch (error) {
+      console.error('[AdminDashboard] Error getting submissions:', error);
+      res.json({ success: false, error: 'Failed to get submissions' });
+    }
+  });
+  
+  app.post('/api/admin/collectible-submissions/:id/approve', authMiddleware, async (req, res) => {
+    try {
+      if (!isMongoConnected()) {
+        return res.json({ success: false, error: 'Database not connected' });
+      }
+      
+      const db = getMongoDatabase();
+      const { ObjectId } = require('mongodb');
+      const { id } = req.params;
+      
+      const submission = await db.collection('collectibleItemSubmissions').findOne({ _id: new ObjectId(id) });
+      if (!submission) {
+        return res.status(404).json({ success: false, error: 'Submission not found' });
+      }
+      
+      const item = {
+        ...submission,
+        status: 'active',
+        approvedBy: req.user.userId,
+        approvedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      delete item._id;
+      delete item.submittedAt;
+      
+      await db.collection('collectibleItems').insertOne(item);
+      await db.collection('collectibleItemSubmissions').updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: 'approved', approvedBy: req.user.userId, approvedAt: new Date() } }
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[AdminDashboard] Error approving submission:', error);
+      res.json({ success: false, error: 'Failed to approve submission' });
+    }
+  });
+  
+  app.post('/api/admin/collectible-submissions/:id/reject', authMiddleware, async (req, res) => {
+    try {
+      if (!isMongoConnected()) {
+        return res.json({ success: false, error: 'Database not connected' });
+      }
+      
+      const db = getMongoDatabase();
+      const { ObjectId } = require('mongodb');
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      await db.collection('collectibleItemSubmissions').updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: 'rejected', rejectedBy: req.user.userId, rejectedAt: new Date(), rejectionReason: reason } }
+      );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[AdminDashboard] Error rejecting submission:', error);
+      res.json({ success: false, error: 'Failed to reject submission' });
+    }
+  });
+  
+  app.get('/api/admin/character-submissions', authMiddleware, async (req, res) => {
+    try {
+      if (!isMongoConnected()) {
+        return res.json({ success: false, error: 'Database not connected' });
+      }
+      
+      const db = getMongoDatabase();
+      const submissions = await db.collection('characterSubmissions')
+        .find({ status: 'pending' })
+        .sort({ submittedAt: -1 })
+        .toArray();
+      
+      res.json({ success: true, submissions });
+    } catch (error) {
+      console.error('[AdminDashboard] Error getting character submissions:', error);
+      res.json({ success: false, error: 'Failed to get character submissions' });
+    }
+  });
+  
+  app.post('/api/admin/backfill-servers', authMiddleware, async (req, res) => {
+    try {
+      if (!discordClient || !discordClient.guilds) {
+        return res.json({ success: false, error: 'Discord client not available' });
+      }
+      
+      const serverConfigManager = require('./serverConfigManager.js');
+      const characterManager = require('./characterManager.js');
+      
+      const zoobotCharacters = characterManager.getCharacters()
+        .filter(c => c.game === 'ZooBot')
+        .map(c => c.name);
+      
+      let backfilledCount = 0;
+      let skippedCount = 0;
+      
+      for (const [guildId, guild] of discordClient.guilds.cache) {
+        const existingConfig = serverConfigManager.getServerConfig(guildId);
+        
+        if (existingConfig && existingConfig.enabledCharacters && existingConfig.enabledCharacters.length > 0) {
+          skippedCount++;
+          continue;
+        }
+        
+        const config = {
+          serverId: guildId,
+          serverName: guild.name,
+          enabledCharacters: zoobotCharacters,
+          selectedGame: 'ZooBot',
+          features: existingConfig?.features || {},
+          backfilledAt: new Date()
+        };
+        
+        await serverConfigManager.saveServerConfig(guildId, config);
+        backfilledCount++;
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `Backfilled ${backfilledCount} servers with ZooBot characters. Skipped ${skippedCount} servers with existing config.`,
+        backfilled: backfilledCount,
+        skipped: skippedCount
+      });
+    } catch (error) {
+      console.error('[AdminDashboard] Error backfilling servers:', error);
+      res.json({ success: false, error: 'Failed to backfill servers' });
+    }
+  });
+  
   app.get('/admin', (req, res) => {
     res.sendFile(require('path').join(__dirname, 'public', 'admin.html'));
   });

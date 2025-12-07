@@ -24,9 +24,9 @@ module.exports = {
       return message.reply('You need to be the server owner or a server admin to set up ZooBot!');
     }
     
-    const dashboardUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}/dashboard`
-      : 'https://zoobot.replit.app/dashboard';
+    const baseUrl = process.env.WEBSITE_URL || process.env.RENDER_EXTERNAL_URL || 'https://zoobot-zoki.onrender.com';
+    const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const dashboardUrl = `${cleanBase}/admin`;
     
     const embed = new EmbedBuilder()
       .setColor(0x00D9FF)

@@ -985,9 +985,17 @@
             <span class="icon">📦</span>
             <span>Bundles</span>
           </a>
+          <a class="nav-item" data-page="collectibles">
+            <span class="icon">🎁</span>
+            <span>Collectibles</span>
+          </a>
           <a class="nav-item" data-page="items">
             <span class="icon">🧪</span>
             <span>Items</span>
+          </a>
+          <a class="nav-item" data-page="submissions">
+            <span class="icon">📝</span>
+            <span>Submissions</span>
           </a>
         </div>
         
@@ -1056,6 +1064,7 @@
           </div>
           <div class="card-body" style="display: flex; gap: 12px; flex-wrap: wrap;">
             <button class="btn btn-primary" onclick="showPage('servers')">Manage Servers</button>
+            <button class="btn btn-success" onclick="backfillAllServers()">Backfill All Servers with ZooBot Characters</button>
             <button class="btn btn-primary" onclick="showPage('characters')">Browse Characters</button>
             <button class="btn btn-ghost" onclick="showPage('bundles')">Create Bundle</button>
             <button class="btn btn-ghost" onclick="showPage('features')">Configure Features</button>
@@ -1159,6 +1168,75 @@
           <div class="empty-state">
             <div class="icon">🧪</div>
             <p>Loading items...</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="page" id="page-collectibles">
+        <div class="page-header">
+          <h1>Collectibles</h1>
+          <p>Manage collectible items that can be obtained through drops, crates, or events</p>
+        </div>
+        
+        <div style="margin-bottom: 24px; display: flex; gap: 12px;">
+          <button class="btn btn-primary" onclick="showCreateCollectibleModal()">
+            <span>+</span> Create New Collectible
+          </button>
+          <button class="btn btn-ghost" onclick="loadCollectibles()">
+            Refresh
+          </button>
+        </div>
+        
+        <div class="character-grid" id="collectibleGrid">
+          <div class="empty-state">
+            <div class="icon">🎁</div>
+            <p>Loading collectibles...</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="page" id="page-submissions">
+        <div class="page-header">
+          <h1>Submissions</h1>
+          <p>Review and approve user-submitted characters and collectibles</p>
+        </div>
+        
+        <div class="tab-bar" id="submissionTabs">
+          <div class="tab-item active" data-submission-tab="characters">Character Submissions</div>
+          <div class="tab-item" data-submission-tab="collectibles">Collectible Submissions</div>
+        </div>
+        
+        <div id="characterSubmissionsTab">
+          <div class="card">
+            <div class="card-header">
+              <h3>Pending Character Submissions</h3>
+              <button class="btn btn-ghost btn-sm" onclick="loadCharacterSubmissions()">Refresh</button>
+            </div>
+            <div class="card-body">
+              <div id="characterSubmissionsList">
+                <div class="empty-state">
+                  <div class="icon">📝</div>
+                  <p>Loading submissions...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="collectibleSubmissionsTab" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <h3>Pending Collectible Submissions</h3>
+              <button class="btn btn-ghost btn-sm" onclick="loadCollectibleSubmissions()">Refresh</button>
+            </div>
+            <div class="card-body">
+              <div id="collectibleSubmissionsList">
+                <div class="empty-state">
+                  <div class="icon">📝</div>
+                  <p>Loading submissions...</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1352,6 +1430,58 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="collectibleModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Create New Collectible</h3>
+        <button class="modal-close" onclick="closeCollectibleModal()">&times;</button>
+      </div>
+      <form id="collectibleForm" onsubmit="handleCollectibleSubmit(event)">
+        <div class="form-group">
+          <label for="collectibleName">Name</label>
+          <input type="text" id="collectibleName" required placeholder="e.g., Golden Trophy">
+        </div>
+        <div class="form-group">
+          <label for="collectibleDescription">Description</label>
+          <textarea id="collectibleDescription" rows="2" placeholder="Describe this collectible..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="collectibleEmoji">Emoji</label>
+          <input type="text" id="collectibleEmoji" placeholder="e.g., 🏆" maxlength="4">
+        </div>
+        <div class="form-group">
+          <label for="collectibleImageUrl">Image URL (optional)</label>
+          <input type="text" id="collectibleImageUrl" placeholder="https://example.com/image.png">
+        </div>
+        <div class="form-group">
+          <label for="collectibleRarity">Rarity</label>
+          <select id="collectibleRarity">
+            <option value="common">Common</option>
+            <option value="uncommon">Uncommon</option>
+            <option value="rare">Rare</option>
+            <option value="epic">Epic</option>
+            <option value="legendary">Legendary</option>
+            <option value="mythic">Mythic</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="collectibleBaseValue">Base Value (coins)</label>
+          <input type="number" id="collectibleBaseValue" value="100" min="1">
+        </div>
+        <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="collectibleGlobal">
+            <span>Global (available in all servers)</span>
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeCollectibleModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Collectible</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     let currentUser = null;
     let characters = [];
@@ -1516,7 +1646,8 @@
         loadStats(),
         loadGuilds(),
         loadCharacters(),
-        loadBundles()
+        loadBundles(),
+        loadCollectibles()
       ]);
       renderFeatures();
       renderPermissions();
@@ -2155,9 +2286,251 @@
       }
     }
 
+    let collectibles = [];
+    let characterSubmissions = [];
+    let collectibleSubmissions = [];
+
+    async function loadCollectibles() {
+      try {
+        const res = await fetch('/api/admin/collectibles');
+        const data = await res.json();
+        if (data.success) {
+          collectibles = data.items || [];
+          renderCollectibles();
+        }
+      } catch (e) {
+        console.error('Failed to load collectibles:', e);
+      }
+    }
+
+    function renderCollectibles() {
+      const container = document.getElementById('collectibleGrid');
+      if (collectibles.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🎁</div>
+            <p>No collectibles yet. Create one to get started!</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = collectibles.map(c => `
+        <div class="character-card">
+          <div class="character-emoji">${c.emoji || '🎁'}</div>
+          <div class="character-name">${c.name}</div>
+          <div class="character-game" style="text-transform: capitalize;">${c.rarity || 'common'}</div>
+          <div style="font-size: 11px; color: var(--accent-cyan); margin-top: 4px;">Value: ${c.baseValue || 100}</div>
+        </div>
+      `).join('');
+    }
+
+    function showCreateCollectibleModal() {
+      document.getElementById('collectibleForm').reset();
+      document.getElementById('collectibleModal').classList.add('active');
+    }
+
+    function closeCollectibleModal() {
+      document.getElementById('collectibleModal').classList.remove('active');
+    }
+
+    async function handleCollectibleSubmit(e) {
+      e.preventDefault();
+      
+      const data = {
+        name: document.getElementById('collectibleName').value,
+        description: document.getElementById('collectibleDescription').value,
+        emoji: document.getElementById('collectibleEmoji').value || '🎁',
+        imageUrl: document.getElementById('collectibleImageUrl').value,
+        rarity: document.getElementById('collectibleRarity').value,
+        baseValue: parseInt(document.getElementById('collectibleBaseValue').value) || 100,
+        isGlobal: document.getElementById('collectibleGlobal').checked
+      };
+      
+      try {
+        const res = await fetch('/api/admin/collectibles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await res.json();
+        if (result.success) {
+          closeCollectibleModal();
+          loadCollectibles();
+          alert('Collectible created successfully!');
+        } else {
+          alert(result.error || 'Failed to create collectible');
+        }
+      } catch (e) {
+        console.error('Failed to create collectible:', e);
+        alert('Failed to create collectible');
+      }
+    }
+
+    async function loadCharacterSubmissions() {
+      try {
+        const res = await fetch('/api/admin/character-submissions');
+        const data = await res.json();
+        if (data.success) {
+          characterSubmissions = data.submissions || [];
+          renderCharacterSubmissions();
+        }
+      } catch (e) {
+        console.error('Failed to load character submissions:', e);
+      }
+    }
+
+    function renderCharacterSubmissions() {
+      const container = document.getElementById('characterSubmissionsList');
+      if (characterSubmissions.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📝</div>
+            <p>No pending character submissions</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = characterSubmissions.map(s => `
+        <div class="card" style="margin-bottom: 12px;">
+          <div class="card-body" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <strong>${s.name || 'Unnamed'}</strong>
+              <div style="font-size: 12px; color: var(--text-secondary);">
+                Submitted by: ${s.submittedBy || 'Unknown'}
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary btn-sm" onclick="approveCharacterSubmission('${s._id}')">Approve</button>
+              <button class="btn btn-ghost btn-sm" onclick="rejectCharacterSubmission('${s._id}')">Reject</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadCollectibleSubmissions() {
+      try {
+        const res = await fetch('/api/admin/collectible-submissions');
+        const data = await res.json();
+        if (data.success) {
+          collectibleSubmissions = data.submissions || [];
+          renderCollectibleSubmissions();
+        }
+      } catch (e) {
+        console.error('Failed to load collectible submissions:', e);
+      }
+    }
+
+    function renderCollectibleSubmissions() {
+      const container = document.getElementById('collectibleSubmissionsList');
+      if (collectibleSubmissions.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📝</div>
+            <p>No pending collectible submissions</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = collectibleSubmissions.map(s => `
+        <div class="card" style="margin-bottom: 12px;">
+          <div class="card-body" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span style="font-size: 24px; margin-right: 8px;">${s.emoji || '🎁'}</span>
+              <strong>${s.name || 'Unnamed'}</strong>
+              <div style="font-size: 12px; color: var(--text-secondary);">
+                ${s.rarity || 'common'} - Submitted by: ${s.submittedBy || 'Unknown'}
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary btn-sm" onclick="approveCollectibleSubmission('${s._id}')">Approve</button>
+              <button class="btn btn-ghost btn-sm" onclick="rejectCollectibleSubmission('${s._id}')">Reject</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function approveCollectibleSubmission(id) {
+      try {
+        const res = await fetch('/api/admin/collectible-submissions/' + id + '/approve', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          loadCollectibleSubmissions();
+          alert('Submission approved!');
+        }
+      } catch (e) {
+        console.error('Failed to approve:', e);
+      }
+    }
+
+    async function rejectCollectibleSubmission(id) {
+      const reason = prompt('Reason for rejection (optional):');
+      try {
+        const res = await fetch('/api/admin/collectible-submissions/' + id + '/reject', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadCollectibleSubmissions();
+          alert('Submission rejected');
+        }
+      } catch (e) {
+        console.error('Failed to reject:', e);
+      }
+    }
+
+    async function backfillAllServers() {
+      if (!confirm('This will set all servers without existing configuration to use ZooBot characters. Continue?')) return;
+      
+      try {
+        const res = await fetch('/api/admin/backfill-servers', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          loadGuilds();
+        } else {
+          alert(data.error || 'Failed to backfill servers');
+        }
+      } catch (e) {
+        console.error('Failed to backfill:', e);
+        alert('Failed to backfill servers');
+      }
+    }
+
+    function setupSubmissionTabs() {
+      document.querySelectorAll('#submissionTabs .tab-item').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('#submissionTabs .tab-item').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          const tabName = tab.dataset.submissionTab;
+          if (tabName === 'characters') {
+            document.getElementById('characterSubmissionsTab').style.display = 'block';
+            document.getElementById('collectibleSubmissionsTab').style.display = 'none';
+            loadCharacterSubmissions();
+          } else {
+            document.getElementById('characterSubmissionsTab').style.display = 'none';
+            document.getElementById('collectibleSubmissionsTab').style.display = 'block';
+            loadCollectibleSubmissions();
+          }
+        });
+      });
+    }
+
     function logout() {
       window.location.href = '/admin/logout';
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupSubmissionTabs();
+    });
 
     checkAuth();
   </script>
