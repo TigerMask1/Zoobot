@@ -13,10 +13,18 @@ const ADMIN_SESSIONS_COLLECTION = 'adminSessions';
 
 function getBaseUrl() {
   if (process.env.WEBSITE_URL) {
-    return process.env.WEBSITE_URL;
+    let url = process.env.WEBSITE_URL;
+    if (url.includes('/admin/callback')) {
+      url = url.replace('/admin/callback', '');
+    }
+    return url.endsWith('/') ? url.slice(0, -1) : url;
   }
   if (process.env.RENDER_EXTERNAL_URL) {
-    return process.env.RENDER_EXTERNAL_URL;
+    let url = process.env.RENDER_EXTERNAL_URL;
+    if (url.includes('/admin/callback')) {
+      url = url.replace('/admin/callback', '');
+    }
+    return url.endsWith('/') ? url.slice(0, -1) : url;
   }
   if (process.env.REPLIT_DEV_DOMAIN) {
     return `https://${process.env.REPLIT_DEV_DOMAIN}`;
