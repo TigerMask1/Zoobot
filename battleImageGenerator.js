@@ -1,4 +1,4 @@
-const { createCanvas, loadImage, registerFont } = require('canvas');
+const { createCanvas, loadImage } = require('canvas');
 const fs = require('fs');
 const path = require('path');
 const { getSkinUrl } = require('./skinSystem.js');
@@ -7,9 +7,9 @@ const ARENA_BACKGROUNDS = {
   forest: {
     name: 'Forest Arena',
     path: path.join(__dirname, 'assets/arenas/forest_arena.jpg'),
-    player1Position: { x: 235, y: 340, radius: 70 },
-    player2Position: { x: 565, y: 340, radius: 70 },
-    displayBoard: { x: 280, y: 60, width: 240, height: 100 }
+    player1Position: { x: 205, y: 378, radius: 55 },
+    player2Position: { x: 655, y: 378, radius: 55 },
+    displayBoard: { x: 285, y: 18, width: 285, height: 115 }
   }
 };
 
@@ -81,9 +81,9 @@ function addArena(id, config) {
   ARENA_BACKGROUNDS[id] = {
     name: config.name || id,
     path: config.path,
-    player1Position: config.player1Position || { x: 235, y: 340, radius: 70 },
-    player2Position: config.player2Position || { x: 565, y: 340, radius: 70 },
-    displayBoard: config.displayBoard || { x: 280, y: 60, width: 240, height: 100 }
+    player1Position: config.player1Position || { x: 205, y: 378, radius: 55 },
+    player2Position: config.player2Position || { x: 655, y: 378, radius: 55 },
+    displayBoard: config.displayBoard || { x: 285, y: 18, width: 285, height: 115 }
   };
   return true;
 }
@@ -96,128 +96,84 @@ function createGradient(ctx, x, y, width, height, colors) {
   return gradient;
 }
 
-function drawHealthBar(ctx, x, y, width, height, currentHP, maxHP, isPlayer1 = true) {
+function drawHealthBar(ctx, x, y, width, height, currentHP, maxHP) {
   const percentage = Math.max(0, Math.min(1, currentHP / maxHP));
   
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillStyle = 'rgba(20, 20, 40, 0.9)';
   ctx.beginPath();
-  ctx.roundRect(x - 2, y - 2, width + 4, height + 4, 4);
-  ctx.fill();
-  
-  ctx.fillStyle = '#1a1a2e';
-  ctx.beginPath();
-  ctx.roundRect(x, y, width, height, 3);
+  ctx.roundRect(x, y, width, height, 4);
   ctx.fill();
   
   if (percentage > 0) {
     let healthColors;
     if (percentage > 0.5) {
-      healthColors = ['#00ff88', '#00cc66'];
+      healthColors = ['#22c55e', '#16a34a'];
     } else if (percentage > 0.25) {
-      healthColors = ['#ffcc00', '#ff9900'];
+      healthColors = ['#eab308', '#ca8a04'];
     } else {
-      healthColors = ['#ff4444', '#cc0000'];
+      healthColors = ['#ef4444', '#dc2626'];
     }
     
     const gradient = createGradient(ctx, x, y, width * percentage, height, healthColors);
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.roundRect(x, y, width * percentage, height, 3);
-    ctx.fill();
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.beginPath();
-    ctx.roundRect(x, y, width * percentage, height / 2, 3);
+    ctx.roundRect(x + 2, y + 2, (width - 4) * percentage, height - 4, 3);
     ctx.fill();
   }
   
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 11px Arial';
+  ctx.font = 'bold 12px Arial';
   ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
   ctx.shadowBlur = 3;
-  ctx.fillText(`${currentHP}/${maxHP}`, x + width / 2, y + height - 3);
+  ctx.fillText(`${currentHP}/${maxHP}`, x + width / 2, y + height - 4);
   ctx.shadowBlur = 0;
 }
 
 function drawEnergyBar(ctx, x, y, width, height, currentEnergy, maxEnergy = 100) {
   const percentage = Math.max(0, Math.min(1, currentEnergy / maxEnergy));
   
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-  ctx.beginPath();
-  ctx.roundRect(x - 2, y - 2, width + 4, height + 4, 4);
-  ctx.fill();
-  
-  ctx.fillStyle = '#1a1a2e';
+  ctx.fillStyle = 'rgba(20, 20, 40, 0.9)';
   ctx.beginPath();
   ctx.roundRect(x, y, width, height, 3);
   ctx.fill();
   
   if (percentage > 0) {
-    const gradient = createGradient(ctx, x, y, width * percentage, height, ['#00ccff', '#0088ff', '#0066cc']);
+    const gradient = createGradient(ctx, x, y, width * percentage, height, ['#3b82f6', '#1d4ed8']);
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.roundRect(x, y, width * percentage, height, 3);
-    ctx.fill();
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.beginPath();
-    ctx.roundRect(x, y, width * percentage, height / 2, 3);
+    ctx.roundRect(x + 2, y + 2, (width - 4) * percentage, height - 4, 2);
     ctx.fill();
   }
   
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 9px Arial';
+  ctx.font = 'bold 10px Arial';
   ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
   ctx.shadowBlur = 2;
-  ctx.fillText(`${currentEnergy}`, x + width / 2, y + height - 2);
+  ctx.fillText(`${currentEnergy}`, x + width / 2, y + height - 3);
   ctx.shadowBlur = 0;
-}
-
-function drawShieldBar(ctx, x, y, width, height, shield, maxHP) {
-  if (shield <= 0) return;
-  
-  const percentage = Math.min(1, shield / (maxHP * 0.5));
-  
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-  ctx.beginPath();
-  ctx.roundRect(x, y, width, height, 2);
-  ctx.fill();
-  
-  const gradient = createGradient(ctx, x, y, width * percentage, height, ['#88ccff', '#4488ff']);
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.roundRect(x, y, width * percentage, height, 2);
-  ctx.fill();
-  
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 8px Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(`🛡️${shield}`, x + width / 2, y + height - 1);
 }
 
 function drawTurnIndicator(ctx, x, y, radius, isCurrentTurn) {
   if (!isCurrentTurn) return;
   
-  ctx.strokeStyle = '#ffdd00';
-  ctx.lineWidth = 4;
-  ctx.shadowColor = '#ffdd00';
-  ctx.shadowBlur = 15;
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 5;
+  ctx.shadowColor = '#fbbf24';
+  ctx.shadowBlur = 20;
   
   ctx.beginPath();
-  ctx.arc(x, y, radius + 8, 0, Math.PI * 2);
+  ctx.arc(x, y, radius + 12, 0, Math.PI * 2);
   ctx.stroke();
   
-  ctx.font = 'bold 14px Arial';
-  ctx.fillStyle = '#ffdd00';
-  ctx.textAlign = 'center';
-  ctx.fillText('⚡ YOUR TURN', x, y - radius - 20);
-  
   ctx.shadowBlur = 0;
+  ctx.lineWidth = 1;
 }
 
-function drawCharacterOnCircle(ctx, image, x, y, radius) {
+function drawCharacterOnHologram(ctx, image, x, y, radius) {
+  if (!image) return;
+  
   ctx.save();
   
   ctx.beginPath();
@@ -228,37 +184,110 @@ function drawCharacterOnCircle(ctx, image, x, y, radius) {
   ctx.drawImage(image, x - radius, y - radius, size, size);
   
   ctx.restore();
-  
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.stroke();
 }
 
-function drawPlayerLabel(ctx, x, y, name, emoji, level, st, isPlayer1 = true) {
-  const labelY = y + 90;
+function drawPlayerNameTag(ctx, x, y, radius, name, level, isPlayer1, isCurrentTurn) {
+  const tagY = y + radius + 25;
+  const tagWidth = 130;
+  const tagHeight = 35;
   
-  ctx.fillStyle = isPlayer1 ? 'rgba(0, 150, 255, 0.85)' : 'rgba(255, 80, 80, 0.85)';
+  const bgColor = isPlayer1 ? 'rgba(59, 130, 246, 0.9)' : 'rgba(239, 68, 68, 0.9)';
+  const borderColor = isPlayer1 ? '#60a5fa' : '#f87171';
+  
+  ctx.fillStyle = bgColor;
   ctx.beginPath();
-  ctx.roundRect(x - 70, labelY, 140, 45, 8);
+  ctx.roundRect(x - tagWidth/2, tagY, tagWidth, tagHeight, 8);
   ctx.fill();
   
-  ctx.strokeStyle = isPlayer1 ? '#00aaff' : '#ff6666';
+  ctx.strokeStyle = borderColor;
   ctx.lineWidth = 2;
   ctx.stroke();
   
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 13px Arial';
+  ctx.font = 'bold 14px Arial';
   ctx.textAlign = 'center';
   ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-  ctx.shadowBlur = 3;
-  ctx.fillText(`${emoji} ${name}`, x, labelY + 18);
+  ctx.shadowBlur = 2;
   
-  ctx.font = '10px Arial';
-  ctx.fillStyle = '#dddddd';
-  ctx.fillText(`Lvl ${level} | ST: ${st}%`, x, labelY + 35);
+  const displayName = name.length > 10 ? name.substring(0, 9) + '..' : name;
+  ctx.fillText(displayName, x, tagY + 16);
+  
+  ctx.font = '11px Arial';
+  ctx.fillStyle = '#e5e7eb';
+  ctx.fillText(`Level ${level}`, x, tagY + 30);
+  
   ctx.shadowBlur = 0;
+  
+  if (isCurrentTurn) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 12px Arial';
+    ctx.shadowColor = '#fbbf24';
+    ctx.shadowBlur = 10;
+    ctx.fillText('YOUR TURN', x, y - radius - 15);
+    ctx.shadowBlur = 0;
+  }
+}
+
+function drawScoreboard(ctx, board, battleData) {
+  const {
+    player1Character,
+    player2Character,
+    player1HP,
+    player2HP,
+    player1MaxHP,
+    player2MaxHP,
+    player1Energy,
+    player2Energy,
+    turnCount = 0
+  } = battleData;
+  
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+  ctx.beginPath();
+  ctx.roundRect(board.x, board.y, board.width, board.height, 12);
+  ctx.fill();
+  
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  const centerX = board.x + board.width / 2;
+  
+  ctx.fillStyle = '#f8fafc';
+  ctx.font = 'bold 16px Arial';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+  ctx.shadowBlur = 4;
+  ctx.fillText(`BATTLE - Turn ${turnCount}`, centerX, board.y + 22);
+  ctx.shadowBlur = 0;
+  
+  const leftX = board.x + 18;
+  const rightX = board.x + board.width - 18;
+  const barWidth = 115;
+  const healthBarHeight = 18;
+  const energyBarHeight = 12;
+  
+  const p1Name = player1Character.name.length > 8 ? player1Character.name.substring(0, 7) + '..' : player1Character.name;
+  const p2Name = player2Character.name.length > 8 ? player2Character.name.substring(0, 7) + '..' : player2Character.name;
+  
+  ctx.font = 'bold 11px Arial';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#60a5fa';
+  ctx.fillText(p1Name, leftX, board.y + 42);
+  
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#f87171';
+  ctx.fillText(p2Name, rightX, board.y + 42);
+  
+  drawHealthBar(ctx, leftX, board.y + 48, barWidth, healthBarHeight, player1HP, player1MaxHP);
+  drawHealthBar(ctx, rightX - barWidth, board.y + 48, barWidth, healthBarHeight, player2HP, player2MaxHP);
+  
+  drawEnergyBar(ctx, leftX, board.y + 70, barWidth, energyBarHeight, player1Energy);
+  drawEnergyBar(ctx, rightX - barWidth, board.y + 70, barWidth, energyBarHeight, player2Energy);
+  
+  ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+  ctx.font = 'bold 14px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('VS', centerX, board.y + 65);
 }
 
 async function generateBattleImage(battleData, arenaId = null) {
@@ -289,8 +318,6 @@ async function generateBattleImage(battleData, arenaId = null) {
     player2MaxHP,
     player1Energy,
     player2Energy,
-    player1Shield = 0,
-    player2Shield = 0,
     currentTurn,
     turnCount = 0,
     player1 = 'Player 1',
@@ -319,78 +346,37 @@ async function generateBattleImage(battleData, arenaId = null) {
   drawTurnIndicator(ctx, p1Pos.x, p1Pos.y, p1Pos.radius, isPlayer1Turn);
   drawTurnIndicator(ctx, p2Pos.x, p2Pos.y, p2Pos.radius, isPlayer2Turn);
   
-  if (player1Image) {
-    drawCharacterOnCircle(ctx, player1Image, p1Pos.x, p1Pos.y, p1Pos.radius);
-  }
+  drawCharacterOnHologram(ctx, player1Image, p1Pos.x, p1Pos.y, p1Pos.radius);
+  drawCharacterOnHologram(ctx, player2Image, p2Pos.x, p2Pos.y, p2Pos.radius);
   
-  if (player2Image) {
-    drawCharacterOnCircle(ctx, player2Image, p2Pos.x, p2Pos.y, p2Pos.radius);
-  }
-  
-  drawPlayerLabel(
-    ctx, p1Pos.x, p1Pos.y,
+  drawPlayerNameTag(
+    ctx, p1Pos.x, p1Pos.y, p1Pos.radius,
     player1Character.name,
-    player1Character.emoji || '',
     player1Character.level || 1,
-    player1Character.st || 50,
-    true
+    true,
+    isPlayer1Turn
   );
   
-  drawPlayerLabel(
-    ctx, p2Pos.x, p2Pos.y,
+  drawPlayerNameTag(
+    ctx, p2Pos.x, p2Pos.y, p2Pos.radius,
     player2Character.name,
-    player2Character.emoji || '',
     player2Character.level || 1,
-    player2Character.st || 50,
-    false
+    false,
+    isPlayer2Turn
   );
   
   const board = arena.displayBoard;
-  
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-  ctx.beginPath();
-  ctx.roundRect(board.x, board.y, board.width, board.height, 10);
-  ctx.fill();
-  
-  ctx.strokeStyle = 'rgba(100, 200, 255, 0.6)';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-  
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 14px Arial';
-  ctx.textAlign = 'center';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-  ctx.shadowBlur = 3;
-  ctx.fillText(`⚔️ BATTLE - Turn ${turnCount}`, board.x + board.width / 2, board.y + 18);
-  ctx.shadowBlur = 0;
-  
-  const barWidth = 100;
-  const barHeight = 14;
-  const energyBarHeight = 10;
-  const leftBarX = board.x + 15;
-  const rightBarX = board.x + board.width - barWidth - 15;
-  
-  ctx.font = 'bold 9px Arial';
-  ctx.textAlign = 'left';
-  ctx.fillStyle = '#00aaff';
-  ctx.fillText(player1Character.emoji + ' ' + player1Character.name.substring(0, 8), leftBarX, board.y + 32);
-  
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#ff6666';
-  ctx.fillText(player2Character.emoji + ' ' + player2Character.name.substring(0, 8), rightBarX + barWidth, board.y + 32);
-  
-  drawHealthBar(ctx, leftBarX, board.y + 36, barWidth, barHeight, player1HP, player1MaxHP, true);
-  drawHealthBar(ctx, rightBarX, board.y + 36, barWidth, barHeight, player2HP, player2MaxHP, false);
-  
-  drawEnergyBar(ctx, leftBarX, board.y + 54, barWidth, energyBarHeight, player1Energy);
-  drawEnergyBar(ctx, rightBarX, board.y + 54, barWidth, energyBarHeight, player2Energy);
-  
-  if (player1Shield > 0) {
-    drawShieldBar(ctx, leftBarX, board.y + 68, barWidth, 8, player1Shield, player1MaxHP);
-  }
-  if (player2Shield > 0) {
-    drawShieldBar(ctx, rightBarX, board.y + 68, barWidth, 8, player2Shield, player2MaxHP);
-  }
+  drawScoreboard(ctx, board, {
+    player1Character,
+    player2Character,
+    player1HP,
+    player2HP,
+    player1MaxHP,
+    player2MaxHP,
+    player1Energy,
+    player2Energy,
+    turnCount
+  });
   
   return canvas.toBuffer('image/png');
 }
