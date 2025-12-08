@@ -49,6 +49,29 @@ The bot is built on Discord.js v14 and Node.js 20, using a dual-mode data storag
 
 ## Recent Changes (December 2025)
 
+### Visual Battle Arena System (December 2025)
+Added a dynamic visual battle image generator that creates arena images for every battle turn:
+
+**Features:**
+- Configurable arena backgrounds (currently: Forest Arena)
+- Character skin images displayed on player positions (blue/red circles)
+- Health and energy bars shown on the display board
+- Turn indicators highlighting the current player
+- Supports both PvP and AI battles
+- Image caching with automatic eviction for memory efficiency
+
+**Technical Details:**
+- Uses node-canvas for image generation
+- Arena backgrounds stored in `assets/arenas/`
+- Extensible system - add new arenas via `addArena()` function
+- Characters display their currently equipped skins
+
+**Files Added/Modified:**
+- `battleImageGenerator.js` - New file with all image generation logic
+- `battleSystem.js` - Integrated battle images into PvP turn prompts
+- `aiBattleSystem.js` - Integrated battle images into AI battle turn prompts
+- `assets/arenas/forest_arena.jpg` - Default arena background
+
 ### Character Key System Implementation
 Added a new character key collection system as an alternative way to unlock characters:
 

@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const { saveData, saveDataImmediate } = require('./dataManager.js');
 const { calculateBaseHP, calculateDamage, calculateEnergyCost, calculateCriticalHit, getMoveDisplay } = require('./battleUtils.js');
 const { getCharacterAbility } = require('./characterAbilities.js');
@@ -10,6 +10,7 @@ const { trackChallengeProgress } = require('./weeklyChallengeSystem.js');
 const { checkAchievements } = require('./achievementSystem.js');
 const { recordEvent } = require('./analyticsSystem.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
+const { generateBattleAttachment } = require('./battleImageGenerator.js');
 
 const activeBattles = new Map();
 const battleInvites = new Map();
@@ -518,7 +519,39 @@ async function promptTurn(battle, channel, data) {
     turnEmbed.setThumbnail(currentCharSkinUrl);
   }
   
-  const turnMessage = await channel.send({ embeds: [turnEmbed], components: rows });
+  let battleAttachment = null;
+  try {
+    const battleImageData = {
+      player1Character: battle.player1Character,
+      player2Character: battle.player2Character,
+      player1HP: battle.player1HP,
+      player2HP: battle.player2HP,
+      player1MaxHP: battle.player1MaxHP,
+      player2MaxHP: battle.player2MaxHP,
+      player1Energy: battle.player1Energy,
+      player2Energy: battle.player2Energy,
+      player1Shield: battle.player1Shield,
+      player2Shield: battle.player2Shield,
+      currentTurn: isPlayer1 ? 'player1' : 'player2',
+      turnCount: battle.turnCount,
+      player1: battle.player1,
+      player2: battle.player2
+    };
+    const imageResult = await generateBattleAttachment(battleImageData);
+    if (imageResult && imageResult.attachment) {
+      battleAttachment = new AttachmentBuilder(imageResult.attachment, { name: imageResult.name });
+      turnEmbed.setImage(`attachment://${imageResult.name}`);
+    }
+  } catch (error) {
+    console.error('Failed to generate battle image:', error);
+  }
+  
+  const messageOptions = { embeds: [turnEmbed], components: rows };
+  if (battleAttachment) {
+    messageOptions.files = [battleAttachment];
+  }
+  
+  const turnMessage = await channel.send(messageOptions);
   
   const filter = (interaction) => {
     return interaction.user.id === currentPlayer && 

@@ -1,10 +1,11 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const { saveDataImmediate } = require('./dataManager.js');
 const { calculateBaseHP, assignMovesToCharacter, calculateEnergyCost, calculateDamage, calculateCriticalHit } = require('./battleUtils.js');
 const { getCharacterAbility } = require('./characterAbilities.js');
 const { MOVE_EFFECTS, applyEffect, processEffects, hasEffect, getEffectsDisplay, clearAllEffects } = require('./moveEffects.js');
 const { checkTaskProgress, completePersonalizedTask, initializePersonalizedTaskData } = require('./personalizedTaskSystem.js');
 const characterManager = require('./characterManager.js');
+const { generateBattleAttachment } = require('./battleImageGenerator.js');
 
 const STARTING_ENERGY = 50;
 const ENERGY_PER_TURN = 10;
@@ -323,7 +324,39 @@ async function promptPlayerTurn(battle, channel, data) {
   }
   rows.push(new ActionRowBuilder().addComponents(passButton));
   
-  const turnMessage = await channel.send({ embeds: [turnEmbed], components: rows });
+  let battleAttachment = null;
+  try {
+    const battleImageData = {
+      player1Character: battle.player1Character,
+      player2Character: battle.player2Character,
+      player1HP: battle.player1HP,
+      player2HP: battle.player2HP,
+      player1MaxHP: battle.player1MaxHP,
+      player2MaxHP: battle.player2MaxHP,
+      player1Energy: battle.player1Energy,
+      player2Energy: battle.player2Energy,
+      player1Shield: battle.player1Shield || 0,
+      player2Shield: battle.player2Shield || 0,
+      currentTurn: 'player',
+      turnCount: battle.turnCount,
+      player1: battle.player1,
+      player2: 'AI'
+    };
+    const imageResult = await generateBattleAttachment(battleImageData);
+    if (imageResult && imageResult.attachment) {
+      battleAttachment = new AttachmentBuilder(imageResult.attachment, { name: imageResult.name });
+      turnEmbed.setImage(`attachment://${imageResult.name}`);
+    }
+  } catch (error) {
+    console.error('Failed to generate AI battle image:', error);
+  }
+  
+  const messageOptions = { embeds: [turnEmbed], components: rows };
+  if (battleAttachment) {
+    messageOptions.files = [battleAttachment];
+  }
+  
+  const turnMessage = await channel.send(messageOptions);
   
   const filter = (interaction) => {
     return interaction.user.id === battle.player1 && 
