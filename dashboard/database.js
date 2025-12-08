@@ -8,127 +8,6 @@ const {
 } = require('./schemas.js');
 const { loadData, saveDataImmediate } = require('../dataManager.js');
 const { sendMailToAll, addMailToUser } = require('../mailSystem.js');
-const CHARACTERS = require('../characters.js');
-
-async function backfillGlobalCharacters() {
-  if (!isMongoConnected()) {
-    console.log('[Dashboard] MongoDB not connected, skipping character backfill');
-    return { added: 0, updated: 0 };
-  }
-  
-  const db = getMongoDatabase();
-  let addedCount = 0;
-  let updatedCount = 0;
-  
-  try {
-    console.log(`[Dashboard] Syncing ${CHARACTERS.length} characters from characters.js...`);
-    
-    for (const char of CHARACTERS) {
-      const existingChar = await db.collection(COLLECTIONS.GLOBAL_CHARACTERS)
-        .findOne({ name: char.name });
-      
-      if (!existingChar) {
-        await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).insertOne({
-          name: char.name,
-          emoji: char.emoji,
-          customEmojiId: char.customEmojiId || null,
-          obtainable: char.obtainable,
-          rarity: 'common',
-          status: 'active',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-        addedCount++;
-      } else {
-        await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).updateOne(
-          { name: char.name },
-          { 
-            $set: { 
-              emoji: char.emoji,
-              customEmojiId: char.customEmojiId || existingChar.customEmojiId,
-              obtainable: char.obtainable,
-              updatedAt: new Date()
-            }
-          }
-        );
-        updatedCount++;
-      }
-    }
-    
-    console.log(`[Dashboard] Character sync complete: ${addedCount} added, ${updatedCount} updated`);
-    return { added: addedCount, updated: updatedCount };
-  } catch (error) {
-    console.error('[Dashboard] Error syncing characters:', error);
-    return { added: addedCount, updated: updatedCount, error: error.message };
-  }
-}
-
-async function backfillGlobalCollectibles() {
-  if (!isMongoConnected()) {
-    console.log('[Dashboard] MongoDB not connected, skipping collectible backfill');
-    return { added: 0, updated: 0 };
-  }
-  
-  const db = getMongoDatabase();
-  let addedCount = 0;
-  let updatedCount = 0;
-  
-  try {
-    const collectibleItemsCollection = db.collection('collectibleItems');
-    const existingCollectibles = await collectibleItemsCollection.find({ status: 'active' }).toArray();
-    
-    console.log(`[Dashboard] Syncing ${existingCollectibles.length} collectibles from collectibleItems...`);
-    
-    for (const item of existingCollectibles) {
-      const existingInGlobal = await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES)
-        .findOne({ name: item.name });
-      
-      if (!existingInGlobal) {
-        await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES).insertOne({
-          name: item.name,
-          description: item.description || '',
-          emoji: item.emoji || '🎁',
-          imageUrl: item.imageUrl || null,
-          rarity: item.rarity || 'common',
-          bundle: item.bundle || 'default',
-          isGlobal: item.isGlobal || true,
-          droppable: item.droppable || { enabled: false },
-          crateObtainable: item.crateObtainable || { enabled: false },
-          tradable: item.tradable !== false,
-          giftable: item.giftable !== false,
-          sellable: item.sellable !== false,
-          baseValue: item.baseValue || 100,
-          stackable: item.stackable !== false,
-          status: 'active',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        });
-        addedCount++;
-      } else {
-        await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES).updateOne(
-          { name: item.name },
-          {
-            $set: {
-              description: item.description || existingInGlobal.description,
-              emoji: item.emoji || existingInGlobal.emoji,
-              imageUrl: item.imageUrl || existingInGlobal.imageUrl,
-              rarity: item.rarity || existingInGlobal.rarity,
-              bundle: item.bundle || existingInGlobal.bundle,
-              updatedAt: new Date()
-            }
-          }
-        );
-        updatedCount++;
-      }
-    }
-    
-    console.log(`[Dashboard] Collectible sync complete: ${addedCount} added, ${updatedCount} updated`);
-    return { added: addedCount, updated: updatedCount };
-  } catch (error) {
-    console.error('[Dashboard] Error syncing collectibles:', error);
-    return { added: addedCount, updated: updatedCount, error: error.message };
-  }
-}
 
 async function sendSubmissionNotification(userId, type, itemName, status, reason = null) {
   try {
@@ -211,15 +90,6 @@ async function initDashboardIndexes() {
   const db = getMongoDatabase();
   
   try {
-    await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).createIndex({ name: 1 }, { unique: true });
-    await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).createIndex({ status: 1 });
-    await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).createIndex({ rarity: 1 });
-    await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).createIndex({ obtainable: 1 });
-    
-    await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES).createIndex({ name: 1 });
-    await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES).createIndex({ status: 1 });
-    await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES).createIndex({ rarity: 1 });
-    
     await db.collection(COLLECTIONS.SERVER_CONFIGS).createIndex({ serverId: 1 }, { unique: true });
     await db.collection(COLLECTIONS.SERVER_CONFIGS).createIndex({ ownerId: 1 });
     await db.collection(COLLECTIONS.SERVER_CONFIGS).createIndex({ setupComplete: 1 });
@@ -233,9 +103,6 @@ async function initDashboardIndexes() {
     await db.collection(COLLECTIONS.COLLECTIBLE_SUBMISSIONS).createIndex({ createdAt: -1 });
     
     console.log('[Dashboard] MongoDB indexes created successfully');
-    
-    await backfillGlobalCharacters();
-    await backfillGlobalCollectibles();
   } catch (error) {
     console.error('[Dashboard] Error creating indexes:', error);
   }
@@ -245,21 +112,48 @@ async function getAllGlobalCharacters(filters = {}) {
   if (!isMongoConnected()) return [];
   
   const db = getMongoDatabase();
-  const query = { status: { $ne: 'deleted' } };
-  
-  if (filters.rarity) query.rarity = filters.rarity;
-  if (filters.obtainable) query.obtainable = filters.obtainable;
-  if (filters.search) {
-    query.name = { $regex: filters.search, $options: 'i' };
-  }
   
   try {
-    return await db.collection(COLLECTIONS.GLOBAL_CHARACTERS)
-      .find(query)
-      .sort({ name: 1 })
-      .toArray();
+    const charDoc = await db.collection('characters').findOne({ _id: 'character_data' });
+    
+    if (!charDoc || !charDoc.characters) {
+      console.log('[Dashboard] No characters found in MongoDB characters collection');
+      return [];
+    }
+    
+    let characters = charDoc.characters.map((char, index) => ({
+      _id: char.name,
+      id: char.name,
+      name: char.name,
+      emoji: char.emoji,
+      customEmojiId: char.customEmojiId || null,
+      obtainable: char.obtainable,
+      game: char.game || 'ZooBot',
+      createdBy: char.createdBy || 'ZooBot',
+      createdAt: char.createdAt ? new Date(char.createdAt) : new Date(),
+      rarity: char.rarity || 'common',
+      status: 'active',
+      ability: charDoc.abilities ? charDoc.abilities[char.name] : null,
+      specialMove: charDoc.specialMoves ? charDoc.specialMoves[char.name] : null
+    }));
+    
+    if (filters.rarity) {
+      characters = characters.filter(c => c.rarity === filters.rarity);
+    }
+    if (filters.obtainable) {
+      characters = characters.filter(c => c.obtainable === filters.obtainable);
+    }
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      characters = characters.filter(c => c.name.toLowerCase().includes(searchLower));
+    }
+    if (filters.game) {
+      characters = characters.filter(c => c.game === filters.game);
+    }
+    
+    return characters.sort((a, b) => a.name.localeCompare(b.name));
   } catch (error) {
-    console.error('[Dashboard] Error getting global characters:', error);
+    console.error('[Dashboard] Error getting characters from bot collection:', error);
     return [];
   }
 }
@@ -267,22 +161,40 @@ async function getAllGlobalCharacters(filters = {}) {
 function isValidObjectId(id) {
   if (!id) return false;
   if (typeof id !== 'string') return false;
-  return /^[a-fA-F0-9]{24}$/.test(id);
+  return true;
 }
 
 async function getGlobalCharacterById(characterId) {
   if (!isMongoConnected()) return null;
   
-  if (!isValidObjectId(characterId)) {
-    console.log('[Dashboard] Invalid ObjectId format:', characterId);
-    return null;
-  }
-  
   const db = getMongoDatabase();
   
   try {
-    return await db.collection(COLLECTIONS.GLOBAL_CHARACTERS)
-      .findOne({ _id: new ObjectId(characterId) });
+    const charDoc = await db.collection('characters').findOne({ _id: 'character_data' });
+    
+    if (!charDoc || !charDoc.characters) {
+      return null;
+    }
+    
+    const char = charDoc.characters.find(c => c.name === characterId || c.name.toLowerCase() === characterId.toLowerCase());
+    
+    if (!char) return null;
+    
+    return {
+      _id: char.name,
+      id: char.name,
+      name: char.name,
+      emoji: char.emoji,
+      customEmojiId: char.customEmojiId || null,
+      obtainable: char.obtainable,
+      game: char.game || 'ZooBot',
+      createdBy: char.createdBy || 'ZooBot',
+      createdAt: char.createdAt ? new Date(char.createdAt) : new Date(),
+      rarity: char.rarity || 'common',
+      status: 'active',
+      ability: charDoc.abilities ? charDoc.abilities[char.name] : null,
+      specialMove: charDoc.specialMoves ? charDoc.specialMoves[char.name] : null
+    };
   } catch (error) {
     console.error('[Dashboard] Error getting character:', error);
     return null;
@@ -296,20 +208,70 @@ async function createGlobalCharacter(characterData) {
   
   const db = getMongoDatabase();
   
-  const character = {
-    ...characterData,
-    status: 'active',
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  
   try {
-    const result = await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).insertOne(character);
-    return { success: true, characterId: result.insertedId };
-  } catch (error) {
-    if (error.code === 11000) {
+    const charDoc = await db.collection('characters').findOne({ _id: 'character_data' });
+    
+    if (!charDoc) {
+      return { success: false, message: 'Characters collection not initialized' };
+    }
+    
+    const existingChar = charDoc.characters.find(c => c.name.toLowerCase() === characterData.name.toLowerCase());
+    if (existingChar) {
       return { success: false, message: 'Character with this name already exists' };
     }
+    
+    const newChar = {
+      name: characterData.name,
+      emoji: characterData.emoji,
+      customEmojiId: characterData.customEmojiId || null,
+      obtainable: characterData.obtainable || 'crate',
+      game: characterData.game || 'ZooBot',
+      createdBy: characterData.createdBy || 'Dashboard',
+      createdAt: new Date().toISOString(),
+      rarity: characterData.rarity || 'common'
+    };
+    
+    charDoc.characters.push(newChar);
+    
+    if (characterData.ability) {
+      charDoc.abilities = charDoc.abilities || {};
+      charDoc.abilities[characterData.name] = characterData.ability;
+    } else {
+      charDoc.abilities = charDoc.abilities || {};
+      charDoc.abilities[characterData.name] = {
+        name: `${characterData.name}'s Power`,
+        emoji: '⭐',
+        description: `${characterData.name} gains a small damage bonus on all attacks.`,
+        type: 'passive',
+        effect: { flatDamageBonus: 5 }
+      };
+    }
+    
+    if (characterData.specialMove) {
+      charDoc.specialMoves = charDoc.specialMoves || {};
+      charDoc.specialMoves[characterData.name] = characterData.specialMove;
+    } else {
+      charDoc.specialMoves = charDoc.specialMoves || {};
+      charDoc.specialMoves[characterData.name] = {
+        name: `${characterData.name}'s Strike`,
+        damage: 90
+      };
+    }
+    
+    await db.collection('characters').updateOne(
+      { _id: 'character_data' },
+      { 
+        $set: { 
+          characters: charDoc.characters,
+          abilities: charDoc.abilities,
+          specialMoves: charDoc.specialMoves,
+          updatedAt: new Date()
+        }
+      }
+    );
+    
+    return { success: true, characterId: characterData.name };
+  } catch (error) {
     console.error('[Dashboard] Error creating character:', error);
     return { success: false, message: 'Failed to create character' };
   }
@@ -320,18 +282,65 @@ async function updateGlobalCharacter(characterId, updates) {
     return { success: false, message: 'Database not connected' };
   }
   
-  if (!isValidObjectId(characterId)) {
-    return { success: false, message: 'Invalid character ID format' };
-  }
-  
   const db = getMongoDatabase();
-  updates.updatedAt = new Date();
   
   try {
-    await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).updateOne(
-      { _id: new ObjectId(characterId) },
-      { $set: updates }
+    const charDoc = await db.collection('characters').findOne({ _id: 'character_data' });
+    
+    if (!charDoc || !charDoc.characters) {
+      return { success: false, message: 'Characters not found' };
+    }
+    
+    const charIndex = charDoc.characters.findIndex(c => c.name === characterId || c.name.toLowerCase() === characterId.toLowerCase());
+    
+    if (charIndex === -1) {
+      return { success: false, message: 'Character not found' };
+    }
+    
+    const oldName = charDoc.characters[charIndex].name;
+    
+    if (updates.name) charDoc.characters[charIndex].name = updates.name;
+    if (updates.emoji) charDoc.characters[charIndex].emoji = updates.emoji;
+    if (updates.obtainable) charDoc.characters[charIndex].obtainable = updates.obtainable;
+    if (updates.customEmojiId !== undefined) charDoc.characters[charIndex].customEmojiId = updates.customEmojiId;
+    if (updates.game) charDoc.characters[charIndex].game = updates.game;
+    if (updates.rarity) charDoc.characters[charIndex].rarity = updates.rarity;
+    
+    charDoc.characters[charIndex].updatedAt = new Date().toISOString();
+    
+    if (updates.name && updates.name !== oldName) {
+      if (charDoc.abilities && charDoc.abilities[oldName]) {
+        charDoc.abilities[updates.name] = charDoc.abilities[oldName];
+        delete charDoc.abilities[oldName];
+      }
+      if (charDoc.specialMoves && charDoc.specialMoves[oldName]) {
+        charDoc.specialMoves[updates.name] = charDoc.specialMoves[oldName];
+        delete charDoc.specialMoves[oldName];
+      }
+    }
+    
+    if (updates.ability) {
+      charDoc.abilities = charDoc.abilities || {};
+      charDoc.abilities[charDoc.characters[charIndex].name] = updates.ability;
+    }
+    
+    if (updates.specialMove) {
+      charDoc.specialMoves = charDoc.specialMoves || {};
+      charDoc.specialMoves[charDoc.characters[charIndex].name] = updates.specialMove;
+    }
+    
+    await db.collection('characters').updateOne(
+      { _id: 'character_data' },
+      { 
+        $set: { 
+          characters: charDoc.characters,
+          abilities: charDoc.abilities,
+          specialMoves: charDoc.specialMoves,
+          updatedAt: new Date()
+        }
+      }
     );
+    
     return { success: true };
   } catch (error) {
     console.error('[Dashboard] Error updating character:', error);
@@ -344,17 +353,43 @@ async function deleteGlobalCharacter(characterId) {
     return { success: false, message: 'Database not connected' };
   }
   
-  if (!isValidObjectId(characterId)) {
-    return { success: false, message: 'Invalid character ID format' };
-  }
-  
   const db = getMongoDatabase();
   
   try {
-    await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).updateOne(
-      { _id: new ObjectId(characterId) },
-      { $set: { status: 'deleted', updatedAt: new Date() } }
+    const charDoc = await db.collection('characters').findOne({ _id: 'character_data' });
+    
+    if (!charDoc || !charDoc.characters) {
+      return { success: false, message: 'Characters not found' };
+    }
+    
+    const charIndex = charDoc.characters.findIndex(c => c.name === characterId || c.name.toLowerCase() === characterId.toLowerCase());
+    
+    if (charIndex === -1) {
+      return { success: false, message: 'Character not found' };
+    }
+    
+    const charName = charDoc.characters[charIndex].name;
+    charDoc.characters.splice(charIndex, 1);
+    
+    if (charDoc.abilities && charDoc.abilities[charName]) {
+      delete charDoc.abilities[charName];
+    }
+    if (charDoc.specialMoves && charDoc.specialMoves[charName]) {
+      delete charDoc.specialMoves[charName];
+    }
+    
+    await db.collection('characters').updateOne(
+      { _id: 'character_data' },
+      { 
+        $set: { 
+          characters: charDoc.characters,
+          abilities: charDoc.abilities,
+          specialMoves: charDoc.specialMoves,
+          updatedAt: new Date()
+        }
+      }
     );
+    
     return { success: true };
   } catch (error) {
     console.error('[Dashboard] Error deleting character:', error);
@@ -366,20 +401,26 @@ async function getAllGlobalCollectibles(filters = {}) {
   if (!isMongoConnected()) return [];
   
   const db = getMongoDatabase();
-  const query = { status: { $ne: 'deleted' } };
-  
-  if (filters.rarity) query.rarity = filters.rarity;
-  if (filters.search) {
-    query.name = { $regex: filters.search, $options: 'i' };
-  }
   
   try {
-    return await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES)
+    const query = { status: 'active' };
+    
+    if (filters.rarity) query.rarity = filters.rarity;
+    if (filters.search) {
+      query.name = { $regex: filters.search, $options: 'i' };
+    }
+    
+    const collectibles = await db.collection('collectibleItems')
       .find(query)
       .sort({ name: 1 })
       .toArray();
+    
+    return collectibles.map(c => ({
+      ...c,
+      id: c._id.toString()
+    }));
   } catch (error) {
-    console.error('[Dashboard] Error getting global collectibles:', error);
+    console.error('[Dashboard] Error getting collectibles:', error);
     return [];
   }
 }
@@ -387,16 +428,34 @@ async function getAllGlobalCollectibles(filters = {}) {
 async function getGlobalCollectibleById(collectibleId) {
   if (!isMongoConnected()) return null;
   
-  if (!isValidObjectId(collectibleId)) {
-    console.log('[Dashboard] Invalid ObjectId format for collectible:', collectibleId);
-    return null;
-  }
-  
   const db = getMongoDatabase();
   
   try {
-    return await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES)
-      .findOne({ _id: new ObjectId(collectibleId) });
+    let collectible = null;
+    
+    if (/^[a-fA-F0-9]{24}$/.test(collectibleId)) {
+      collectible = await db.collection('collectibleItems')
+        .findOne({ _id: new ObjectId(collectibleId) });
+    }
+    
+    if (!collectible) {
+      collectible = await db.collection('collectibleItems')
+        .findOne({ name: collectibleId });
+    }
+    
+    if (!collectible) {
+      collectible = await db.collection('collectibleItems')
+        .findOne({ name: { $regex: new RegExp(`^${collectibleId}$`, 'i') } });
+    }
+    
+    if (collectible) {
+      return {
+        ...collectible,
+        id: collectible._id.toString()
+      };
+    }
+    
+    return null;
   } catch (error) {
     console.error('[Dashboard] Error getting collectible:', error);
     return null;
@@ -410,15 +469,36 @@ async function createGlobalCollectible(collectibleData) {
   
   const db = getMongoDatabase();
   
-  const collectible = {
-    ...collectibleData,
-    status: 'active',
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
-  
   try {
-    const result = await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES).insertOne(collectible);
+    const existing = await db.collection('collectibleItems')
+      .findOne({ name: collectibleData.name });
+    
+    if (existing) {
+      return { success: false, message: 'Collectible with this name already exists' };
+    }
+    
+    const collectible = {
+      name: collectibleData.name,
+      description: collectibleData.description || '',
+      emoji: collectibleData.emoji || '🎁',
+      imageUrl: collectibleData.imageUrl || null,
+      rarity: collectibleData.rarity || 'common',
+      bundle: collectibleData.bundle || 'default',
+      isGlobal: collectibleData.isGlobal !== false,
+      droppable: collectibleData.droppable || { enabled: false },
+      crateObtainable: collectibleData.crateObtainable || { enabled: false },
+      tradable: collectibleData.tradable !== false,
+      giftable: collectibleData.giftable !== false,
+      sellable: collectibleData.sellable !== false,
+      baseValue: collectibleData.baseValue || 100,
+      stackable: collectibleData.stackable !== false,
+      status: 'active',
+      createdBy: collectibleData.createdBy || 'Dashboard',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    const result = await db.collection('collectibleItems').insertOne(collectible);
     return { success: true, collectibleId: result.insertedId };
   } catch (error) {
     console.error('[Dashboard] Error creating collectible:', error);
@@ -431,18 +511,18 @@ async function updateGlobalCollectible(collectibleId, updates) {
     return { success: false, message: 'Database not connected' };
   }
   
-  if (!isValidObjectId(collectibleId)) {
-    return { success: false, message: 'Invalid collectible ID format' };
-  }
-  
   const db = getMongoDatabase();
   updates.updatedAt = new Date();
   
   try {
-    await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES).updateOne(
-      { _id: new ObjectId(collectibleId) },
-      { $set: updates }
-    );
+    let query;
+    if (/^[a-fA-F0-9]{24}$/.test(collectibleId)) {
+      query = { _id: new ObjectId(collectibleId) };
+    } else {
+      query = { name: collectibleId };
+    }
+    
+    await db.collection('collectibleItems').updateOne(query, { $set: updates });
     return { success: true };
   } catch (error) {
     console.error('[Dashboard] Error updating collectible:', error);
@@ -455,15 +535,18 @@ async function deleteGlobalCollectible(collectibleId) {
     return { success: false, message: 'Database not connected' };
   }
   
-  if (!isValidObjectId(collectibleId)) {
-    return { success: false, message: 'Invalid collectible ID format' };
-  }
-  
   const db = getMongoDatabase();
   
   try {
-    await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES).updateOne(
-      { _id: new ObjectId(collectibleId) },
+    let query;
+    if (/^[a-fA-F0-9]{24}$/.test(collectibleId)) {
+      query = { _id: new ObjectId(collectibleId) };
+    } else {
+      query = { name: collectibleId };
+    }
+    
+    await db.collection('collectibleItems').updateOne(
+      query,
       { $set: { status: 'deleted', updatedAt: new Date() } }
     );
     return { success: true };
@@ -520,7 +603,7 @@ async function createOrUpdateServerConfig(serverId, configData) {
     } else {
       const newConfig = {
         serverId,
-        selectedCharacterIds: [],
+        selectedCharacterNames: [],
         selectedCollectibleIds: [],
         channels: {},
         features: { ...DEFAULT_FEATURES },
@@ -553,7 +636,7 @@ async function createOrUpdateServerConfig(serverId, configData) {
   }
 }
 
-async function addCharacterToServer(serverId, characterId) {
+async function addCharacterToServer(serverId, characterName) {
   if (!isMongoConnected()) {
     return { success: false, message: 'Database not connected' };
   }
@@ -561,10 +644,10 @@ async function addCharacterToServer(serverId, characterId) {
   const db = getMongoDatabase();
   
   try {
-    const result = await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
       { serverId },
       { 
-        $addToSet: { selectedCharacterIds: characterId },
+        $addToSet: { selectedCharacterNames: characterName },
         $set: { updatedAt: new Date() }
       }
     );
@@ -578,7 +661,7 @@ async function addCharacterToServer(serverId, characterId) {
   }
 }
 
-async function removeCharacterFromServer(serverId, characterId) {
+async function removeCharacterFromServer(serverId, characterName) {
   if (!isMongoConnected()) {
     return { success: false, message: 'Database not connected' };
   }
@@ -589,7 +672,7 @@ async function removeCharacterFromServer(serverId, characterId) {
     await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
       { serverId },
       { 
-        $pull: { selectedCharacterIds: characterId },
+        $pull: { selectedCharacterNames: characterName },
         $set: { updatedAt: new Date() }
       }
     );
@@ -658,7 +741,7 @@ async function checkAndUpdateSetupStatus(serverId) {
     const config = await db.collection(COLLECTIONS.SERVER_CONFIGS).findOne({ serverId });
     if (!config) return;
     
-    const characterCount = config.selectedCharacterIds?.length || 0;
+    const characterCount = config.selectedCharacterNames?.length || 0;
     const wasSetup = config.setupComplete;
     const isNowSetup = characterCount >= MINIMUM_CHARACTERS_REQUIRED;
     
@@ -683,7 +766,7 @@ async function isServerSetupComplete(serverId) {
   const config = await getServerConfig(serverId);
   if (!config) return false;
   
-  const characterCount = config.selectedCharacterIds?.length || 0;
+  const characterCount = config.selectedCharacterNames?.length || 0;
   return characterCount >= MINIMUM_CHARACTERS_REQUIRED;
 }
 
@@ -691,36 +774,21 @@ async function getServerCharacters(serverId) {
   if (!isMongoConnected()) return [];
   
   const config = await getServerConfig(serverId);
-  if (!config || !config.selectedCharacterIds?.length) return [];
-  
-  const db = getMongoDatabase();
-  
-  try {
-    const characterIds = config.selectedCharacterIds.map(id => {
-      try {
-        return new ObjectId(id);
-      } catch {
-        return id;
-      }
-    });
-    
-    return await db.collection(COLLECTIONS.GLOBAL_CHARACTERS)
-      .find({ 
-        _id: { $in: characterIds },
-        status: 'active'
-      })
-      .toArray();
-  } catch (error) {
-    console.error('[Dashboard] Error getting server characters:', error);
-    return [];
+  if (!config || !config.selectedCharacterNames?.length) {
+    return await getAllGlobalCharacters();
   }
+  
+  const allCharacters = await getAllGlobalCharacters();
+  return allCharacters.filter(c => config.selectedCharacterNames.includes(c.name));
 }
 
 async function getServerCollectibles(serverId) {
   if (!isMongoConnected()) return [];
   
   const config = await getServerConfig(serverId);
-  if (!config || !config.selectedCollectibleIds?.length) return [];
+  if (!config || !config.selectedCollectibleIds?.length) {
+    return await getAllGlobalCollectibles();
+  }
   
   const db = getMongoDatabase();
   
@@ -733,12 +801,20 @@ async function getServerCollectibles(serverId) {
       }
     });
     
-    return await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES)
+    const collectibles = await db.collection('collectibleItems')
       .find({ 
-        _id: { $in: collectibleIds },
+        $or: [
+          { _id: { $in: collectibleIds.filter(id => id instanceof ObjectId) } },
+          { name: { $in: collectibleIds.filter(id => typeof id === 'string') } }
+        ],
         status: 'active'
       })
       .toArray();
+    
+    return collectibles.map(c => ({
+      ...c,
+      id: c._id.toString()
+    }));
   } catch (error) {
     console.error('[Dashboard] Error getting server collectibles:', error);
     return [];
@@ -793,7 +869,7 @@ async function approveCharacterSubmission(submissionId, approvedBy) {
     return { success: false, message: 'Database not connected' };
   }
   
-  if (!isValidObjectId(submissionId)) {
+  if (!submissionId || !/^[a-fA-F0-9]{24}$/.test(submissionId)) {
     return { success: false, message: 'Invalid submission ID format' };
   }
   
@@ -853,7 +929,7 @@ async function rejectCharacterSubmission(submissionId, rejectedBy, reason) {
     return { success: false, message: 'Database not connected' };
   }
   
-  if (!isValidObjectId(submissionId)) {
+  if (!submissionId || !/^[a-fA-F0-9]{24}$/.test(submissionId)) {
     return { success: false, message: 'Invalid submission ID format' };
   }
   
@@ -937,7 +1013,7 @@ async function approveCollectibleSubmission(submissionId, approvedBy) {
     return { success: false, message: 'Database not connected' };
   }
   
-  if (!isValidObjectId(submissionId)) {
+  if (!submissionId || !/^[a-fA-F0-9]{24}$/.test(submissionId)) {
     return { success: false, message: 'Invalid submission ID format' };
   }
   
@@ -1001,7 +1077,7 @@ async function rejectCollectibleSubmission(submissionId, rejectedBy, reason) {
     return { success: false, message: 'Database not connected' };
   }
   
-  if (!isValidObjectId(submissionId)) {
+  if (!submissionId || !/^[a-fA-F0-9]{24}$/.test(submissionId)) {
     return { success: false, message: 'Invalid submission ID format' };
   }
   
@@ -1127,16 +1203,17 @@ async function getDashboardStats() {
   const db = getMongoDatabase();
   
   try {
+    const charDoc = await db.collection('characters').findOne({ _id: 'character_data' });
+    const totalCharacters = charDoc?.characters?.length || 0;
+    
     const [
-      totalCharacters,
       totalCollectibles,
       totalServers,
       setupCompleteServers,
       pendingCharacterSubmissions,
       pendingCollectibleSubmissions
     ] = await Promise.all([
-      db.collection(COLLECTIONS.GLOBAL_CHARACTERS).countDocuments({ status: 'active' }),
-      db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES).countDocuments({ status: 'active' }),
+      db.collection('collectibleItems').countDocuments({ status: 'active' }),
       db.collection(COLLECTIONS.SERVER_CONFIGS).countDocuments(),
       db.collection(COLLECTIONS.SERVER_CONFIGS).countDocuments({ setupComplete: true }),
       db.collection(COLLECTIONS.CHARACTER_SUBMISSIONS).countDocuments({ status: 'pending' }),
@@ -1181,18 +1258,14 @@ async function backfillServersFromBot(discordClient) {
   let charactersAssigned = 0;
   
   try {
-    const allCharacters = await db.collection(COLLECTIONS.GLOBAL_CHARACTERS)
-      .find({ status: 'active' })
-      .toArray();
-    const allCharacterIds = allCharacters.map(c => c._id.toString());
+    const allCharacters = await getAllGlobalCharacters();
+    const allCharacterNames = allCharacters.map(c => c.name);
     
-    const allCollectibles = await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES)
-      .find({ status: 'active' })
-      .toArray();
+    const allCollectibles = await getAllGlobalCollectibles();
     const allCollectibleIds = allCollectibles.map(c => c._id.toString());
     
     const guilds = discordClient.guilds.cache;
-    console.log(`[Dashboard] Backfilling ${guilds.size} servers with ${allCharacterIds.length} characters and ${allCollectibleIds.length} collectibles...`);
+    console.log(`[Dashboard] Backfilling ${guilds.size} servers with ${allCharacterNames.length} characters and ${allCollectibleIds.length} collectibles...`);
     
     for (const [guildId, guild] of guilds) {
       const existingConfig = await db.collection(COLLECTIONS.SERVER_CONFIGS).findOne({ serverId: guildId });
@@ -1203,7 +1276,7 @@ async function backfillServersFromBot(discordClient) {
           serverName: guild.name,
           serverIcon: guild.iconURL(),
           ownerId: guild.ownerId,
-          selectedCharacterIds: allCharacterIds,
+          selectedCharacterNames: allCharacterNames,
           selectedCollectibleIds: allCollectibleIds,
           channels: {},
           features: { ...DEFAULT_FEATURES },
@@ -1220,7 +1293,7 @@ async function backfillServersFromBot(discordClient) {
           },
           serverAdmins: [],
           zooAdminRoleName: 'zooadmin',
-          setupComplete: allCharacterIds.length >= MINIMUM_CHARACTERS_REQUIRED,
+          setupComplete: allCharacterNames.length >= MINIMUM_CHARACTERS_REQUIRED,
           botInstalledAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date()
@@ -1228,7 +1301,7 @@ async function backfillServersFromBot(discordClient) {
         
         await db.collection(COLLECTIONS.SERVER_CONFIGS).insertOne(newConfig);
         backfilledCount++;
-        charactersAssigned += allCharacterIds.length;
+        charactersAssigned += allCharacterNames.length;
       } else {
         const updateData = {
           serverName: guild.name,
@@ -1237,10 +1310,10 @@ async function backfillServersFromBot(discordClient) {
           updatedAt: new Date()
         };
         
-        if (!existingConfig.selectedCharacterIds || existingConfig.selectedCharacterIds.length === 0) {
-          updateData.selectedCharacterIds = allCharacterIds;
-          updateData.setupComplete = allCharacterIds.length >= MINIMUM_CHARACTERS_REQUIRED;
-          charactersAssigned += allCharacterIds.length;
+        if (!existingConfig.selectedCharacterNames || existingConfig.selectedCharacterNames.length === 0) {
+          updateData.selectedCharacterNames = allCharacterNames;
+          updateData.setupComplete = allCharacterNames.length >= MINIMUM_CHARACTERS_REQUIRED;
+          charactersAssigned += allCharacterNames.length;
         }
         
         if (!existingConfig.selectedCollectibleIds || existingConfig.selectedCollectibleIds.length === 0) {
@@ -1285,7 +1358,7 @@ async function getAllServerConfigs() {
   }
 }
 
-async function setServerCharacters(serverId, characterIds) {
+async function setServerCharacters(serverId, characterNames) {
   if (!isMongoConnected()) {
     return { success: false, message: 'Database not connected' };
   }
@@ -1297,7 +1370,7 @@ async function setServerCharacters(serverId, characterIds) {
       { serverId },
       { 
         $set: { 
-          selectedCharacterIds: characterIds || [],
+          selectedCharacterNames: characterNames || [],
           updatedAt: new Date()
         }
       },
@@ -1353,7 +1426,7 @@ async function completeServerSetup(serverId) {
       return { success: false, message: 'Server config not found' };
     }
     
-    const characterCount = config.selectedCharacterIds?.length || 0;
+    const characterCount = config.selectedCharacterNames?.length || 0;
     if (characterCount < MINIMUM_CHARACTERS_REQUIRED) {
       return { 
         success: false, 
@@ -1381,8 +1454,6 @@ async function completeServerSetup(serverId) {
 
 module.exports = {
   initDashboardIndexes,
-  backfillGlobalCharacters,
-  backfillGlobalCollectibles,
   backfillServersFromBot,
   getAllServerConfigs,
   isValidObjectId,
@@ -1415,6 +1486,7 @@ module.exports = {
   updateServerFeatures,
   updateServerChannels,
   updateServerPingSettings,
+  checkAndUpdateSetupStatus,
   
   createCharacterSubmission,
   getCharacterSubmissions,
@@ -1426,8 +1498,5 @@ module.exports = {
   approveCollectibleSubmission,
   rejectCollectibleSubmission,
   
-  getDashboardStats,
-  checkAndUpdateSetupStatus,
-  
-  MINIMUM_CHARACTERS_REQUIRED
+  getDashboardStats
 };

@@ -19,7 +19,7 @@ router.get('/', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       characters: characters.map(c => ({
-        id: c._id.toString(),
+        id: c.id || c.name,
         name: c.name,
         emoji: c.emoji,
         customEmojiId: c.customEmojiId,
@@ -30,6 +30,7 @@ router.get('/', authMiddleware, async (req, res) => {
         ability: c.ability,
         specialMove: c.specialMove,
         stats: c.stats,
+        game: c.game,
         createdAt: c.createdAt,
         createdBy: c.createdBy
       })),
@@ -55,7 +56,7 @@ router.get('/:characterId', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       character: {
-        id: character._id.toString(),
+        id: character.id || character.name,
         name: character.name,
         emoji: character.emoji,
         customEmojiId: character.customEmojiId,
@@ -66,6 +67,7 @@ router.get('/:characterId', authMiddleware, async (req, res) => {
         ability: character.ability,
         specialMove: character.specialMove,
         stats: character.stats,
+        game: character.game,
         createdAt: character.createdAt,
         createdBy: character.createdBy,
         approvedBy: character.approvedBy,

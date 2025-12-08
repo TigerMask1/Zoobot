@@ -18,7 +18,7 @@ router.get('/', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       collectibles: collectibles.map(c => ({
-        id: c._id.toString(),
+        id: c.id || (c._id ? c._id.toString() : c.name),
         name: c.name,
         description: c.description,
         emoji: c.emoji,
@@ -57,7 +57,7 @@ router.get('/:collectibleId', authMiddleware, async (req, res) => {
     res.json({
       success: true,
       collectible: {
-        id: collectible._id.toString(),
+        id: collectible.id || (collectible._id ? collectible._id.toString() : collectible.name),
         name: collectible.name,
         description: collectible.description,
         emoji: collectible.emoji,

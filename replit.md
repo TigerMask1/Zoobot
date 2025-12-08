@@ -121,17 +121,23 @@ Added a new character key collection system as an alternative way to unlock char
 
 ### Web Dashboard Improvements (December 2025)
 
-**Dashboard-MongoDB Integration:**
-- Dashboard now directly reads characters and collectibles from MongoDB
-- `backfillGlobalCharacters()` syncs all characters from characters.js (upsert behavior)
-- `backfillGlobalCollectibles()` syncs collectibles from the collectibleItems collection
-- Automatic sync runs on dashboard initialization via `initDashboardIndexes()`
+**Dashboard-MongoDB Full Integration (Latest):**
+- Dashboard now reads characters directly from bot's `characters` collection (document `_id: 'character_data'`)
+- Dashboard reads collectibles directly from `collectibleItems` collection (no shadow collections)
+- Removed redundant `globalCharacters` and `globalCollectibles` shadow collections
+- Single source of truth: bot and dashboard use the same MongoDB data
+- Character identification changed from ObjectId to name-based for consistency with bot
+- Server configs now store `selectedCharacterNames` instead of `selectedCharacterIds`
+- All CRUD operations (create/update/delete) go directly to bot collections
+- `getAllGlobalCharacters()` reads from `characters.character_data.characters` array
+- `getAllGlobalCollectibles()` reads from `collectibleItems` collection with status filter
 
 **Server Backfill Enhancements:**
-- `backfillServersFromBot()` now assigns all default characters to new servers
+- `backfillServersFromBot()` assigns all characters by name to new servers
 - Servers with ZooBot installed automatically get all characters and collectibles
-- `setupComplete` flag auto-set when minimum character threshold is met
+- `setupComplete` flag auto-set when minimum character threshold (5) is met
 - Existing servers without characters get backfilled on sync
+- Uses character names instead of ObjectIds for server configuration
 
 **Client-Side Routing:**
 - SPA routing with browser history support (`pushState`/`popstate`)
@@ -143,7 +149,7 @@ Added a new character key collection system as an alternative way to unlock char
 - `!setup` command uses production URL: https://zoobot-zoki.onrender.com
 
 **Files Modified:**
-- `dashboard/database.js` - Added sync functions, enhanced backfill
+- `dashboard/database.js` - Full rewrite to use bot's MongoDB collections directly
 - `dashboard/index.js` - SPA routing for server detail pages
 - `public/dashboard.html` - Client-side routing, server card click handlers
 - `commands/admin/setup.js` - Production URL hardcoded
