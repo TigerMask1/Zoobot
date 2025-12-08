@@ -1,7 +1,19 @@
 const express = require('express');
 const { authMiddleware, fetchDiscordGuilds, DISCORD_CDN } = require('./auth.js');
 const db = require('../database.js');
-const { MINIMUM_CHARACTERS_REQUIRED } = require('../schemas.js');
+const validation = require('../validation.js');
+const { 
+  MINIMUM_CHARACTERS_REQUIRED,
+  DEFAULT_CORE,
+  DEFAULT_PERMISSIONS,
+  DEFAULT_CHANNELS,
+  DEFAULT_FEATURES,
+  DEFAULT_NOTIFICATIONS,
+  DEFAULT_MODERATION,
+  DEFAULT_ECONOMY,
+  DEFAULT_ONBOARDING,
+  DEFAULT_AUTOMATION
+} = require('../schemas.js');
 
 const router = express.Router();
 
@@ -28,7 +40,7 @@ router.get('/', authMiddleware, async (req, res) => {
           owner: guild.owner,
           botInstalled,
           setupComplete: config?.setupComplete || false,
-          characterCount: config?.selectedCharacterIds?.length || 0,
+          characterCount: config?.selectedCharacterNames?.length || config?.selectedCharacterIds?.length || 0,
           collectibleCount: config?.selectedCollectibleIds?.length || 0,
           minimumRequired: MINIMUM_CHARACTERS_REQUIRED
         };
@@ -110,13 +122,19 @@ router.get('/:serverId', authMiddleware, async (req, res) => {
         collectibleCount: formattedCollectibles.length,
         minimumRequired: MINIMUM_CHARACTERS_REQUIRED,
         config: {
-          channels: config.channels || {},
-          features: config.features || {},
-          pingSettings: config.pingSettings || {},
-          moderationSettings: config.moderationSettings || {},
+          core: config.core || { ...DEFAULT_CORE },
+          permissions: config.permissions || { ...DEFAULT_PERMISSIONS },
+          channels: config.channels || { ...DEFAULT_CHANNELS },
+          features: config.features || { ...DEFAULT_FEATURES },
+          notificationSettings: config.notificationSettings || { ...DEFAULT_NOTIFICATIONS },
+          moderationSettings: config.moderationSettings || { ...DEFAULT_MODERATION },
+          economySettings: config.economySettings || { ...DEFAULT_ECONOMY },
+          onboardingSettings: config.onboardingSettings || { ...DEFAULT_ONBOARDING },
+          automationSettings: config.automationSettings || { ...DEFAULT_AUTOMATION },
+          pingSettings: config.pingSettings || { ...DEFAULT_NOTIFICATIONS },
           commandSettings: config.commandSettings || {},
           serverAdmins: config.serverAdmins || [],
-          zooAdminRoleName: config.zooAdminRoleName || 'zooadmin'
+          zooAdminRoleName: config.permissions?.zooAdminRoleName || config.zooAdminRoleName || 'zooadmin'
         },
         characters: formattedChars,
         collectibles: formattedCollectibles
@@ -125,6 +143,248 @@ router.get('/:serverId', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('[Dashboard Servers] Error getting server:', error);
     res.status(500).json({ success: false, error: 'Failed to get server details' });
+  }
+});
+
+router.get('/:serverId/config', authMiddleware, async (req, res) => {
+  const { serverId } = req.params;
+  
+  try {
+    const guilds = await fetchDiscordGuilds(req.user.accessToken);
+    const guild = guilds.find(g => g.id === serverId && g.owner);
+    
+    if (!guild && !req.user.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Not authorized for this server' });
+    }
+    
+    const config = await db.getServerConfig(serverId);
+    
+    if (!config) {
+      return res.status(404).json({ success: false, error: 'Server config not found' });
+    }
+    
+    res.json({
+      success: true,
+      config: {
+        core: config.core || { ...DEFAULT_CORE },
+        permissions: config.permissions || { ...DEFAULT_PERMISSIONS },
+        channels: config.channels || { ...DEFAULT_CHANNELS },
+        features: config.features || { ...DEFAULT_FEATURES },
+        notificationSettings: config.notificationSettings || { ...DEFAULT_NOTIFICATIONS },
+        moderationSettings: config.moderationSettings || { ...DEFAULT_MODERATION },
+        economySettings: config.economySettings || { ...DEFAULT_ECONOMY },
+        onboardingSettings: config.onboardingSettings || { ...DEFAULT_ONBOARDING },
+        automationSettings: config.automationSettings || { ...DEFAULT_AUTOMATION },
+        pingSettings: config.pingSettings || { ...DEFAULT_NOTIFICATIONS },
+        serverAdmins: config.serverAdmins || [],
+        selectedCharacterNames: config.selectedCharacterNames || [],
+        selectedCollectibleIds: config.selectedCollectibleIds || [],
+        setupComplete: config.setupComplete || false
+      }
+    });
+  } catch (error) {
+    console.error('[Dashboard Servers] Error getting server config:', error);
+    res.status(500).json({ success: false, error: 'Failed to get server config' });
+  }
+});
+
+router.patch('/:serverId/core', authMiddleware, async (req, res) => {
+  const { serverId } = req.params;
+  const coreSettings = req.body;
+  
+  try {
+    const validationResult = validation.validateCoreSettings(coreSettings);
+    if (!validationResult.valid) {
+      return res.status(400).json({ success: false, errors: validationResult.errors });
+    }
+    
+    const guilds = await fetchDiscordGuilds(req.user.accessToken);
+    const guild = guilds.find(g => g.id === serverId && g.owner);
+    
+    if (!guild && !req.user.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+    
+    const result = await db.updateServerCoreSettings(serverId, coreSettings);
+    
+    if (discordClient) {
+      discordClient.emit('dashboardConfigUpdate', { serverId, type: 'core', data: coreSettings });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[Dashboard Servers] Error updating core settings:', error);
+    res.status(500).json({ success: false, error: 'Failed to update core settings' });
+  }
+});
+
+router.patch('/:serverId/permissions', authMiddleware, async (req, res) => {
+  const { serverId } = req.params;
+  const permissions = req.body;
+  
+  try {
+    const validationResult = validation.validatePermissions(permissions);
+    if (!validationResult.valid) {
+      return res.status(400).json({ success: false, errors: validationResult.errors });
+    }
+    
+    const guilds = await fetchDiscordGuilds(req.user.accessToken);
+    const guild = guilds.find(g => g.id === serverId && g.owner);
+    
+    if (!guild && !req.user.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+    
+    const result = await db.updateServerPermissions(serverId, permissions);
+    
+    if (discordClient) {
+      discordClient.emit('dashboardConfigUpdate', { serverId, type: 'permissions', data: permissions });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[Dashboard Servers] Error updating permissions:', error);
+    res.status(500).json({ success: false, error: 'Failed to update permissions' });
+  }
+});
+
+router.patch('/:serverId/notifications', authMiddleware, async (req, res) => {
+  const { serverId } = req.params;
+  const notifications = req.body;
+  
+  try {
+    const guilds = await fetchDiscordGuilds(req.user.accessToken);
+    const guild = guilds.find(g => g.id === serverId && g.owner);
+    
+    if (!guild && !req.user.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+    
+    const result = await db.updateServerNotifications(serverId, notifications);
+    
+    if (discordClient) {
+      discordClient.emit('dashboardConfigUpdate', { serverId, type: 'notifications', data: notifications });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[Dashboard Servers] Error updating notifications:', error);
+    res.status(500).json({ success: false, error: 'Failed to update notifications' });
+  }
+});
+
+router.patch('/:serverId/moderation', authMiddleware, async (req, res) => {
+  const { serverId } = req.params;
+  const moderation = req.body;
+  
+  try {
+    const validationResult = validation.validateModeration(moderation);
+    if (!validationResult.valid) {
+      return res.status(400).json({ success: false, errors: validationResult.errors });
+    }
+    
+    const guilds = await fetchDiscordGuilds(req.user.accessToken);
+    const guild = guilds.find(g => g.id === serverId && g.owner);
+    
+    if (!guild && !req.user.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+    
+    const result = await db.updateServerModeration(serverId, moderation);
+    
+    if (discordClient) {
+      discordClient.emit('dashboardConfigUpdate', { serverId, type: 'moderation', data: moderation });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[Dashboard Servers] Error updating moderation settings:', error);
+    res.status(500).json({ success: false, error: 'Failed to update moderation settings' });
+  }
+});
+
+router.patch('/:serverId/economy', authMiddleware, async (req, res) => {
+  const { serverId } = req.params;
+  const economy = req.body;
+  
+  try {
+    const validationResult = validation.validateEconomy(economy);
+    if (!validationResult.valid) {
+      return res.status(400).json({ success: false, errors: validationResult.errors });
+    }
+    
+    const guilds = await fetchDiscordGuilds(req.user.accessToken);
+    const guild = guilds.find(g => g.id === serverId && g.owner);
+    
+    if (!guild && !req.user.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+    
+    const result = await db.updateServerEconomy(serverId, economy);
+    
+    if (discordClient) {
+      discordClient.emit('dashboardConfigUpdate', { serverId, type: 'economy', data: economy });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[Dashboard Servers] Error updating economy settings:', error);
+    res.status(500).json({ success: false, error: 'Failed to update economy settings' });
+  }
+});
+
+router.patch('/:serverId/onboarding', authMiddleware, async (req, res) => {
+  const { serverId } = req.params;
+  const onboarding = req.body;
+  
+  try {
+    const validationResult = validation.validateOnboarding(onboarding);
+    if (!validationResult.valid) {
+      return res.status(400).json({ success: false, errors: validationResult.errors });
+    }
+    
+    const guilds = await fetchDiscordGuilds(req.user.accessToken);
+    const guild = guilds.find(g => g.id === serverId && g.owner);
+    
+    if (!guild && !req.user.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+    
+    const result = await db.updateServerOnboarding(serverId, onboarding);
+    
+    if (discordClient) {
+      discordClient.emit('dashboardConfigUpdate', { serverId, type: 'onboarding', data: onboarding });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[Dashboard Servers] Error updating onboarding settings:', error);
+    res.status(500).json({ success: false, error: 'Failed to update onboarding settings' });
+  }
+});
+
+router.patch('/:serverId/automation', authMiddleware, async (req, res) => {
+  const { serverId } = req.params;
+  const automation = req.body;
+  
+  try {
+    const guilds = await fetchDiscordGuilds(req.user.accessToken);
+    const guild = guilds.find(g => g.id === serverId && g.owner);
+    
+    if (!guild && !req.user.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Not authorized' });
+    }
+    
+    const result = await db.updateServerAutomation(serverId, automation);
+    
+    if (discordClient) {
+      discordClient.emit('dashboardConfigUpdate', { serverId, type: 'automation', data: automation });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('[Dashboard Servers] Error updating automation settings:', error);
+    res.status(500).json({ success: false, error: 'Failed to update automation settings' });
   }
 });
 
@@ -158,6 +418,11 @@ router.patch('/:serverId/channels', authMiddleware, async (req, res) => {
   const channels = req.body;
   
   try {
+    const validationResult = validation.validateChannels(channels);
+    if (!validationResult.valid) {
+      return res.status(400).json({ success: false, errors: validationResult.errors });
+    }
+    
     const guilds = await fetchDiscordGuilds(req.user.accessToken);
     const guild = guilds.find(g => g.id === serverId && g.owner);
     
@@ -205,7 +470,7 @@ router.patch('/:serverId/ping-settings', authMiddleware, async (req, res) => {
 
 router.put('/:serverId/characters', authMiddleware, async (req, res) => {
   const { serverId } = req.params;
-  const { ids } = req.body;
+  const { names, ids } = req.body;
   
   try {
     const guilds = await fetchDiscordGuilds(req.user.accessToken);
@@ -215,13 +480,14 @@ router.put('/:serverId/characters', authMiddleware, async (req, res) => {
       return res.status(403).json({ success: false, error: 'Not authorized' });
     }
     
-    const result = await db.setServerCharacters(serverId, ids || []);
+    const characterNames = names || ids || [];
+    const result = await db.setServerCharacterNames(serverId, characterNames);
     
     if (result.success && discordClient) {
       discordClient.emit('dashboardConfigUpdate', { 
         serverId, 
         type: 'charactersUpdated', 
-        data: { characterIds: ids } 
+        data: { characterNames } 
       });
     }
     
@@ -389,7 +655,7 @@ router.post('/:serverId/complete-setup', authMiddleware, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Server config not found' });
     }
     
-    const characterCount = config.selectedCharacterIds?.length || 0;
+    const characterCount = config.selectedCharacterNames?.length || config.selectedCharacterIds?.length || 0;
     if (characterCount < MINIMUM_CHARACTERS_REQUIRED) {
       return res.status(400).json({ 
         success: false, 
@@ -469,6 +735,11 @@ router.get('/:serverId/roles', authMiddleware, async (req, res) => {
     console.error('[Dashboard Servers] Error getting roles:', error);
     res.status(500).json({ success: false, error: 'Failed to get roles' });
   }
+});
+
+router.use((err, req, res, next) => {
+  console.error('[Dashboard Servers] Unhandled error:', err);
+  res.status(500).json({ success: false, error: 'An unexpected error occurred' });
 });
 
 module.exports = {

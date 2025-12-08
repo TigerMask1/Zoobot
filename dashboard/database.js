@@ -2,7 +2,15 @@ const { getMongoDatabase, isMongoConnected, getCollection } = require('../mongoM
 const { ObjectId } = require('mongodb');
 const { 
   COLLECTIONS, 
+  DEFAULT_CORE,
+  DEFAULT_PERMISSIONS,
+  DEFAULT_CHANNELS,
   DEFAULT_FEATURES, 
+  DEFAULT_NOTIFICATIONS,
+  DEFAULT_MODERATION,
+  DEFAULT_ECONOMY,
+  DEFAULT_ONBOARDING,
+  DEFAULT_AUTOMATION,
   DEFAULT_PING_SETTINGS,
   MINIMUM_CHARACTERS_REQUIRED 
 } = require('./schemas.js');
@@ -562,7 +570,22 @@ async function getServerConfig(serverId) {
   const db = getMongoDatabase();
   
   try {
-    return await db.collection(COLLECTIONS.SERVER_CONFIGS).findOne({ serverId });
+    const config = await db.collection(COLLECTIONS.SERVER_CONFIGS).findOne({ serverId });
+    
+    if (!config) return null;
+    
+    return {
+      ...config,
+      core: { ...DEFAULT_CORE, ...config.core },
+      permissions: { ...DEFAULT_PERMISSIONS, ...config.permissions },
+      channels: { ...DEFAULT_CHANNELS, ...config.channels },
+      features: { ...DEFAULT_FEATURES, ...config.features },
+      notificationSettings: { ...DEFAULT_NOTIFICATIONS, ...config.notificationSettings },
+      moderationSettings: { ...DEFAULT_MODERATION, ...config.moderationSettings },
+      economySettings: { ...DEFAULT_ECONOMY, ...config.economySettings },
+      onboardingSettings: { ...DEFAULT_ONBOARDING, ...config.onboardingSettings },
+      automationSettings: { ...DEFAULT_AUTOMATION, ...config.automationSettings }
+    };
   } catch (error) {
     console.error('[Dashboard] Error getting server config:', error);
     return null;
@@ -605,21 +628,22 @@ async function createOrUpdateServerConfig(serverId, configData) {
         serverId,
         selectedCharacterNames: [],
         selectedCollectibleIds: [],
-        channels: {},
+        core: { ...DEFAULT_CORE },
+        permissions: { ...DEFAULT_PERMISSIONS },
+        channels: { ...DEFAULT_CHANNELS },
         features: { ...DEFAULT_FEATURES },
+        notificationSettings: { ...DEFAULT_NOTIFICATIONS },
+        moderationSettings: { ...DEFAULT_MODERATION },
+        economySettings: { ...DEFAULT_ECONOMY },
+        onboardingSettings: { ...DEFAULT_ONBOARDING },
+        automationSettings: { ...DEFAULT_AUTOMATION },
         pingSettings: { ...DEFAULT_PING_SETTINGS },
-        moderationSettings: {
-          maxWarningsBeforeBan: 5,
-          autoModEnabled: false,
-          profanityFilter: false
-        },
-        commandSettings: {
-          prefix: '!',
-          disabledCommands: [],
-          commandCooldowns: {}
+        audit: {
+          schemaVersion: '1.0',
+          lastEditedBy: null,
+          changeLog: []
         },
         serverAdmins: [],
-        zooAdminRoleName: 'zooadmin',
         setupComplete: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -1121,14 +1145,14 @@ async function updateServerFeatures(serverId, features) {
   const db = getMongoDatabase();
   
   try {
+    const setData = { updatedAt: new Date() };
+    for (const [key, value] of Object.entries(features)) {
+      setData[`features.${key}`] = value;
+    }
+    
     await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
       { serverId },
-      { 
-        $set: { 
-          features,
-          updatedAt: new Date()
-        }
-      }
+      { $set: setData }
     );
     
     return { success: true };
@@ -1146,14 +1170,14 @@ async function updateServerChannels(serverId, channels) {
   const db = getMongoDatabase();
   
   try {
+    const setData = { updatedAt: new Date() };
+    for (const [key, value] of Object.entries(channels)) {
+      setData[`channels.${key}`] = value;
+    }
+    
     await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
       { serverId },
-      { 
-        $set: { 
-          channels,
-          updatedAt: new Date()
-        }
-      }
+      { $set: setData }
     );
     
     return { success: true };
@@ -1185,6 +1209,248 @@ async function updateServerPingSettings(serverId, pingSettings) {
   } catch (error) {
     console.error('[Dashboard] Error updating ping settings:', error);
     return { success: false, message: 'Failed to update ping settings' };
+  }
+}
+
+async function updateServerCoreSettings(serverId, coreSettings) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const setData = { updatedAt: new Date() };
+    for (const [key, value] of Object.entries(coreSettings)) {
+      setData[`core.${key}`] = value;
+    }
+    
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { $set: setData }
+    );
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error updating core settings:', error);
+    return { success: false, message: 'Failed to update core settings' };
+  }
+}
+
+async function updateServerPermissions(serverId, permissions) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const setData = { updatedAt: new Date() };
+    for (const [key, value] of Object.entries(permissions)) {
+      setData[`permissions.${key}`] = value;
+    }
+    
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { $set: setData }
+    );
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error updating permissions:', error);
+    return { success: false, message: 'Failed to update permissions' };
+  }
+}
+
+async function updateServerNotifications(serverId, notifications) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const setData = { updatedAt: new Date() };
+    for (const [key, value] of Object.entries(notifications)) {
+      setData[`notificationSettings.${key}`] = value;
+    }
+    
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { $set: setData }
+    );
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error updating notification settings:', error);
+    return { success: false, message: 'Failed to update notification settings' };
+  }
+}
+
+async function updateServerModeration(serverId, moderation) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const setData = { updatedAt: new Date() };
+    for (const [key, value] of Object.entries(moderation)) {
+      setData[`moderationSettings.${key}`] = value;
+    }
+    
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { $set: setData }
+    );
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error updating moderation settings:', error);
+    return { success: false, message: 'Failed to update moderation settings' };
+  }
+}
+
+async function updateServerEconomy(serverId, economy) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const setData = { updatedAt: new Date() };
+    for (const [key, value] of Object.entries(economy)) {
+      setData[`economySettings.${key}`] = value;
+    }
+    
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { $set: setData }
+    );
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error updating economy settings:', error);
+    return { success: false, message: 'Failed to update economy settings' };
+  }
+}
+
+async function updateServerOnboarding(serverId, onboarding) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const setData = { updatedAt: new Date() };
+    for (const [key, value] of Object.entries(onboarding)) {
+      setData[`onboardingSettings.${key}`] = value;
+    }
+    
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { $set: setData }
+    );
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error updating onboarding settings:', error);
+    return { success: false, message: 'Failed to update onboarding settings' };
+  }
+}
+
+async function updateServerAutomation(serverId, automation) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const setData = { updatedAt: new Date() };
+    for (const [key, value] of Object.entries(automation)) {
+      setData[`automationSettings.${key}`] = value;
+    }
+    
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { $set: setData }
+    );
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error updating automation settings:', error);
+    return { success: false, message: 'Failed to update automation settings' };
+  }
+}
+
+async function recordAuditEntry(serverId, entry) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const auditEntry = {
+      action: entry.action,
+      field: entry.field,
+      oldValue: entry.oldValue,
+      newValue: entry.newValue,
+      editedBy: entry.editedBy,
+      editedAt: entry.editedAt || new Date()
+    };
+    
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { 
+        $push: { 
+          'audit.changeLog': { 
+            $each: [auditEntry], 
+            $slice: -100 
+          }
+        },
+        $set: { 
+          'audit.lastEditedBy': entry.editedBy,
+          updatedAt: new Date() 
+        }
+      }
+    );
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error recording audit entry:', error);
+    return { success: false, message: 'Failed to record audit entry' };
+  }
+}
+
+async function setServerCharacterNames(serverId, characterNames) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
+      { serverId },
+      { 
+        $set: { 
+          selectedCharacterNames: characterNames || [],
+          updatedAt: new Date()
+        }
+      }
+    );
+    
+    await checkAndUpdateSetupStatus(serverId);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error setting server character names:', error);
+    return { success: false, message: 'Failed to set character names' };
   }
 }
 
@@ -1479,6 +1745,7 @@ module.exports = {
   removeCollectibleFromServer,
   setServerCharacters,
   setServerCollectibles,
+  setServerCharacterNames,
   completeServerSetup,
   isServerSetupComplete,
   getServerCharacters,
@@ -1486,6 +1753,14 @@ module.exports = {
   updateServerFeatures,
   updateServerChannels,
   updateServerPingSettings,
+  updateServerCoreSettings,
+  updateServerPermissions,
+  updateServerNotifications,
+  updateServerModeration,
+  updateServerEconomy,
+  updateServerOnboarding,
+  updateServerAutomation,
+  recordAuditEntry,
   checkAndUpdateSetupStatus,
   
   createCharacterSubmission,

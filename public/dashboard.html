@@ -751,6 +751,23 @@
 
     .rate-input input:focus { outline: none; border-color: var(--accent); }
 
+    .channel-settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    
+    .notification-setting {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .notification-setting:last-child { border-bottom: none; }
+    
+    .settings-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin: 24px 0 16px 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
     @media (max-width: 1024px) {
       .sidebar { width: 200px; }
       .content { margin-left: 200px; }
@@ -840,6 +857,42 @@
             <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
           </svg>
           Collectibles
+        </div>
+      </div>
+      <div class="sidebar-section" id="serverSettingsNav" style="display: none;">
+        <div class="sidebar-title">Server Settings</div>
+        <div class="nav-item" onclick="scrollToSection('coreSettingsCard')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"></path>
+          </svg>
+          Bot Settings
+        </div>
+        <div class="nav-item" onclick="scrollToSection('channelSettingsCard')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path>
+          </svg>
+          Channels
+        </div>
+        <div class="nav-item" onclick="scrollToSection('featuresCard')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 11 12 14 22 4"></polyline>
+            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+          </svg>
+          Features
+        </div>
+        <div class="nav-item" onclick="scrollToSection('economyCard')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path>
+          </svg>
+          Economy
+        </div>
+        <div class="nav-item" onclick="scrollToSection('moderationCard')">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          Moderation
         </div>
       </div>
       <div class="sidebar-section" id="adminNavSection" style="display: none;">
@@ -1305,6 +1358,7 @@
       history.pushState({}, '', '/admin');
       showView('servers');
       loadServers();
+      document.getElementById('serverSettingsNav').style.display = 'none';
     }
 
     async function loadServers() {
@@ -1390,6 +1444,8 @@
 
         currentServerConfig = data.server;
         renderServerConfig(data.server);
+        document.getElementById('serverSettingsNav').style.display = 'block';
+        await loadServerSettings();
       } catch (error) {
         console.error('Failed to load server config:', error);
         container.innerHTML = '<div class="alert alert-error">Failed to load server configuration. Please try again.</div>';
@@ -1580,23 +1636,348 @@
         case 'settings':
           const config = server.config || {};
           container.innerHTML = `
-            <div class="card">
+            <!-- Core Bot Settings -->
+            <div class="card" id="coreSettingsCard">
               <div class="card-header">
-                <h3 class="card-title">Notification Settings</h3>
+                <h3 class="card-title">Bot Settings</h3>
+                <button class="btn btn-primary btn-sm" onclick="saveCoreSettings()">Save Changes</button>
               </div>
-              ${renderFeatureToggle('pingOnDrops', 'Ping on Drops', 'Mention a role when drops spawn', config.pingSettings?.pingOnDrops)}
-              ${renderFeatureToggle('pingOnEvents', 'Ping on Events', 'Mention a role for events', config.pingSettings?.pingOnEvents)}
-              ${renderFeatureToggle('pingOnGiveaways', 'Ping on Giveaways', 'Mention a role for giveaways', config.pingSettings?.pingOnGiveaways)}
+              <div class="form-group">
+                <label class="form-label">Command Prefix</label>
+                <input type="text" id="prefixInput" class="form-input" style="max-width:100px" value="${config.core?.prefix || '!'}" maxlength="3">
+                <p class="form-hint">The prefix used to trigger bot commands (e.g., !help)</p>
+              </div>
+              <div class="form-group">
+                <label class="form-label">ZooAdmin Role Name</label>
+                <input type="text" id="zooAdminRoleInput" class="form-input" style="max-width:200px" value="${config.permissions?.zooAdminRoleName || 'zooadmin'}">
+                <p class="form-hint">Users with this role name can use admin commands</p>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Slash Commands</h4>
+                  <p>Enable slash command support (/ commands)</p>
+                </div>
+                <div class="toggle ${config.core?.slashCommandsEnabled !== false ? 'active' : ''}" id="slashCommandsToggle" onclick="toggleSetting(this)"></div>
+              </div>
             </div>
 
-            <div class="card">
+            <!-- Channel Configuration -->
+            <div class="card" id="channelSettingsCard">
               <div class="card-header">
-                <h3 class="card-title">Moderation</h3>
+                <h3 class="card-title">Channel Configuration</h3>
+                <button class="btn btn-primary btn-sm" onclick="saveChannelSettings()">Save Changes</button>
               </div>
-              ${renderFeatureToggle('profanityFilter', 'Profanity Filter', 'Filter inappropriate content', config.features?.profanityFilter)}
-              ${renderFeatureToggle('autoModEnabled', 'Auto Moderation', 'Automatic spam detection', config.features?.autoModEnabled)}
+              <div class="channel-settings-grid">
+                <div class="channel-select-row">
+                  <label class="channel-label">Drop Channel</label>
+                  <select id="dropChannelSelect" class="form-select channel-select"><option value="">Select channel...</option></select>
+                </div>
+                <div class="channel-select-row">
+                  <label class="channel-label">Events Channel</label>
+                  <select id="eventsChannelSelect" class="form-select channel-select"><option value="">Select channel...</option></select>
+                </div>
+                <div class="channel-select-row">
+                  <label class="channel-label">Updates Channel</label>
+                  <select id="updatesChannelSelect" class="form-select channel-select"><option value="">Select channel...</option></select>
+                </div>
+                <div class="channel-select-row">
+                  <label class="channel-label">Battle Channel</label>
+                  <select id="battleChannelSelect" class="form-select channel-select"><option value="">Select channel...</option></select>
+                </div>
+                <div class="channel-select-row">
+                  <label class="channel-label">Log Channel</label>
+                  <select id="logChannelSelect" class="form-select channel-select"><option value="">Select channel...</option></select>
+                </div>
+                <div class="channel-select-row">
+                  <label class="channel-label">Giveaway Channel</label>
+                  <select id="giveawayChannelSelect" class="form-select channel-select"><option value="">Select channel...</option></select>
+                </div>
+                <div class="channel-select-row">
+                  <label class="channel-label">Welcome Channel</label>
+                  <select id="welcomeChannelSelect" class="form-select channel-select"><option value="">Select channel...</option></select>
+                </div>
+                <div class="channel-select-row">
+                  <label class="channel-label">Announcement Channel</label>
+                  <select id="announcementChannelSelect" class="form-select channel-select"><option value="">Select channel...</option></select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Feature Toggles -->
+            <div class="card" id="featuresCard">
+              <div class="card-header">
+                <h3 class="card-title">Feature Toggles</h3>
+                <button class="btn btn-primary btn-sm" onclick="saveFeatures()">Save Changes</button>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Character Drops</h4>
+                  <p>Enable random character drops in the server</p>
+                </div>
+                <div class="toggle ${config.features?.drops !== false ? 'active' : ''}" id="dropsToggle" data-feature="drops" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Events</h4>
+                  <p>Enable special timed events with bonus rewards</p>
+                </div>
+                <div class="toggle ${config.features?.events !== false ? 'active' : ''}" id="eventsToggle" data-feature="events" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Giveaways</h4>
+                  <p>Enable automated giveaways for players</p>
+                </div>
+                <div class="toggle ${config.features?.giveaways !== false ? 'active' : ''}" id="giveawaysToggle" data-feature="giveaways" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Lottery</h4>
+                  <p>Enable lottery system for players</p>
+                </div>
+                <div class="toggle ${config.features?.lottery !== false ? 'active' : ''}" id="lotteryToggle" data-feature="lottery" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Trading</h4>
+                  <p>Allow players to trade characters with each other</p>
+                </div>
+                <div class="toggle ${config.features?.trading !== false ? 'active' : ''}" id="tradingToggle" data-feature="trading" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Marketplace</h4>
+                  <p>Enable the marketplace for buying/selling</p>
+                </div>
+                <div class="toggle ${config.features?.marketplace !== false ? 'active' : ''}" id="marketplaceToggle" data-feature="marketplace" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Auctions</h4>
+                  <p>Enable auction system for rare items</p>
+                </div>
+                <div class="toggle ${config.features?.auctions !== false ? 'active' : ''}" id="auctionsToggle" data-feature="auctions" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Battles</h4>
+                  <p>Enable character battle system</p>
+                </div>
+                <div class="toggle ${config.features?.battles !== false ? 'active' : ''}" id="battlesToggle" data-feature="battles" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Work System</h4>
+                  <p>Allow players to work for coins</p>
+                </div>
+                <div class="toggle ${config.features?.work !== false ? 'active' : ''}" id="workToggle" data-feature="work" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Quests</h4>
+                  <p>Enable daily and weekly quests</p>
+                </div>
+                <div class="toggle ${config.features?.quests !== false ? 'active' : ''}" id="questsToggle" data-feature="quests" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Dailies</h4>
+                  <p>Enable daily login rewards</p>
+                </div>
+                <div class="toggle ${config.features?.dailies !== false ? 'active' : ''}" id="dailiesToggle" data-feature="dailies" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Minigames</h4>
+                  <p>Enable fun minigames for coins</p>
+                </div>
+                <div class="toggle ${config.features?.minigames !== false ? 'active' : ''}" id="minigamesToggle" data-feature="minigames" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Trivia</h4>
+                  <p>Enable trivia games</p>
+                </div>
+                <div class="toggle ${config.features?.trivia !== false ? 'active' : ''}" id="triviaToggle" data-feature="trivia" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Clans</h4>
+                  <p>Enable clan/guild system</p>
+                </div>
+                <div class="toggle ${config.features?.clans !== false ? 'active' : ''}" id="clansToggle" data-feature="clans" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Leaderboards</h4>
+                  <p>Enable server leaderboards</p>
+                </div>
+                <div class="toggle ${config.features?.leaderboards !== false ? 'active' : ''}" id="leaderboardsToggle" data-feature="leaderboards" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Season Pass</h4>
+                  <p>Enable season pass rewards</p>
+                </div>
+                <div class="toggle ${config.features?.seasonPass !== false ? 'active' : ''}" id="seasonPassToggle" data-feature="seasonPass" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Logging</h4>
+                  <p>Log bot actions to log channel</p>
+                </div>
+                <div class="toggle ${config.features?.logging !== false ? 'active' : ''}" id="loggingToggle" data-feature="logging" onclick="toggleSettingOnly(this)"></div>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Tutorial Hints</h4>
+                  <p>Show helpful hints for new players</p>
+                </div>
+                <div class="toggle ${config.features?.showTutorialHints !== false ? 'active' : ''}" id="tutorialHintsToggle" data-feature="showTutorialHints" onclick="toggleSettingOnly(this)"></div>
+              </div>
+            </div>
+
+            <!-- Notification Settings -->
+            <div class="card" id="notificationsCard">
+              <div class="card-header">
+                <h3 class="card-title">Notification Settings</h3>
+                <button class="btn btn-primary btn-sm" onclick="saveNotificationSettings()">Save Changes</button>
+              </div>
+              <div class="notification-setting">
+                <div class="toggle-container" style="border-bottom: none; padding-bottom: 0;">
+                  <div class="toggle-info">
+                    <h4>Ping on Drops</h4>
+                    <p>Mention a role when characters drop</p>
+                  </div>
+                  <div class="toggle ${config.notificationSettings?.pingOnDrops ? 'active' : ''}" id="pingDropsToggle" data-setting="pingOnDrops" onclick="toggleNotification(this)"></div>
+                </div>
+                <select id="dropPingRoleSelect" class="form-select" style="margin-top:8px; max-width:200px;">
+                  <option value="">Select role...</option>
+                </select>
+              </div>
+              <div class="notification-setting">
+                <div class="toggle-container" style="border-bottom: none; padding-bottom: 0;">
+                  <div class="toggle-info">
+                    <h4>Ping on Events</h4>
+                    <p>Mention a role for events</p>
+                  </div>
+                  <div class="toggle ${config.notificationSettings?.pingOnEvents ? 'active' : ''}" id="pingEventsToggle" data-setting="pingOnEvents" onclick="toggleNotification(this)"></div>
+                </div>
+                <select id="eventPingRoleSelect" class="form-select" style="margin-top:8px; max-width:200px;">
+                  <option value="">Select role...</option>
+                </select>
+              </div>
+              <div class="notification-setting">
+                <div class="toggle-container" style="border-bottom: none; padding-bottom: 0;">
+                  <div class="toggle-info">
+                    <h4>Ping on Giveaways</h4>
+                    <p>Mention a role for giveaways</p>
+                  </div>
+                  <div class="toggle ${config.notificationSettings?.pingOnGiveaways ? 'active' : ''}" id="pingGiveawaysToggle" data-setting="pingOnGiveaways" onclick="toggleNotification(this)"></div>
+                </div>
+                <select id="giveawayPingRoleSelect" class="form-select" style="margin-top:8px; max-width:200px;">
+                  <option value="">Select role...</option>
+                </select>
+              </div>
+              <div class="notification-setting">
+                <div class="toggle-container" style="border-bottom: none; padding-bottom: 0;">
+                  <div class="toggle-info">
+                    <h4>Ping on Lottery</h4>
+                    <p>Mention a role for lottery draws</p>
+                  </div>
+                  <div class="toggle ${config.notificationSettings?.pingOnLottery ? 'active' : ''}" id="pingLotteryToggle" data-setting="pingOnLottery" onclick="toggleNotification(this)"></div>
+                </div>
+                <select id="lotteryPingRoleSelect" class="form-select" style="margin-top:8px; max-width:200px;">
+                  <option value="">Select role...</option>
+                </select>
+              </div>
+              <div class="notification-setting">
+                <div class="toggle-container" style="border-bottom: none; padding-bottom: 0;">
+                  <div class="toggle-info">
+                    <h4>Ping on Updates</h4>
+                    <p>Mention a role for bot updates</p>
+                  </div>
+                  <div class="toggle ${config.notificationSettings?.pingOnUpdates ? 'active' : ''}" id="pingUpdatesToggle" data-setting="pingOnUpdates" onclick="toggleNotification(this)"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Moderation Settings -->
+            <div class="card" id="moderationCard">
+              <div class="card-header">
+                <h3 class="card-title">Moderation Settings</h3>
+                <button class="btn btn-primary btn-sm" onclick="saveModerationSettings()">Save Changes</button>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Auto-Moderation</h4>
+                  <p>Automatically moderate spam and inappropriate content</p>
+                </div>
+                <div class="toggle ${config.moderationSettings?.autoModEnabled ? 'active' : ''}" id="autoModToggle" onclick="toggleSetting(this)"></div>
+              </div>
+              <div class="form-group" style="margin-top: 16px;">
+                <label class="form-label">Profanity Filter Mode</label>
+                <select id="profanityModeSelect" class="form-select" style="max-width:200px">
+                  <option value="off" ${config.moderationSettings?.profanityFilterMode === 'off' ? 'selected' : ''}>Off</option>
+                  <option value="basic" ${config.moderationSettings?.profanityFilterMode === 'basic' ? 'selected' : ''}>Basic</option>
+                  <option value="strict" ${config.moderationSettings?.profanityFilterMode === 'strict' ? 'selected' : ''}>Strict</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Max Warnings Before Ban</label>
+                <input type="number" id="maxWarningsInput" class="form-input" style="max-width:100px" value="${config.moderationSettings?.maxWarningsBeforeBan || 5}" min="1" max="10">
+              </div>
+            </div>
+
+            <!-- Economy Settings -->
+            <div class="card" id="economyCard">
+              <div class="card-header">
+                <h3 class="card-title">Economy Settings</h3>
+                <button class="btn btn-primary btn-sm" onclick="saveEconomySettings()">Save Changes</button>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Daily Reward Amount</label>
+                  <input type="number" id="dailyRewardInput" class="form-input" value="${config.economySettings?.earnRates?.daily || 500}" min="0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Work Reward Amount</label>
+                  <input type="number" id="workRewardInput" class="form-input" value="${config.economySettings?.earnRates?.work || 250}" min="0">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Event Reward Multiplier</label>
+                  <input type="number" id="eventMultiplierInput" class="form-input" value="${config.economySettings?.rewardMultipliers?.events || 1.5}" min="1" max="5" step="0.1">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Marketplace Fee (%)</label>
+                  <input type="number" id="marketplaceFeeInput" class="form-input" value="${(config.economySettings?.marketplaceFee || 0.1) * 100}" min="0" max="50">
+                </div>
+              </div>
+            </div>
+
+            <!-- Welcome/Onboarding Settings -->
+            <div class="card" id="onboardingCard">
+              <div class="card-header">
+                <h3 class="card-title">Welcome Messages</h3>
+                <button class="btn btn-primary btn-sm" onclick="saveOnboardingSettings()">Save Changes</button>
+              </div>
+              <div class="toggle-container">
+                <div class="toggle-info">
+                  <h4>Welcome New Players</h4>
+                  <p>Send a welcome message when new players join</p>
+                </div>
+                <div class="toggle ${config.onboardingSettings?.welcomeEnabled !== false ? 'active' : ''}" id="welcomeEnabledToggle" onclick="toggleSetting(this)"></div>
+              </div>
+              <div class="form-group" style="margin-top: 16px;">
+                <label class="form-label">Welcome Message</label>
+                <textarea id="welcomeMessageInput" class="form-textarea" placeholder="Welcome {user} to {server}! Use !start to begin your adventure.">${config.onboardingSettings?.welcomeMessage || ''}</textarea>
+                <p class="form-hint">Use {user} for username, {server} for server name</p>
+              </div>
             </div>
           `;
+          loadSettingsChannelsAndRoles();
           break;
       }
     }
@@ -2280,6 +2661,198 @@
         e.target.classList.remove('active');
       }
     });
+
+    // Settings functions
+    let serverSettings = {};
+
+    function toggleSetting(element) {
+      element.classList.toggle('active');
+    }
+
+    function toggleSettingOnly(element) {
+      element.classList.toggle('active');
+    }
+
+    function toggleNotification(element) {
+      element.classList.toggle('active');
+    }
+
+    async function loadSettingsChannelsAndRoles() {
+      if (!currentServer) return;
+      
+      try {
+        // Load channels
+        const channelsResponse = await fetch(`/admin/api/servers/${currentServer}/channels`);
+        const channelsData = await channelsResponse.json();
+        if (channelsData.success && channelsData.channels) {
+          const channelSelects = document.querySelectorAll('select[id$="ChannelSelect"]');
+          channelSelects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select channel...</option>';
+            channelsData.channels.forEach(ch => {
+              const option = document.createElement('option');
+              option.value = ch.id;
+              option.textContent = ch.category ? `#${ch.name} (${ch.category})` : `#${ch.name}`;
+              select.appendChild(option);
+            });
+            if (currentValue) select.value = currentValue;
+          });
+        }
+        
+        // Load roles
+        const rolesResponse = await fetch(`/admin/api/servers/${currentServer}/roles`);
+        const rolesData = await rolesResponse.json();
+        if (rolesData.success && rolesData.roles) {
+          const roleSelects = document.querySelectorAll('select[id$="RoleSelect"]');
+          roleSelects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select role...</option>';
+            rolesData.roles.forEach(role => {
+              const option = document.createElement('option');
+              option.value = role.id;
+              option.textContent = `@${role.name}`;
+              option.style.color = role.color;
+              select.appendChild(option);
+            });
+            if (currentValue) select.value = currentValue;
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load channels and roles:', error);
+      }
+    }
+
+    async function loadServerSettings() {
+      if (!currentServer) return;
+      try {
+        const response = await fetch(`/admin/api/servers/${currentServer}/config`);
+        const data = await response.json();
+        if (data.success) {
+          serverSettings = data.config;
+          await populateSettingsUI();
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      }
+    }
+
+    async function populateSettingsUI() {
+      await loadSettingsChannelsAndRoles();
+
+      // Then populate channel values
+      const channels = serverSettings.channels || {};
+      Object.keys(channels).forEach(key => {
+        const selectId = key.replace('Id', 'Select').replace('Channel', 'Channel');
+        const select = document.getElementById(selectId);
+        if (select && channels[key]) select.value = channels[key];
+      });
+    }
+
+    async function saveCoreSettings() {
+      const data = {
+        prefix: document.getElementById('prefixInput').value,
+        slashCommandsEnabled: document.getElementById('slashCommandsToggle').classList.contains('active'),
+        disabledCommands: [],
+        commandCooldowns: {}
+      };
+      
+      await saveSettings('core', data);
+      
+      await saveSettings('permissions', {
+        zooAdminRoleName: document.getElementById('zooAdminRoleInput').value
+      });
+    }
+
+    async function saveChannelSettings() {
+      const data = {};
+      ['drop', 'events', 'updates', 'battle', 'log', 'giveaway', 'welcome', 'announcement'].forEach(type => {
+        const select = document.getElementById(`${type}ChannelSelect`);
+        if (select) data[`${type}ChannelId`] = select.value || null;
+      });
+      await saveSettings('channels', data);
+    }
+
+    async function saveFeatures() {
+      const data = {};
+      document.querySelectorAll('[data-feature]').forEach(toggle => {
+        data[toggle.dataset.feature] = toggle.classList.contains('active');
+      });
+      await saveSettings('features', data);
+    }
+
+    async function saveNotificationSettings() {
+      const data = {
+        pingOnDrops: document.getElementById('pingDropsToggle')?.classList.contains('active'),
+        pingOnEvents: document.getElementById('pingEventsToggle')?.classList.contains('active'),
+        pingOnGiveaways: document.getElementById('pingGiveawaysToggle')?.classList.contains('active'),
+        pingOnLottery: document.getElementById('pingLotteryToggle')?.classList.contains('active'),
+        pingOnUpdates: document.getElementById('pingUpdatesToggle')?.classList.contains('active'),
+        dropPingRoleId: document.getElementById('dropPingRoleSelect')?.value || null,
+        eventPingRoleId: document.getElementById('eventPingRoleSelect')?.value || null,
+        giveawayPingRoleId: document.getElementById('giveawayPingRoleSelect')?.value || null,
+        lotteryPingRoleId: document.getElementById('lotteryPingRoleSelect')?.value || null
+      };
+      await saveSettings('notifications', data);
+    }
+
+    async function saveModerationSettings() {
+      const data = {
+        autoModEnabled: document.getElementById('autoModToggle')?.classList.contains('active'),
+        profanityFilterMode: document.getElementById('profanityModeSelect')?.value || 'off',
+        maxWarningsBeforeBan: parseInt(document.getElementById('maxWarningsInput')?.value) || 5
+      };
+      await saveSettings('moderation', data);
+    }
+
+    async function saveEconomySettings() {
+      const data = {
+        earnRates: {
+          daily: parseInt(document.getElementById('dailyRewardInput')?.value) || 500,
+          work: parseInt(document.getElementById('workRewardInput')?.value) || 250,
+          weekly: 1500
+        },
+        rewardMultipliers: {
+          events: parseFloat(document.getElementById('eventMultiplierInput')?.value) || 1.5,
+          weekends: 1.2
+        },
+        marketplaceFee: (parseInt(document.getElementById('marketplaceFeeInput')?.value) || 10) / 100,
+        tradeTax: 0.05
+      };
+      await saveSettings('economy', data);
+    }
+
+    async function saveOnboardingSettings() {
+      const data = {
+        welcomeEnabled: document.getElementById('welcomeEnabledToggle')?.classList.contains('active'),
+        welcomeMessage: document.getElementById('welcomeMessageInput')?.value || null
+      };
+      await saveSettings('onboarding', data);
+    }
+
+    async function saveSettings(category, data) {
+      try {
+        const response = await fetch(`/admin/api/servers/${currentServer}/${category}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        if (result.success) {
+          showToast(`${category.charAt(0).toUpperCase() + category.slice(1)} settings saved!`, 'success');
+        } else {
+          showToast(result.message || 'Failed to save settings', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to save settings', 'error');
+      }
+    }
+
+    function scrollToSection(sectionId) {
+      const section = document.getElementById(sectionId);
+      if (section) {
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
 
     init();
   </script>

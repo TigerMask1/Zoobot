@@ -845,6 +845,23 @@ async function getDashboardServerConfig(serverId) {
   }
 }
 
+async function reloadServerConfigFromMongo(serverId) {
+  try {
+    const collection = await getCollection('serverConfigs');
+    const config = await collection.findOne({ serverId });
+    
+    if (config) {
+      serverConfigs[serverId] = config;
+      console.log(`[ServerConfig] Reloaded config for server ${serverId} from MongoDB`);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error(`[ServerConfig] Error reloading config for ${serverId}:`, error);
+    return false;
+  }
+}
+
 module.exports = {
   loadServerConfigs,
   saveServerConfig,
@@ -906,6 +923,7 @@ module.exports = {
   hasServerSelectedCharacters,
   isDashboardSetupComplete,
   getDashboardServerConfig,
+  reloadServerConfigFromMongo,
   DEFAULT_FEATURE_SETTINGS,
   MAIN_SERVER_ID,
   SUPER_ADMINS,

@@ -269,7 +269,10 @@ const {
   getAllAdminsInfo,
   getHierarchyInfo,
   DEFAULT_FEATURE_SETTINGS,
-  DEFAULT_GAME 
+  DEFAULT_GAME,
+  getServerConfig,
+  saveServerConfig,
+  reloadServerConfigFromMongo
 } = require('./serverConfigManager.js');
 const gameSystem = require('./gameSystem.js');
 const charSubmissionSystem = require('./characterSubmissionSystem.js');
@@ -601,9 +604,151 @@ client.on('clientReady', async () => {
     const { serverId, type, data: updatePayload } = updateData;
     console.log(`[Dashboard] Config update for server ${serverId}: ${type}`);
     
-    if (type === 'characterAdded' || type === 'characterRemoved') {
-      await dashboardDb.checkAndUpdateSetupStatus(serverId);
-      console.log(`[Dashboard] Setup status checked for server ${serverId}`);
+    try {
+      switch (type) {
+        case 'core':
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for core settings`);
+            }
+          }
+          console.log(`[Dashboard] Core settings updated for server ${serverId}`);
+          break;
+          
+        case 'permissions':
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for permission settings`);
+            }
+          }
+          console.log(`[Dashboard] Permission settings updated for server ${serverId}`);
+          break;
+          
+        case 'channels':
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for channel settings`);
+            }
+          }
+          console.log(`[Dashboard] Channel settings updated for server ${serverId}`);
+          break;
+          
+        case 'features':
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for feature toggles`);
+            }
+          }
+          console.log(`[Dashboard] Feature toggles updated for server ${serverId}`);
+          break;
+          
+        case 'notifications':
+        case 'pingSettings':
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for notification settings`);
+            }
+          }
+          console.log(`[Dashboard] Notification settings updated for server ${serverId}`);
+          break;
+          
+        case 'moderation':
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for moderation settings`);
+            }
+          }
+          console.log(`[Dashboard] Moderation settings updated for server ${serverId}`);
+          break;
+          
+        case 'economy':
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for economy settings`);
+            }
+          }
+          console.log(`[Dashboard] Economy settings updated for server ${serverId}`);
+          break;
+          
+        case 'onboarding':
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for onboarding settings`);
+            }
+          }
+          console.log(`[Dashboard] Onboarding settings updated for server ${serverId}`);
+          break;
+          
+        case 'automation':
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for automation settings`);
+            }
+          }
+          console.log(`[Dashboard] Automation settings updated for server ${serverId}`);
+          break;
+          
+        case 'characterAdded':
+        case 'characterRemoved':
+        case 'charactersUpdated':
+          await dashboardDb.checkAndUpdateSetupStatus(serverId);
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for character configuration`);
+            }
+          }
+          console.log(`[Dashboard] Character configuration updated for server ${serverId}`);
+          break;
+          
+        case 'collectibleAdded':
+        case 'collectibleRemoved':
+        case 'collectiblesUpdated':
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for collectible configuration`);
+            }
+          }
+          console.log(`[Dashboard] Collectible configuration updated for server ${serverId}`);
+          break;
+          
+        case 'setupCompleted':
+          if (USE_MONGODB) {
+            try {
+              await reloadServerConfigFromMongo(serverId);
+            } catch (e) {
+              console.log(`[Dashboard] Using in-memory update for setup completion`);
+            }
+          }
+          console.log(`[Dashboard] Setup completed for server ${serverId}`);
+          break;
+          
+        default:
+          console.log(`[Dashboard] Unhandled config update type: ${type}`);
+      }
+    } catch (error) {
+      console.error(`[Dashboard] Error processing config update for ${serverId}:`, error);
     }
   });
   console.log('✅ Dashboard event listener configured');

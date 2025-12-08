@@ -119,37 +119,64 @@ Added a new character key collection system as an alternative way to unlock char
 - `dropsWerePausedBefore` flag prevents unwanted drop restarts
 - All critical saves use `saveDataImmediate()` for data integrity
 
-### Web Dashboard Improvements (December 2025)
+### Web Dashboard Complete Redesign (December 2025)
 
-**Dashboard-MongoDB Full Integration (Latest):**
-- Dashboard now reads characters directly from bot's `characters` collection (document `_id: 'character_data'`)
-- Dashboard reads collectibles directly from `collectibleItems` collection (no shadow collections)
-- Removed redundant `globalCharacters` and `globalCollectibles` shadow collections
-- Single source of truth: bot and dashboard use the same MongoDB data
-- Character identification changed from ObjectId to name-based for consistency with bot
-- Server configs now store `selectedCharacterNames` instead of `selectedCharacterIds`
-- All CRUD operations (create/update/delete) go directly to bot collections
-- `getAllGlobalCharacters()` reads from `characters.character_data.characters` array
-- `getAllGlobalCollectibles()` reads from `collectibleItems` collection with status filter
+**Full Configuration Dashboard:**
+The dashboard has been completely redesigned as a fully functional bot configuration system with proper MongoDB persistence for all settings.
 
-**Server Backfill Enhancements:**
-- `backfillServersFromBot()` assigns all characters by name to new servers
-- Servers with ZooBot installed automatically get all characters and collectibles
-- `setupComplete` flag auto-set when minimum character threshold (5) is met
-- Existing servers without characters get backfilled on sync
-- Uses character names instead of ObjectIds for server configuration
+**New Server Configuration Schema:**
+- `core` - Bot prefix, slash commands, disabled commands, command cooldowns
+- `permissions` - ZooAdmin role, admin/moderator/trusted/blocked role IDs
+- `channels` - Drop, events, updates, battle, log, giveaway, welcome, announcement channels
+- `features` - 22 feature toggles (drops, events, trading, battles, etc.)
+- `notificationSettings` - Ping toggles and role IDs for each notification type
+- `moderationSettings` - Auto-mod, profanity filter mode, warning thresholds, mute/ban durations
+- `economySettings` - Earn rates, drop rates, reward multipliers, marketplace fees
+- `onboardingSettings` - Welcome messages, auto-roles, verification
+- `automationSettings` - Timezone, locale, scheduled jobs
+- `audit` - Schema version, change log
 
-**Client-Side Routing:**
-- SPA routing with browser history support (`pushState`/`popstate`)
-- Direct URL navigation to `/admin/server/:id` works correctly
-- Back/forward browser buttons properly update views
-- `goBackToServers()` updates URL when navigating back
+**Dashboard UI Panels:**
+- Core Settings - Command prefix, ZooAdmin role name, slash commands toggle
+- Channel Configuration - 8 channel dropdowns with live Discord data
+- Feature Toggles - 18 toggleable features with descriptions
+- Notification Settings - 5 ping toggles with role selection
+- Moderation Settings - Auto-mod, profanity filter, warning limits
+- Economy Settings - Daily/work rewards, multipliers, fees
+- Welcome/Onboarding - Welcome toggle, custom message with placeholders
 
-**Setup Command:**
-- `!setup` command uses production URL: https://zoobot-zoki.onrender.com
+**API Routes (PATCH endpoints):**
+- `/admin/api/servers/:serverId/core` - Update core settings
+- `/admin/api/servers/:serverId/permissions` - Update permissions
+- `/admin/api/servers/:serverId/channels` - Update channels
+- `/admin/api/servers/:serverId/features` - Update feature toggles
+- `/admin/api/servers/:serverId/notifications` - Update notifications
+- `/admin/api/servers/:serverId/moderation` - Update moderation
+- `/admin/api/servers/:serverId/economy` - Update economy
+- `/admin/api/servers/:serverId/onboarding` - Update onboarding
+- `/admin/api/servers/:serverId/config` - Get full configuration
+
+**Input Validation:**
+- `dashboard/validation.js` - Comprehensive validation for all settings
+- Validates Discord IDs, prefixes, numbers, booleans, enums
+- Returns structured error messages for invalid inputs
+
+**Real-Time Bot Sync:**
+- Dashboard changes emit `dashboardConfigUpdate` events
+- Bot handler processes 15 config update types
+- Reloads server config from MongoDB after dashboard updates
+- Settings apply immediately without bot restart
+
+**Default Backfilling:**
+- `getServerConfig()` merges defaults for missing nested fields
+- Existing documents get proper defaults for new schema fields
+- No migration needed for old server configs
 
 **Files Modified:**
-- `dashboard/database.js` - Full rewrite to use bot's MongoDB collections directly
-- `dashboard/index.js` - SPA routing for server detail pages
-- `public/dashboard.html` - Client-side routing, server card click handlers
-- `commands/admin/setup.js` - Production URL hardcoded
+- `dashboard/schemas.js` - Comprehensive SERVER_CONFIG_SCHEMA and DEFAULT_* constants
+- `dashboard/database.js` - New CRUD functions for all settings categories
+- `dashboard/routes/servers.js` - New PATCH routes with validation
+- `dashboard/validation.js` - New validation utility
+- `public/dashboard.html` - Complete UI redesign with settings panels
+- `index.js` - Expanded dashboardConfigUpdate event handler
+- `serverConfigManager.js` - Added reloadServerConfigFromMongo function
