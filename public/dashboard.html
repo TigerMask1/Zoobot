@@ -870,7 +870,7 @@
 
       <!-- Server Config View -->
       <div id="serverConfigView" class="hidden">
-        <div class="back-btn" onclick="showView('servers')">
+        <div class="back-btn" onclick="goBackToServers()">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
@@ -1202,6 +1202,7 @@
           if (data.success) {
             currentUser = data.user;
             showDashboard();
+            handleInitialRoute();
             return;
           }
         }
@@ -1211,6 +1212,19 @@
         showLogin();
       }
     }
+
+    function handleInitialRoute() {
+      const path = window.location.pathname;
+      const serverMatch = path.match(/\/admin\/server\/(\d+)/);
+      if (serverMatch) {
+        const serverId = serverMatch[1];
+        openServerConfig(serverId);
+      }
+    }
+
+    window.addEventListener('popstate', () => {
+      handleInitialRoute();
+    });
 
     function getErrorMessage(code) {
       const errors = {
@@ -1285,6 +1299,14 @@
       }
     }
 
+    function goBackToServers() {
+      currentServer = null;
+      currentServerConfig = null;
+      history.pushState({}, '', '/admin');
+      showView('servers');
+      loadServers();
+    }
+
     async function loadServers() {
       const container = document.getElementById('serversList');
       container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -1306,7 +1328,8 @@
 
         container.innerHTML = data.servers.map(server => `
           <div class="server-card ${!server.botInstalled ? 'not-installed' : server.setupComplete ? '' : 'setup-pending'}" 
-               onclick="${server.botInstalled ? `openServerConfig('${server.id}')` : 'showBotInvite()'}">
+               data-server-id="${server.id}"
+               style="cursor: pointer;">
             <div class="server-icon">
               ${server.icon ? `<img src="${server.icon}" alt="${server.name}">` : server.name.charAt(0).toUpperCase()}
             </div>
@@ -1315,13 +1338,23 @@
               <div class="server-stats">
                 <span>
                   <span class="status-indicator ${!server.botInstalled ? 'status-not-installed' : server.setupComplete ? 'status-ready' : 'status-setup'}"></span>
-                  ${!server.botInstalled ? 'Bot Not Installed' : server.setupComplete ? 'Ready' : 'Setup Required'}
+                  ${!server.botInstalled ? 'Click to Configure' : server.setupComplete ? 'Ready' : 'Setup Required'}
                 </span>
-                ${server.botInstalled ? `<span>${server.characterCount} characters</span>` : ''}
+                <span>${server.characterCount || 0} characters</span>
               </div>
             </div>
           </div>
         `).join('');
+        
+        document.querySelectorAll('.server-card[data-server-id]').forEach(card => {
+          card.addEventListener('click', function(e) {
+            e.preventDefault();
+            const serverId = this.getAttribute('data-server-id');
+            if (serverId) {
+              openServerConfig(serverId);
+            }
+          });
+        });
       } catch (error) {
         console.error('Failed to load servers:', error);
         container.innerHTML = '<div class="alert alert-error">Failed to load servers</div>';
@@ -1333,8 +1366,15 @@
     }
 
     async function openServerConfig(serverId) {
+      if (!serverId) {
+        showToast('Invalid server ID', 'error');
+        return;
+      }
+      
       currentServer = serverId;
       showView('serverConfig');
+      
+      history.pushState({ serverId }, '', `/admin/server/${serverId}`);
 
       const container = document.getElementById('serverConfigContent');
       container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -1344,7 +1384,7 @@
         const data = await response.json();
 
         if (!data.success) {
-          container.innerHTML = '<div class="alert alert-error">Failed to load server configuration</div>';
+          container.innerHTML = '<div class="alert alert-error">Failed to load server configuration. ' + (data.error || '') + '</div>';
           return;
         }
 
@@ -1352,7 +1392,7 @@
         renderServerConfig(data.server);
       } catch (error) {
         console.error('Failed to load server config:', error);
-        container.innerHTML = '<div class="alert alert-error">Failed to load server configuration</div>';
+        container.innerHTML = '<div class="alert alert-error">Failed to load server configuration. Please try again.</div>';
       }
     }
 

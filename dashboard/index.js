@@ -78,6 +78,10 @@ function setupDashboardRoutes(app, discordClient) {
     res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
   });
   
+  app.get('/admin/server/:serverId', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'dashboard.html'));
+  });
+  
   console.log('[Dashboard] Routes configured at /admin');
 }
 
