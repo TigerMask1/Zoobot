@@ -118,3 +118,32 @@ Added a new character key collection system as an alternative way to unlock char
 - `startUTCGiveawayScheduler()` - Global minute-based checker for giveaways
 - `dropsWerePausedBefore` flag prevents unwanted drop restarts
 - All critical saves use `saveDataImmediate()` for data integrity
+
+### Web Dashboard Improvements (December 2025)
+
+**Dashboard-MongoDB Integration:**
+- Dashboard now directly reads characters and collectibles from MongoDB
+- `backfillGlobalCharacters()` syncs all characters from characters.js (upsert behavior)
+- `backfillGlobalCollectibles()` syncs collectibles from the collectibleItems collection
+- Automatic sync runs on dashboard initialization via `initDashboardIndexes()`
+
+**Server Backfill Enhancements:**
+- `backfillServersFromBot()` now assigns all default characters to new servers
+- Servers with ZooBot installed automatically get all characters and collectibles
+- `setupComplete` flag auto-set when minimum character threshold is met
+- Existing servers without characters get backfilled on sync
+
+**Client-Side Routing:**
+- SPA routing with browser history support (`pushState`/`popstate`)
+- Direct URL navigation to `/admin/server/:id` works correctly
+- Back/forward browser buttons properly update views
+- `goBackToServers()` updates URL when navigating back
+
+**Setup Command:**
+- `!setup` command uses production URL: https://zoobot-zoki.onrender.com
+
+**Files Modified:**
+- `dashboard/database.js` - Added sync functions, enhanced backfill
+- `dashboard/index.js` - SPA routing for server detail pages
+- `public/dashboard.html` - Client-side routing, server card click handlers
+- `commands/admin/setup.js` - Production URL hardcoded
