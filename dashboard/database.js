@@ -13,36 +13,120 @@ const CHARACTERS = require('../characters.js');
 async function backfillGlobalCharacters() {
   if (!isMongoConnected()) {
     console.log('[Dashboard] MongoDB not connected, skipping character backfill');
-    return;
+    return { added: 0, updated: 0 };
   }
   
   const db = getMongoDatabase();
+  let addedCount = 0;
+  let updatedCount = 0;
   
   try {
-    const existingCount = await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).countDocuments();
+    console.log(`[Dashboard] Syncing ${CHARACTERS.length} characters from characters.js...`);
     
-    if (existingCount > 0) {
-      console.log(`[Dashboard] ${existingCount} characters already exist, skipping backfill`);
-      return;
+    for (const char of CHARACTERS) {
+      const existingChar = await db.collection(COLLECTIONS.GLOBAL_CHARACTERS)
+        .findOne({ name: char.name });
+      
+      if (!existingChar) {
+        await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).insertOne({
+          name: char.name,
+          emoji: char.emoji,
+          customEmojiId: char.customEmojiId || null,
+          obtainable: char.obtainable,
+          rarity: 'common',
+          status: 'active',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        addedCount++;
+      } else {
+        await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).updateOne(
+          { name: char.name },
+          { 
+            $set: { 
+              emoji: char.emoji,
+              customEmojiId: char.customEmojiId || existingChar.customEmojiId,
+              obtainable: char.obtainable,
+              updatedAt: new Date()
+            }
+          }
+        );
+        updatedCount++;
+      }
     }
     
-    console.log(`[Dashboard] Backfilling ${CHARACTERS.length} characters from characters.js...`);
-    
-    const charactersToInsert = CHARACTERS.map(char => ({
-      name: char.name,
-      emoji: char.emoji,
-      customEmojiId: char.customEmojiId || null,
-      obtainable: char.obtainable,
-      rarity: 'common',
-      status: 'active',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }));
-    
-    await db.collection(COLLECTIONS.GLOBAL_CHARACTERS).insertMany(charactersToInsert);
-    console.log(`[Dashboard] Successfully backfilled ${CHARACTERS.length} characters`);
+    console.log(`[Dashboard] Character sync complete: ${addedCount} added, ${updatedCount} updated`);
+    return { added: addedCount, updated: updatedCount };
   } catch (error) {
-    console.error('[Dashboard] Error backfilling characters:', error);
+    console.error('[Dashboard] Error syncing characters:', error);
+    return { added: addedCount, updated: updatedCount, error: error.message };
+  }
+}
+
+async function backfillGlobalCollectibles() {
+  if (!isMongoConnected()) {
+    console.log('[Dashboard] MongoDB not connected, skipping collectible backfill');
+    return { added: 0, updated: 0 };
+  }
+  
+  const db = getMongoDatabase();
+  let addedCount = 0;
+  let updatedCount = 0;
+  
+  try {
+    const collectibleItemsCollection = db.collection('collectibleItems');
+    const existingCollectibles = await collectibleItemsCollection.find({ status: 'active' }).toArray();
+    
+    console.log(`[Dashboard] Syncing ${existingCollectibles.length} collectibles from collectibleItems...`);
+    
+    for (const item of existingCollectibles) {
+      const existingInGlobal = await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES)
+        .findOne({ name: item.name });
+      
+      if (!existingInGlobal) {
+        await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES).insertOne({
+          name: item.name,
+          description: item.description || '',
+          emoji: item.emoji || '🎁',
+          imageUrl: item.imageUrl || null,
+          rarity: item.rarity || 'common',
+          bundle: item.bundle || 'default',
+          isGlobal: item.isGlobal || true,
+          droppable: item.droppable || { enabled: false },
+          crateObtainable: item.crateObtainable || { enabled: false },
+          tradable: item.tradable !== false,
+          giftable: item.giftable !== false,
+          sellable: item.sellable !== false,
+          baseValue: item.baseValue || 100,
+          stackable: item.stackable !== false,
+          status: 'active',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+        addedCount++;
+      } else {
+        await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES).updateOne(
+          { name: item.name },
+          {
+            $set: {
+              description: item.description || existingInGlobal.description,
+              emoji: item.emoji || existingInGlobal.emoji,
+              imageUrl: item.imageUrl || existingInGlobal.imageUrl,
+              rarity: item.rarity || existingInGlobal.rarity,
+              bundle: item.bundle || existingInGlobal.bundle,
+              updatedAt: new Date()
+            }
+          }
+        );
+        updatedCount++;
+      }
+    }
+    
+    console.log(`[Dashboard] Collectible sync complete: ${addedCount} added, ${updatedCount} updated`);
+    return { added: addedCount, updated: updatedCount };
+  } catch (error) {
+    console.error('[Dashboard] Error syncing collectibles:', error);
+    return { added: addedCount, updated: updatedCount, error: error.message };
   }
 }
 
@@ -151,6 +235,7 @@ async function initDashboardIndexes() {
     console.log('[Dashboard] MongoDB indexes created successfully');
     
     await backfillGlobalCharacters();
+    await backfillGlobalCollectibles();
   } catch (error) {
     console.error('[Dashboard] Error creating indexes:', error);
   }
@@ -1093,10 +1178,21 @@ async function backfillServersFromBot(discordClient) {
   const db = getMongoDatabase();
   let backfilledCount = 0;
   let updatedCount = 0;
+  let charactersAssigned = 0;
   
   try {
+    const allCharacters = await db.collection(COLLECTIONS.GLOBAL_CHARACTERS)
+      .find({ status: 'active' })
+      .toArray();
+    const allCharacterIds = allCharacters.map(c => c._id.toString());
+    
+    const allCollectibles = await db.collection(COLLECTIONS.GLOBAL_COLLECTIBLES)
+      .find({ status: 'active' })
+      .toArray();
+    const allCollectibleIds = allCollectibles.map(c => c._id.toString());
+    
     const guilds = discordClient.guilds.cache;
-    console.log(`[Dashboard] Backfilling ${guilds.size} servers from Discord client...`);
+    console.log(`[Dashboard] Backfilling ${guilds.size} servers with ${allCharacterIds.length} characters and ${allCollectibleIds.length} collectibles...`);
     
     for (const [guildId, guild] of guilds) {
       const existingConfig = await db.collection(COLLECTIONS.SERVER_CONFIGS).findOne({ serverId: guildId });
@@ -1107,8 +1203,8 @@ async function backfillServersFromBot(discordClient) {
           serverName: guild.name,
           serverIcon: guild.iconURL(),
           ownerId: guild.ownerId,
-          selectedCharacterIds: [],
-          selectedCollectibleIds: [],
+          selectedCharacterIds: allCharacterIds,
+          selectedCollectibleIds: allCollectibleIds,
           channels: {},
           features: { ...DEFAULT_FEATURES },
           pingSettings: { ...DEFAULT_PING_SETTINGS },
@@ -1124,7 +1220,7 @@ async function backfillServersFromBot(discordClient) {
           },
           serverAdmins: [],
           zooAdminRoleName: 'zooadmin',
-          setupComplete: false,
+          setupComplete: allCharacterIds.length >= MINIMUM_CHARACTERS_REQUIRED,
           botInstalledAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date()
@@ -1132,24 +1228,41 @@ async function backfillServersFromBot(discordClient) {
         
         await db.collection(COLLECTIONS.SERVER_CONFIGS).insertOne(newConfig);
         backfilledCount++;
+        charactersAssigned += allCharacterIds.length;
       } else {
+        const updateData = {
+          serverName: guild.name,
+          serverIcon: guild.iconURL(),
+          ownerId: guild.ownerId,
+          updatedAt: new Date()
+        };
+        
+        if (!existingConfig.selectedCharacterIds || existingConfig.selectedCharacterIds.length === 0) {
+          updateData.selectedCharacterIds = allCharacterIds;
+          updateData.setupComplete = allCharacterIds.length >= MINIMUM_CHARACTERS_REQUIRED;
+          charactersAssigned += allCharacterIds.length;
+        }
+        
+        if (!existingConfig.selectedCollectibleIds || existingConfig.selectedCollectibleIds.length === 0) {
+          updateData.selectedCollectibleIds = allCollectibleIds;
+        }
+        
         await db.collection(COLLECTIONS.SERVER_CONFIGS).updateOne(
           { serverId: guildId },
-          {
-            $set: {
-              serverName: guild.name,
-              serverIcon: guild.iconURL(),
-              ownerId: guild.ownerId,
-              updatedAt: new Date()
-            }
-          }
+          { $set: updateData }
         );
         updatedCount++;
       }
     }
     
-    console.log(`[Dashboard] Server backfill complete: ${backfilledCount} new, ${updatedCount} updated`);
-    return { success: true, backfilled: backfilledCount, updated: updatedCount };
+    console.log(`[Dashboard] Server backfill complete: ${backfilledCount} new, ${updatedCount} updated, ${charactersAssigned} characters assigned`);
+    return { 
+      success: true, 
+      backfilled: backfilledCount, 
+      updated: updatedCount,
+      charactersAssigned,
+      message: `Synced ${backfilledCount + updatedCount} servers with ZooBot characters`
+    };
   } catch (error) {
     console.error('[Dashboard] Error backfilling servers:', error);
     return { success: false, message: 'Failed to backfill servers' };
@@ -1269,6 +1382,7 @@ async function completeServerSetup(serverId) {
 module.exports = {
   initDashboardIndexes,
   backfillGlobalCharacters,
+  backfillGlobalCollectibles,
   backfillServersFromBot,
   getAllServerConfigs,
   isValidObjectId,
