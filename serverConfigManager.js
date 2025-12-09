@@ -362,15 +362,35 @@ function getPingSettings(serverId, eventType) {
 }
 
 function formatPingMention(serverId, eventType) {
+  const config = getServerConfig(serverId);
+  
+  if (config && config.notifyRoleId) {
+    const pingSettings = config.pingSettings || {};
+    if (pingSettings[eventType] === false) return '';
+    return `<@&${config.notifyRoleId}>`;
+  }
+  
+  if (config && config.notifyRoleEnabled === false) {
+    return '';
+  }
+  
   const pingSettings = getPingSettings(serverId, eventType);
   
   if (!pingSettings.enabled) return '';
   
-  if (pingSettings.role === 'everyone') return '@everyone';
-  if (pingSettings.role === 'here') return '@here';
+  if (pingSettings.role === 'everyone') return '';
+  if (pingSettings.role === 'here') return '';
   if (pingSettings.role) return `<@&${pingSettings.role}>`;
   
   return '';
+}
+
+function getServerNotifyRole(serverId) {
+  const config = getServerConfig(serverId);
+  if (!config) return null;
+  if (config.notifyRoleEnabled === false) return null;
+  if (config.notifyRoleId) return config.notifyRoleId;
+  return null;
 }
 
 async function setZooAdminRole(serverId, roleName, setBy, member = null) {
@@ -895,6 +915,7 @@ module.exports = {
   isFeatureEnabled,
   getPingSettings,
   formatPingMention,
+  getServerNotifyRole,
   setZooAdminRole,
   setupServer,
   isServerSetup,
