@@ -1,6 +1,11 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { canSetupServer, isServerOwner, getServerConfig, saveServerConfig } = require('../../serverConfigManager.js');
 const { getCollection } = require('../../mongoManager.js');
+const crypto = require('crypto');
+
+function generateUniqueId() {
+  return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
 
 const RARITY_OPTIONS = ['common', 'uncommon', 'rare', 'ultra rare', 'epic', 'legendary'];
 const OBTAINABLE_OPTIONS = ['drop', 'crate', 'event', 'exclusive'];
@@ -93,8 +98,11 @@ function showHelp(message) {
 async function handleCreate(message, serverId, userId, client) {
   const creationId = `${serverId}-${userId}-${Date.now()}`;
   
+  const uniqueId = generateUniqueId();
+  
   const newCharacter = {
     serverId,
+    uniqueId,
     createdBy: userId,
     createdAt: new Date(),
     status: 'active',
@@ -105,6 +113,7 @@ async function handleCreate(message, serverId, userId, client) {
     imageUrl: null,
     rarity: 'common',
     obtainable: 'drop',
+    isPublic: false,
     ability: {
       name: null,
       emoji: '⚡',
@@ -137,14 +146,14 @@ async function handleCreate(message, serverId, userId, client) {
   
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle('Create New Server Character - Step 1/10')
+    .setTitle('Create New Server Character - Step 1/11')
     .setDescription(
       'Let\'s create a new character for your server!\n\n' +
       '**Step 1: Character Name**\n' +
       'Please reply with the name of your character.\n\n' +
       '*Example: Fluffy, Dragon King, Shadow Wolf*'
     )
-    .setFooter({ text: 'Type your answer below or "cancel" to stop' })
+    .setFooter({ text: `Type your answer below or "cancel" to stop | ID: ${uniqueId}` })
     .setTimestamp();
   
   await message.reply({ embeds: [embed] });
@@ -269,6 +278,19 @@ async function handleCreate(message, serverId, userId, client) {
           return;
         }
         charData.stats = { hp, attack, defense, speed };
+        charData.step = 11;
+        await sendStep11(m, charData);
+        break;
+        
+      case 11:
+        const publicChoice = content.toLowerCase();
+        if (publicChoice === 'yes' || publicChoice === 'public' || publicChoice === 'y') {
+          charData.isPublic = true;
+          charData.pendingApproval = true;
+        } else {
+          charData.isPublic = false;
+          charData.pendingApproval = false;
+        }
         await finalizeCharacter(m, serverId, charData, creationId);
         collector.stop('completed');
         break;
@@ -288,7 +310,7 @@ async function handleCreate(message, serverId, userId, client) {
 async function sendStep2(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 2/10`)
+    .setTitle(`Create "${charData.name}" - Step 2/11`)
     .setDescription(
       '**Step 2: Character Emoji**\n' +
       'Enter an emoji or custom emoji for your character.\n\n' +
@@ -301,7 +323,7 @@ async function sendStep2(m, charData) {
 async function sendStep3(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 3/10`)
+    .setTitle(`Create "${charData.name}" - Step 3/11`)
     .setDescription(
       '**Step 3: Character Description**\n' +
       'Enter a description for your character (10-200 characters).\n\n' +
@@ -314,7 +336,7 @@ async function sendStep3(m, charData) {
 async function sendStep4(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 4/10`)
+    .setTitle(`Create "${charData.name}" - Step 4/11`)
     .setDescription(
       '**Step 4: Character Image (Optional)**\n' +
       'Enter an image URL for your character, or type "skip".\n\n' +
@@ -327,7 +349,7 @@ async function sendStep4(m, charData) {
 async function sendStep5(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 5/10`)
+    .setTitle(`Create "${charData.name}" - Step 5/11`)
     .setDescription(
       '**Step 5: Character Rarity**\n' +
       'Choose how rare this character will be:\n\n' +
@@ -345,7 +367,7 @@ async function sendStep5(m, charData) {
 async function sendStep6(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 6/10`)
+    .setTitle(`Create "${charData.name}" - Step 6/11`)
     .setDescription(
       '**Step 6: How to Obtain**\n' +
       'Choose how players can get this character:\n\n' +
@@ -361,7 +383,7 @@ async function sendStep6(m, charData) {
 async function sendStep7(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 7/10`)
+    .setTitle(`Create "${charData.name}" - Step 7/11`)
     .setDescription(
       '**Step 7: Ability Name**\n' +
       'Enter the name of your character\'s special ability.\n\n' +
@@ -374,7 +396,7 @@ async function sendStep7(m, charData) {
 async function sendStep8(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 8/10`)
+    .setTitle(`Create "${charData.name}" - Step 8/11`)
     .setDescription(
       '**Step 8: Ability Description**\n' +
       'Describe what the ability does (10-150 characters).\n\n' +
@@ -387,7 +409,7 @@ async function sendStep8(m, charData) {
 async function sendStep9(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 9/10`)
+    .setTitle(`Create "${charData.name}" - Step 9/11`)
     .setDescription(
       '**Step 9: Special Move Name**\n' +
       'Enter the name of your character\'s special attack move.\n\n' +
@@ -400,7 +422,7 @@ async function sendStep9(m, charData) {
 async function sendStep10(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 10/10`)
+    .setTitle(`Create "${charData.name}" - Step 10/11`)
     .setDescription(
       '**Step 10: Character Stats**\n' +
       'Enter 4 numbers separated by spaces:\n' +
@@ -416,18 +438,36 @@ async function sendStep10(m, charData) {
   await m.reply({ embeds: [embed] });
 }
 
+async function sendStep11(m, charData) {
+  const embed = new EmbedBuilder()
+    .setColor(0x00D9FF)
+    .setTitle(`Create "${charData.name}" - Step 11/11`)
+    .setDescription(
+      '**Step 11: Public Visibility**\n' +
+      'Would you like to make this character public so other servers can add it?\n\n' +
+      '• `yes` - Request public approval (Super Admins will review)\n' +
+      '• `no` - Keep private to your server only\n\n' +
+      '*Public characters can be added by any server once approved.*'
+    )
+    .setFooter({ text: 'Type "yes" or "no"' });
+  await m.reply({ embeds: [embed] });
+}
+
 async function finalizeCharacter(m, serverId, charData, creationId) {
   try {
     const collection = await getCollection('serverCharacters');
     
     const characterDoc = {
       serverId: charData.serverId,
+      uniqueId: charData.uniqueId,
       name: charData.name,
       emoji: charData.emoji,
       description: charData.description,
       imageUrl: charData.imageUrl,
       rarity: charData.rarity,
       obtainable: charData.obtainable,
+      isPublic: charData.isPublic,
+      pendingApproval: charData.pendingApproval || false,
       ability: charData.ability,
       specialMove: charData.specialMove,
       stats: charData.stats,
@@ -452,11 +492,17 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
       legendary: 0xFFD700
     };
     
+    const visibilityStatus = charData.pendingApproval 
+      ? '⏳ Pending Approval (will be public once approved)' 
+      : (charData.isPublic ? '🌐 Public' : '🔒 Private');
+    
     const embed = new EmbedBuilder()
       .setColor(rarityColors[charData.rarity] || 0x00D9FF)
       .setTitle('Character Created Successfully!')
       .setDescription(`${charData.emoji} **${charData.name}** has been added to your server!`)
       .addFields(
+        { name: 'Unique ID', value: `\`${charData.uniqueId}\``, inline: true },
+        { name: 'Visibility', value: visibilityStatus, inline: true },
         { name: 'Description', value: charData.description, inline: false },
         { name: 'Rarity', value: charData.rarity.toUpperCase(), inline: true },
         { name: 'Obtainable', value: charData.obtainable, inline: true },
@@ -464,7 +510,7 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
         { name: 'Ability', value: `**${charData.ability.name}**: ${charData.ability.description}`, inline: false },
         { name: 'Special Move', value: charData.specialMove.name, inline: true }
       )
-      .setFooter({ text: 'This character is exclusive to your server!' })
+      .setFooter({ text: charData.isPublic ? 'Other servers can add this character once approved!' : 'This character is exclusive to your server!' })
       .setTimestamp();
     
     if (charData.imageUrl) {

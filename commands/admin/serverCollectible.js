@@ -1,6 +1,11 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { canSetupServer, isServerOwner } = require('../../serverConfigManager.js');
 const { getCollection } = require('../../mongoManager.js');
+const crypto = require('crypto');
+
+function generateUniqueId() {
+  return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
 
 const RARITY_OPTIONS = ['common', 'uncommon', 'rare', 'ultra rare', 'epic', 'legendary'];
 const RARITY_BASE_VALUES = {
@@ -95,8 +100,11 @@ function showHelp(message) {
 async function handleCreate(message, serverId, userId, client) {
   const creationId = `${serverId}-${userId}-${Date.now()}`;
   
+  const uniqueId = generateUniqueId();
+  
   const newCollectible = {
     serverId,
+    uniqueId,
     createdBy: userId,
     createdAt: new Date(),
     status: 'active',
@@ -111,6 +119,7 @@ async function handleCreate(message, serverId, userId, client) {
     giftable: true,
     sellable: true,
     stackable: true,
+    isPublic: false,
     dropSettings: {
       enabled: true,
       probability: 5
@@ -126,7 +135,7 @@ async function handleCreate(message, serverId, userId, client) {
   
   const embed = new EmbedBuilder()
     .setColor(0x9B59B6)
-    .setTitle('Create New Server Collectible - Step 1/7')
+    .setTitle('Create New Server Collectible - Step 1/8')
     .setDescription(
       'Let\'s create a new collectible for your server!\n\n' +
       '**Step 1: Collectible Name**\n' +
@@ -134,7 +143,7 @@ async function handleCreate(message, serverId, userId, client) {
       '*Example: Golden Trophy, Magic Crystal, Server Badge*\n\n' +
       '⚠️ **Note:** You cannot name collectibles after currencies (coin, gem, currency, money, etc.)'
     )
-    .setFooter({ text: 'Type your answer below or "cancel" to stop' })
+    .setFooter({ text: `Type your answer below or "cancel" to stop | ID: ${uniqueId}` })
     .setTimestamp();
   
   await message.reply({ embeds: [embed] });
@@ -243,6 +252,19 @@ async function handleCreate(message, serverId, userId, client) {
           enabled: dropEnabled, 
           probability: Math.min(100, Math.max(1, dropProb)) 
         };
+        colData.step = 8;
+        await sendStep8(m, colData);
+        break;
+        
+      case 8:
+        const publicChoice = content.toLowerCase();
+        if (publicChoice === 'yes' || publicChoice === 'public' || publicChoice === 'y') {
+          colData.isPublic = true;
+          colData.pendingApproval = true;
+        } else {
+          colData.isPublic = false;
+          colData.pendingApproval = false;
+        }
         await finalizeCollectible(m, serverId, colData, creationId);
         collector.stop('completed');
         break;
@@ -262,7 +284,7 @@ async function handleCreate(message, serverId, userId, client) {
 async function sendStep2(m, colData) {
   const embed = new EmbedBuilder()
     .setColor(0x9B59B6)
-    .setTitle(`Create "${colData.name}" - Step 2/7`)
+    .setTitle(`Create "${colData.name}" - Step 2/8`)
     .setDescription(
       '**Step 2: Collectible Emoji**\n' +
       'Enter an emoji or custom emoji for your collectible.\n\n' +
@@ -275,7 +297,7 @@ async function sendStep2(m, colData) {
 async function sendStep3(m, colData) {
   const embed = new EmbedBuilder()
     .setColor(0x9B59B6)
-    .setTitle(`Create "${colData.name}" - Step 3/7`)
+    .setTitle(`Create "${colData.name}" - Step 3/8`)
     .setDescription(
       '**Step 3: Collectible Description**\n' +
       'Enter a description for your collectible (10-200 characters).\n\n' +
@@ -288,7 +310,7 @@ async function sendStep3(m, colData) {
 async function sendStep4(m, colData) {
   const embed = new EmbedBuilder()
     .setColor(0x9B59B6)
-    .setTitle(`Create "${colData.name}" - Step 4/7`)
+    .setTitle(`Create "${colData.name}" - Step 4/8`)
     .setDescription(
       '**Step 4: Collectible Image (Optional)**\n' +
       'Enter an image URL for your collectible, or type "skip".\n\n' +
@@ -301,7 +323,7 @@ async function sendStep4(m, colData) {
 async function sendStep5(m, colData) {
   const embed = new EmbedBuilder()
     .setColor(0x9B59B6)
-    .setTitle(`Create "${colData.name}" - Step 5/7`)
+    .setTitle(`Create "${colData.name}" - Step 5/8`)
     .setDescription(
       '**Step 5: Collectible Rarity**\n' +
       'Choose how rare this collectible will be:\n\n' +
@@ -319,7 +341,7 @@ async function sendStep5(m, colData) {
 async function sendStep6(m, colData) {
   const embed = new EmbedBuilder()
     .setColor(0x9B59B6)
-    .setTitle(`Create "${colData.name}" - Step 6/7`)
+    .setTitle(`Create "${colData.name}" - Step 6/8`)
     .setDescription(
       '**Step 6: Trading Options**\n' +
       'What can players do with this collectible?\n\n' +
@@ -341,7 +363,7 @@ async function sendStep6(m, colData) {
 async function sendStep7(m, colData) {
   const embed = new EmbedBuilder()
     .setColor(0x9B59B6)
-    .setTitle(`Create "${colData.name}" - Step 7/7`)
+    .setTitle(`Create "${colData.name}" - Step 7/8`)
     .setDescription(
       '**Step 7: Drop Settings**\n' +
       'Should this collectible appear in drops?\n\n' +
@@ -353,12 +375,28 @@ async function sendStep7(m, colData) {
   await m.reply({ embeds: [embed] });
 }
 
+async function sendStep8(m, colData) {
+  const embed = new EmbedBuilder()
+    .setColor(0x9B59B6)
+    .setTitle(`Create "${colData.name}" - Step 8/8`)
+    .setDescription(
+      '**Step 8: Public Visibility**\n' +
+      'Would you like to make this collectible public so other servers can add it?\n\n' +
+      '• `yes` - Request public approval (Super Admins will review)\n' +
+      '• `no` - Keep private to your server only\n\n' +
+      '*Public collectibles can be added by any server once approved.*'
+    )
+    .setFooter({ text: 'Type "yes" or "no"' });
+  await m.reply({ embeds: [embed] });
+}
+
 async function finalizeCollectible(m, serverId, colData, creationId) {
   try {
     const collection = await getCollection('serverCollectibles');
     
     const collectibleDoc = {
       serverId: colData.serverId,
+      uniqueId: colData.uniqueId,
       name: colData.name,
       emoji: colData.emoji,
       description: colData.description,
@@ -369,6 +407,8 @@ async function finalizeCollectible(m, serverId, colData, creationId) {
       giftable: colData.giftable,
       sellable: colData.sellable,
       stackable: colData.stackable,
+      isPublic: colData.isPublic,
+      pendingApproval: colData.pendingApproval || false,
       dropSettings: colData.dropSettings,
       crateSettings: colData.crateSettings,
       status: 'active',
@@ -398,18 +438,24 @@ async function finalizeCollectible(m, serverId, colData, creationId) {
     if (colData.sellable) tradingInfo.push('Sellable');
     if (!colData.stackable) tradingInfo.push('Non-stackable');
     
+    const visibilityStatus = colData.pendingApproval 
+      ? '⏳ Pending Approval (will be public once approved)' 
+      : (colData.isPublic ? '🌐 Public' : '🔒 Private');
+    
     const embed = new EmbedBuilder()
       .setColor(rarityColors[colData.rarity] || 0x9B59B6)
       .setTitle('Collectible Created Successfully!')
       .setDescription(`${colData.emoji} **${colData.name}** has been added to your server!`)
       .addFields(
+        { name: 'Unique ID', value: `\`${colData.uniqueId}\``, inline: true },
+        { name: 'Visibility', value: visibilityStatus, inline: true },
         { name: 'Description', value: colData.description, inline: false },
         { name: 'Rarity', value: colData.rarity.toUpperCase(), inline: true },
         { name: 'Base Value', value: `${colData.baseValue} coins`, inline: true },
         { name: 'Trading', value: tradingInfo.length > 0 ? tradingInfo.join(', ') : 'Soulbound', inline: false },
         { name: 'Drop Settings', value: colData.dropSettings.enabled ? `Enabled (${colData.dropSettings.probability}% chance)` : 'Disabled', inline: true }
       )
-      .setFooter({ text: 'This collectible is exclusive to your server!' })
+      .setFooter({ text: colData.isPublic ? 'Other servers can add this collectible once approved!' : 'This collectible is exclusive to your server!' })
       .setTimestamp();
     
     if (colData.imageUrl) {
