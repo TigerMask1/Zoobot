@@ -387,10 +387,9 @@ async function performWeeklyReset(client, data) {
       if (channel) {
         const { formatPingMention } = require('./serverConfigManager.js');
         const pingMention = formatPingMention(serverId, 'events');
-        await channel.send({ 
-          content: pingMention || '', 
-          embeds: [leaderboardEmbed] 
-        });
+        const sendOptions = { embeds: [leaderboardEmbed] };
+        if (pingMention) sendOptions.content = pingMention;
+        await channel.send(sendOptions);
       }
     } catch (error) {
       console.log(`Error announcing to server ${serverId}:`, error.message);

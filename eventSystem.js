@@ -402,7 +402,9 @@ async function announceEventStart(event) {
         const channel = await botClient.channels.fetch(targetChannelId).catch(() => null);
         if (channel) {
           const pingMention = formatPingMention(guild.id, 'events');
-          await channel.send({ content: pingMention || '', embeds: [embed] }).catch(err => {
+          const sendOptions = { embeds: [embed] };
+          if (pingMention) sendOptions.content = pingMention;
+          await channel.send(sendOptions).catch(err => {
             console.error(`Failed to announce event start to server ${guild.id}:`, err.message);
           });
         }
@@ -482,7 +484,9 @@ async function announceEventEnd(event, leaderboard) {
         const channel = await botClient.channels.fetch(targetChannelId).catch(() => null);
         if (channel) {
           const pingMention = formatPingMention(guild.id, 'events');
-          await channel.send({ content: pingMention || '', embeds: [embed] }).catch(err => {
+          const sendOptions = { embeds: [embed] };
+          if (pingMention) sendOptions.content = pingMention;
+          await channel.send(sendOptions).catch(err => {
             console.error(`Failed to announce event end to server ${guild.id}:`, err.message);
           });
         }
