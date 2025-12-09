@@ -694,6 +694,109 @@ function getObtainableTypes() {
   return OBTAINABLE_TYPES;
 }
 
+async function getServerSpecificCharactersFromDB(serverId) {
+  if (!USE_MONGODB || !mongoManager) {
+    return [];
+  }
+  
+  try {
+    const collection = await mongoManager.getCollection('serverCharacters');
+    const characters = await collection.find({ serverId, status: 'active' }).toArray();
+    
+    return characters.map(c => ({
+      ...c,
+      id: c._id.toString(),
+      isServerSpecific: true
+    }));
+  } catch (error) {
+    console.error(`Error loading server characters for ${serverId}:`, error);
+    return [];
+  }
+}
+
+async function getServerCharacterByName(serverId, name) {
+  if (!USE_MONGODB || !mongoManager) {
+    return null;
+  }
+  
+  try {
+    const collection = await mongoManager.getCollection('serverCharacters');
+    const character = await collection.findOne({ 
+      serverId, 
+      name: { $regex: new RegExp(`^${name}$`, 'i') },
+      status: 'active'
+    });
+    
+    if (character) {
+      return {
+        ...character,
+        id: character._id.toString(),
+        isServerSpecific: true
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`Error getting server character "${name}" for ${serverId}:`, error);
+    return null;
+  }
+}
+
+async function getAllCharactersForServer(serverId) {
+  const serverCharacters = await getServerSpecificCharactersFromDB(serverId);
+  
+  const formattedServerChars = serverCharacters.map(c => ({
+    name: c.name,
+    emoji: c.emoji,
+    customEmojiId: c.customEmojiId,
+    obtainable: c.obtainable,
+    rarity: c.rarity,
+    description: c.description,
+    imageUrl: c.imageUrl,
+    stats: c.stats,
+    ability: c.ability,
+    specialMove: c.specialMove,
+    dropSettings: c.dropSettings,
+    crateSettings: c.crateSettings,
+    serverId: c.serverId,
+    isServerSpecific: true
+  }));
+  
+  return formattedServerChars;
+}
+
+async function getServerCharacterAbility(serverId, characterName) {
+  const character = await getServerCharacterByName(serverId, characterName);
+  if (character && character.ability) {
+    return character.ability;
+  }
+  return null;
+}
+
+async function getServerSpecialMove(serverId, characterName) {
+  const character = await getServerCharacterByName(serverId, characterName);
+  if (character && character.specialMove) {
+    return character.specialMove;
+  }
+  return null;
+}
+
+async function getDroppableServerCharacters(serverId) {
+  const characters = await getServerSpecificCharactersFromDB(serverId);
+  return characters.filter(c => c.dropSettings?.enabled === true);
+}
+
+async function getCrateServerCharacters(serverId, crateType = null) {
+  const characters = await getServerSpecificCharactersFromDB(serverId);
+  return characters.filter(c => {
+    if (!c.crateSettings?.enabled) return false;
+    if (crateType && c.crateSettings.crates && !c.crateSettings.crates.includes(crateType)) {
+      return false;
+    }
+    return true;
+  });
+}
+
 module.exports = {
   initializeCharacterSystem,
   getCharacters,
@@ -725,6 +828,13 @@ module.exports = {
   saveCharactersToDB,
   loadCharactersFromDB,
   backfillGameAndCreator,
+  getServerSpecificCharactersFromDB,
+  getServerCharacterByName,
+  getAllCharactersForServer,
+  getServerCharacterAbility,
+  getServerSpecialMove,
+  getDroppableServerCharacters,
+  getCrateServerCharacters,
   VALID_EFFECT_TYPES,
   OBTAINABLE_TYPES,
   DEFAULT_GAME,

@@ -110,6 +110,14 @@ async function initDashboardIndexes() {
     await db.collection(COLLECTIONS.COLLECTIBLE_SUBMISSIONS).createIndex({ submittedBy: 1 });
     await db.collection(COLLECTIONS.COLLECTIBLE_SUBMISSIONS).createIndex({ createdAt: -1 });
     
+    await db.collection(COLLECTIONS.SERVER_CHARACTERS).createIndex({ serverId: 1, name: 1 }, { unique: true });
+    await db.collection(COLLECTIONS.SERVER_CHARACTERS).createIndex({ serverId: 1 });
+    await db.collection(COLLECTIONS.SERVER_CHARACTERS).createIndex({ status: 1 });
+    
+    await db.collection(COLLECTIONS.SERVER_COLLECTIBLES).createIndex({ serverId: 1, name: 1 }, { unique: true });
+    await db.collection(COLLECTIONS.SERVER_COLLECTIBLES).createIndex({ serverId: 1 });
+    await db.collection(COLLECTIONS.SERVER_COLLECTIBLES).createIndex({ status: 1 });
+    
     console.log('[Dashboard] MongoDB indexes created successfully');
   } catch (error) {
     console.error('[Dashboard] Error creating indexes:', error);
@@ -1718,6 +1726,390 @@ async function completeServerSetup(serverId) {
   }
 }
 
+async function createServerCharacter(serverId, characterData) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const existing = await db.collection(COLLECTIONS.SERVER_CHARACTERS)
+      .findOne({ serverId, name: characterData.name });
+    
+    if (existing) {
+      return { success: false, message: 'Character with this name already exists for this server' };
+    }
+    
+    const character = {
+      serverId,
+      name: characterData.name,
+      emoji: characterData.emoji,
+      customEmojiId: characterData.customEmojiId || null,
+      description: characterData.description,
+      imageUrl: characterData.imageUrl,
+      rarity: characterData.rarity,
+      obtainable: characterData.obtainable,
+      ability: {
+        name: characterData.ability?.name,
+        emoji: characterData.ability?.emoji || '⭐',
+        description: characterData.ability?.description,
+        effectType: characterData.ability?.effectType,
+        effectValue: characterData.ability?.effectValue || 0
+      },
+      specialMove: {
+        name: characterData.specialMove?.name,
+        damage: characterData.specialMove?.damage || 90
+      },
+      stats: {
+        hp: characterData.stats?.hp || 100,
+        attack: characterData.stats?.attack || 50,
+        defense: characterData.stats?.defense || 50,
+        speed: characterData.stats?.speed || 50
+      },
+      dropSettings: {
+        enabled: characterData.dropSettings?.enabled || false,
+        probability: characterData.dropSettings?.probability || 5
+      },
+      crateSettings: {
+        enabled: characterData.crateSettings?.enabled !== false,
+        probability: characterData.crateSettings?.probability || 10,
+        crates: characterData.crateSettings?.crates || ['bronze', 'silver', 'gold']
+      },
+      status: 'active',
+      createdBy: characterData.createdBy,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    const result = await db.collection(COLLECTIONS.SERVER_CHARACTERS).insertOne(character);
+    console.log(`[Dashboard] Created server character "${character.name}" for server ${serverId}`);
+    return { success: true, characterId: result.insertedId };
+  } catch (error) {
+    if (error.code === 11000) {
+      return { success: false, message: 'Character with this name already exists for this server' };
+    }
+    console.error('[Dashboard] Error creating server character:', error);
+    return { success: false, message: 'Failed to create character' };
+  }
+}
+
+async function getServerSpecificCharacters(serverId, filters = {}) {
+  if (!isMongoConnected()) return [];
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const query = { serverId, status: 'active' };
+    
+    if (filters.rarity) query.rarity = filters.rarity;
+    if (filters.obtainable) query.obtainable = filters.obtainable;
+    if (filters.search) {
+      query.name = { $regex: filters.search, $options: 'i' };
+    }
+    
+    const characters = await db.collection(COLLECTIONS.SERVER_CHARACTERS)
+      .find(query)
+      .sort({ name: 1 })
+      .toArray();
+    
+    return characters.map(c => ({
+      ...c,
+      id: c._id.toString()
+    }));
+  } catch (error) {
+    console.error('[Dashboard] Error getting server characters:', error);
+    return [];
+  }
+}
+
+async function getServerCharacterById(serverId, characterId) {
+  if (!isMongoConnected()) return null;
+  
+  const db = getMongoDatabase();
+  
+  try {
+    let character = null;
+    
+    if (/^[a-fA-F0-9]{24}$/.test(characterId)) {
+      character = await db.collection(COLLECTIONS.SERVER_CHARACTERS)
+        .findOne({ _id: new ObjectId(characterId), serverId });
+    }
+    
+    if (!character) {
+      character = await db.collection(COLLECTIONS.SERVER_CHARACTERS)
+        .findOne({ serverId, name: characterId });
+    }
+    
+    if (!character) {
+      character = await db.collection(COLLECTIONS.SERVER_CHARACTERS)
+        .findOne({ serverId, name: { $regex: new RegExp(`^${characterId}$`, 'i') } });
+    }
+    
+    if (character) {
+      return {
+        ...character,
+        id: character._id.toString()
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[Dashboard] Error getting server character:', error);
+    return null;
+  }
+}
+
+async function updateServerCharacter(serverId, characterId, updates) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  updates.updatedAt = new Date();
+  
+  try {
+    let query;
+    if (/^[a-fA-F0-9]{24}$/.test(characterId)) {
+      query = { _id: new ObjectId(characterId), serverId };
+    } else {
+      query = { serverId, name: characterId };
+    }
+    
+    const result = await db.collection(COLLECTIONS.SERVER_CHARACTERS).updateOne(query, { $set: updates });
+    
+    if (result.matchedCount === 0) {
+      return { success: false, message: 'Character not found' };
+    }
+    
+    console.log(`[Dashboard] Updated server character ${characterId} for server ${serverId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error updating server character:', error);
+    return { success: false, message: 'Failed to update character' };
+  }
+}
+
+async function deleteServerCharacter(serverId, characterId) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    let query;
+    if (/^[a-fA-F0-9]{24}$/.test(characterId)) {
+      query = { _id: new ObjectId(characterId), serverId };
+    } else {
+      query = { serverId, name: characterId };
+    }
+    
+    const result = await db.collection(COLLECTIONS.SERVER_CHARACTERS).updateOne(
+      query,
+      { $set: { status: 'deleted', updatedAt: new Date() } }
+    );
+    
+    if (result.matchedCount === 0) {
+      return { success: false, message: 'Character not found' };
+    }
+    
+    console.log(`[Dashboard] Deleted server character ${characterId} from server ${serverId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error deleting server character:', error);
+    return { success: false, message: 'Failed to delete character' };
+  }
+}
+
+async function createServerCollectible(serverId, collectibleData) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const existing = await db.collection(COLLECTIONS.SERVER_COLLECTIBLES)
+      .findOne({ serverId, name: collectibleData.name });
+    
+    if (existing) {
+      return { success: false, message: 'Collectible with this name already exists for this server' };
+    }
+    
+    const collectible = {
+      serverId,
+      name: collectibleData.name,
+      description: collectibleData.description,
+      emoji: collectibleData.emoji,
+      imageUrl: collectibleData.imageUrl,
+      rarity: collectibleData.rarity,
+      droppable: {
+        enabled: collectibleData.droppable?.enabled || false,
+        probability: collectibleData.droppable?.probability || 5
+      },
+      crateObtainable: {
+        enabled: collectibleData.crateObtainable?.enabled || false,
+        probability: collectibleData.crateObtainable?.probability || 5,
+        crates: collectibleData.crateObtainable?.crates || []
+      },
+      tradable: collectibleData.tradable !== false,
+      giftable: collectibleData.giftable !== false,
+      sellable: collectibleData.sellable !== false,
+      auctionable: collectibleData.auctionable || false,
+      baseValue: collectibleData.baseValue || 100,
+      stackable: collectibleData.stackable !== false,
+      availableFrom: collectibleData.availableFrom || null,
+      availableUntil: collectibleData.availableUntil || null,
+      limitedEdition: collectibleData.limitedEdition || false,
+      maxSupply: collectibleData.maxSupply || null,
+      ownerCount: 0,
+      totalQuantity: 0,
+      status: 'active',
+      createdBy: collectibleData.createdBy,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    const result = await db.collection(COLLECTIONS.SERVER_COLLECTIBLES).insertOne(collectible);
+    console.log(`[Dashboard] Created server collectible "${collectible.name}" for server ${serverId}`);
+    return { success: true, collectibleId: result.insertedId };
+  } catch (error) {
+    if (error.code === 11000) {
+      return { success: false, message: 'Collectible with this name already exists for this server' };
+    }
+    console.error('[Dashboard] Error creating server collectible:', error);
+    return { success: false, message: 'Failed to create collectible' };
+  }
+}
+
+async function getServerSpecificCollectibles(serverId, filters = {}) {
+  if (!isMongoConnected()) return [];
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const query = { serverId, status: 'active' };
+    
+    if (filters.rarity) query.rarity = filters.rarity;
+    if (filters.search) {
+      query.name = { $regex: filters.search, $options: 'i' };
+    }
+    
+    const collectibles = await db.collection(COLLECTIONS.SERVER_COLLECTIBLES)
+      .find(query)
+      .sort({ name: 1 })
+      .toArray();
+    
+    return collectibles.map(c => ({
+      ...c,
+      id: c._id.toString()
+    }));
+  } catch (error) {
+    console.error('[Dashboard] Error getting server collectibles:', error);
+    return [];
+  }
+}
+
+async function getServerCollectibleById(serverId, collectibleId) {
+  if (!isMongoConnected()) return null;
+  
+  const db = getMongoDatabase();
+  
+  try {
+    let collectible = null;
+    
+    if (/^[a-fA-F0-9]{24}$/.test(collectibleId)) {
+      collectible = await db.collection(COLLECTIONS.SERVER_COLLECTIBLES)
+        .findOne({ _id: new ObjectId(collectibleId), serverId });
+    }
+    
+    if (!collectible) {
+      collectible = await db.collection(COLLECTIONS.SERVER_COLLECTIBLES)
+        .findOne({ serverId, name: collectibleId });
+    }
+    
+    if (!collectible) {
+      collectible = await db.collection(COLLECTIONS.SERVER_COLLECTIBLES)
+        .findOne({ serverId, name: { $regex: new RegExp(`^${collectibleId}$`, 'i') } });
+    }
+    
+    if (collectible) {
+      return {
+        ...collectible,
+        id: collectible._id.toString()
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[Dashboard] Error getting server collectible:', error);
+    return null;
+  }
+}
+
+async function updateServerCollectible(serverId, collectibleId, updates) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  updates.updatedAt = new Date();
+  
+  try {
+    let query;
+    if (/^[a-fA-F0-9]{24}$/.test(collectibleId)) {
+      query = { _id: new ObjectId(collectibleId), serverId };
+    } else {
+      query = { serverId, name: collectibleId };
+    }
+    
+    const result = await db.collection(COLLECTIONS.SERVER_COLLECTIBLES).updateOne(query, { $set: updates });
+    
+    if (result.matchedCount === 0) {
+      return { success: false, message: 'Collectible not found' };
+    }
+    
+    console.log(`[Dashboard] Updated server collectible ${collectibleId} for server ${serverId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error updating server collectible:', error);
+    return { success: false, message: 'Failed to update collectible' };
+  }
+}
+
+async function deleteServerCollectible(serverId, collectibleId) {
+  if (!isMongoConnected()) {
+    return { success: false, message: 'Database not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  
+  try {
+    let query;
+    if (/^[a-fA-F0-9]{24}$/.test(collectibleId)) {
+      query = { _id: new ObjectId(collectibleId), serverId };
+    } else {
+      query = { serverId, name: collectibleId };
+    }
+    
+    const result = await db.collection(COLLECTIONS.SERVER_COLLECTIBLES).updateOne(
+      query,
+      { $set: { status: 'deleted', updatedAt: new Date() } }
+    );
+    
+    if (result.matchedCount === 0) {
+      return { success: false, message: 'Collectible not found' };
+    }
+    
+    console.log(`[Dashboard] Deleted server collectible ${collectibleId} from server ${serverId}`);
+    return { success: true };
+  } catch (error) {
+    console.error('[Dashboard] Error deleting server collectible:', error);
+    return { success: false, message: 'Failed to delete collectible' };
+  }
+}
+
 module.exports = {
   initDashboardIndexes,
   backfillServersFromBot,
@@ -1735,6 +2127,18 @@ module.exports = {
   createGlobalCollectible,
   updateGlobalCollectible,
   deleteGlobalCollectible,
+  
+  createServerCharacter,
+  getServerSpecificCharacters,
+  getServerCharacterById,
+  updateServerCharacter,
+  deleteServerCharacter,
+  
+  createServerCollectible,
+  getServerSpecificCollectibles,
+  getServerCollectibleById,
+  updateServerCollectible,
+  deleteServerCollectible,
   
   getServerConfig,
   getServersByOwner,

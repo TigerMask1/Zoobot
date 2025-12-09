@@ -1198,6 +1198,246 @@
     </div>
   </div>
 
+  <!-- Custom Character Modal -->
+  <div id="customCharacterModal" class="modal-overlay">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2 class="modal-title" id="customCharacterModalTitle">Create Custom Character</h2>
+        <button class="modal-close" onclick="closeModal('customCharacterModal')">&times;</button>
+      </div>
+      <form id="customCharacterForm" onsubmit="saveCustomCharacter(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Name *</label>
+            <input type="text" class="form-input" id="customCharName" required minlength="2">
+            <p class="form-hint">Minimum 2 characters</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Emoji *</label>
+            <input type="text" class="form-input" id="customCharEmoji" required placeholder="🦁">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description *</label>
+          <textarea class="form-textarea" id="customCharDescription" required minlength="10" placeholder="Character description (minimum 10 characters)..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Image URL *</label>
+          <input type="url" class="form-input" id="customCharImageUrl" required placeholder="https://...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Rarity *</label>
+            <select class="form-select" id="customCharRarity" required>
+              <option value="common">Common</option>
+              <option value="uncommon">Uncommon</option>
+              <option value="rare">Rare</option>
+              <option value="ultra rare">Ultra Rare</option>
+              <option value="epic">Epic</option>
+              <option value="legendary">Legendary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Obtainable Type *</label>
+            <select class="form-select" id="customCharObtainable" required>
+              <option value="drop">Drop</option>
+              <option value="crate">Crate</option>
+              <option value="event">Event</option>
+              <option value="starter">Starter</option>
+              <option value="exclusive">Exclusive</option>
+            </select>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 16px;">
+          <h4 style="margin-bottom: 16px;">Stats</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">HP *</label>
+              <input type="number" class="form-input" id="customCharHP" value="100" min="1" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Attack *</label>
+              <input type="number" class="form-input" id="customCharAttack" value="10" min="1" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Defense *</label>
+              <input type="number" class="form-input" id="customCharDefense" value="10" min="1" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Speed *</label>
+              <input type="number" class="form-input" id="customCharSpeed" value="10" min="1" required>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 16px;">
+          <h4 style="margin-bottom: 16px;">Ability</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Ability Name *</label>
+              <input type="text" class="form-input" id="customCharAbilityName" required placeholder="e.g., Fierce Roar">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Effect Type *</label>
+              <select class="form-select" id="customCharAbilityEffectType" required>
+                <option value="damage">Damage</option>
+                <option value="heal">Heal</option>
+                <option value="buff_attack">Buff Attack</option>
+                <option value="buff_defense">Buff Defense</option>
+                <option value="buff_speed">Buff Speed</option>
+                <option value="debuff_attack">Debuff Attack</option>
+                <option value="debuff_defense">Debuff Defense</option>
+                <option value="debuff_speed">Debuff Speed</option>
+                <option value="stun">Stun</option>
+                <option value="poison">Poison</option>
+                <option value="shield">Shield</option>
+                <option value="lifesteal">Lifesteal</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Effect Value *</label>
+              <input type="number" class="form-input" id="customCharAbilityEffectValue" value="15" min="1" required>
+              <p class="form-hint">Amount of damage/heal/buff</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ability Description *</label>
+              <input type="text" class="form-input" id="customCharAbilityDesc" required placeholder="What does this ability do?">
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 16px;">
+          <h4 style="margin-bottom: 16px;">Special Move</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Move Name *</label>
+              <input type="text" class="form-input" id="customCharSpecialMoveName" required placeholder="e.g., Ultimate Strike">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Damage *</label>
+              <input type="number" class="form-input" id="customCharSpecialMoveDamage" value="25" min="1" required>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="customCharEditId">
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('customCharacterModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Character</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Custom Collectible Modal -->
+  <div id="customCollectibleModal" class="modal-overlay">
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h2 class="modal-title" id="customCollectibleModalTitle">Create Custom Collectible</h2>
+        <button class="modal-close" onclick="closeModal('customCollectibleModal')">&times;</button>
+      </div>
+      <form id="customCollectibleForm" onsubmit="saveCustomCollectible(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Name *</label>
+            <input type="text" class="form-input" id="customCollectName" required minlength="2">
+            <p class="form-hint">Minimum 2 characters</p>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Emoji *</label>
+            <input type="text" class="form-input" id="customCollectEmoji" required placeholder="💎">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description *</label>
+          <textarea class="form-textarea" id="customCollectDescription" required minlength="10" placeholder="Collectible description (minimum 10 characters)..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Image URL *</label>
+          <input type="url" class="form-input" id="customCollectImageUrl" required placeholder="https://...">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Rarity *</label>
+            <select class="form-select" id="customCollectRarity" required>
+              <option value="common">Common</option>
+              <option value="uncommon">Uncommon</option>
+              <option value="rare">Rare</option>
+              <option value="ultra rare">Ultra Rare</option>
+              <option value="epic">Epic</option>
+              <option value="legendary">Legendary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Base Value *</label>
+            <input type="number" class="form-input" id="customCollectValue" value="100" min="1" required>
+          </div>
+        </div>
+        <div class="card" style="margin-top: 16px;">
+          <h4 style="margin-bottom: 16px;">Obtainability Settings</h4>
+          <div class="toggle-container">
+            <div class="toggle-info">
+              <h4>Droppable</h4>
+              <p>Can spawn in random drops</p>
+            </div>
+            <div class="toggle" id="customCollectDroppable" onclick="toggleSwitch(this); toggleDropSettings()"></div>
+          </div>
+          <div id="dropSettingsSection" class="hidden" style="margin-left: 20px; padding: 12px 0;">
+            <div class="form-group">
+              <label class="form-label">Drop Probability (1-100)</label>
+              <input type="number" class="form-input" id="customCollectDropProbability" value="50" min="1" max="100" style="max-width: 100px;">
+            </div>
+          </div>
+          <div class="toggle-container">
+            <div class="toggle-info">
+              <h4>Crate Obtainable</h4>
+              <p>Can be found in crates</p>
+            </div>
+            <div class="toggle" id="customCollectCrateObtainable" onclick="toggleSwitch(this); toggleCrateSettings()"></div>
+          </div>
+          <div id="crateSettingsSection" class="hidden" style="margin-left: 20px; padding: 12px 0;">
+            <div class="form-group">
+              <label class="form-label">Crate Probability (1-100)</label>
+              <input type="number" class="form-input" id="customCollectCrateProbability" value="50" min="1" max="100" style="max-width: 100px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Available in Crates</label>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="crate-type-checkbox" value="bronze"> Bronze</label>
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="crate-type-checkbox" value="silver"> Silver</label>
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="crate-type-checkbox" value="gold"> Gold</label>
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="crate-type-checkbox" value="emerald"> Emerald</label>
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="crate-type-checkbox" value="legendary"> Legendary</label>
+                <label style="display: flex; align-items: center; gap: 4px;"><input type="checkbox" class="crate-type-checkbox" value="tyrant"> Tyrant</label>
+              </div>
+            </div>
+          </div>
+          <div class="toggle-container">
+            <div class="toggle-info">
+              <h4>Tradable</h4>
+              <p>Players can trade this item</p>
+            </div>
+            <div class="toggle active" id="customCollectTradable" onclick="toggleSwitch(this)"></div>
+          </div>
+          <div class="toggle-container">
+            <div class="toggle-info">
+              <h4>Sellable</h4>
+              <p>Players can sell this item</p>
+            </div>
+            <div class="toggle active" id="customCollectSellable" onclick="toggleSwitch(this)"></div>
+          </div>
+        </div>
+        <input type="hidden" id="customCollectEditId">
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('customCollectibleModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Collectible</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Server Item Selection Modal -->
   <div id="itemSelectionModal" class="modal-overlay">
     <div class="modal modal-large">
@@ -1573,12 +1813,51 @@
               </div>
             </div>
 
+            <!-- Custom Characters Section -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Custom Characters</h3>
+                <button class="btn btn-primary btn-sm" onclick="openCustomCharacterModal()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Create Custom Character
+                </button>
+              </div>
+              <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                Create unique characters exclusive to this server. Custom characters can appear in drops and crates.
+              </p>
+              <div id="customCharactersList" class="item-grid"></div>
+            </div>
+
+            <!-- Custom Collectibles Section -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Custom Collectibles</h3>
+                <button class="btn btn-primary btn-sm" onclick="openCustomCollectibleModal()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  Create Custom Collectible
+                </button>
+              </div>
+              <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                Create unique collectibles exclusive to this server. Collectibles can be obtained through drops, crates, or trading.
+              </p>
+              <div id="customCollectiblesList" class="item-grid"></div>
+            </div>
+
             <div style="display: flex; gap: 12px; margin-top: 24px;">
               <button class="btn btn-success" onclick="saveServerConfig()" ${(server.characters?.length || 0) < server.minimumRequired ? 'disabled' : ''}>
                 Save & Activate Server
               </button>
             </div>
           `;
+          // Load custom content
+          loadCustomCharacters();
+          loadCustomCollectibles();
           break;
 
         case 'channels':
@@ -2852,6 +3131,346 @@
       if (section) {
         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
+    }
+
+    // Custom Content Management
+    let customCharacters = [];
+    let customCollectibles = [];
+
+    function toggleDropSettings() {
+      const section = document.getElementById('dropSettingsSection');
+      const toggle = document.getElementById('customCollectDroppable');
+      if (toggle.classList.contains('active')) {
+        section.classList.remove('hidden');
+      } else {
+        section.classList.add('hidden');
+      }
+    }
+
+    function toggleCrateSettings() {
+      const section = document.getElementById('crateSettingsSection');
+      const toggle = document.getElementById('customCollectCrateObtainable');
+      if (toggle.classList.contains('active')) {
+        section.classList.remove('hidden');
+      } else {
+        section.classList.add('hidden');
+      }
+    }
+
+    async function loadCustomCharacters() {
+      if (!currentServer) return;
+      try {
+        const response = await fetch(`/admin/api/servers/${currentServer}/custom-characters`);
+        const data = await response.json();
+        if (data.success) {
+          customCharacters = data.characters || [];
+          const container = document.getElementById('customCharactersList');
+          if (container) {
+            container.innerHTML = renderCustomItems(customCharacters, 'character');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load custom characters:', error);
+      }
+    }
+
+    async function loadCustomCollectibles() {
+      if (!currentServer) return;
+      try {
+        const response = await fetch(`/admin/api/servers/${currentServer}/custom-collectibles`);
+        const data = await response.json();
+        if (data.success) {
+          customCollectibles = data.collectibles || [];
+          const container = document.getElementById('customCollectiblesList');
+          if (container) {
+            container.innerHTML = renderCustomItems(customCollectibles, 'collectible');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load custom collectibles:', error);
+      }
+    }
+
+    function openCustomCharacterModal(character = null) {
+      const modal = document.getElementById('customCharacterModal');
+      const form = document.getElementById('customCharacterForm');
+      form.reset();
+
+      if (character) {
+        document.getElementById('customCharacterModalTitle').textContent = 'Edit Custom Character';
+        document.getElementById('customCharEditId').value = character._id || character.id;
+        document.getElementById('customCharName').value = character.name || '';
+        document.getElementById('customCharEmoji').value = character.emoji || '';
+        document.getElementById('customCharDescription').value = character.description || '';
+        document.getElementById('customCharImageUrl').value = character.imageUrl || '';
+        document.getElementById('customCharRarity').value = character.rarity || 'common';
+        document.getElementById('customCharObtainable').value = character.obtainable || 'drop';
+        document.getElementById('customCharHP').value = character.stats?.hp || 100;
+        document.getElementById('customCharAttack').value = character.stats?.attack || 10;
+        document.getElementById('customCharDefense').value = character.stats?.defense || 10;
+        document.getElementById('customCharSpeed').value = character.stats?.speed || 10;
+        document.getElementById('customCharAbilityName').value = character.ability?.name || '';
+        document.getElementById('customCharAbilityDesc').value = character.ability?.description || '';
+        document.getElementById('customCharAbilityEffectType').value = character.ability?.effectType || 'damage';
+        document.getElementById('customCharAbilityEffectValue').value = character.ability?.effectValue || 15;
+        document.getElementById('customCharSpecialMoveName').value = character.specialMove?.name || '';
+        document.getElementById('customCharSpecialMoveDamage').value = character.specialMove?.damage || 25;
+      } else {
+        document.getElementById('customCharacterModalTitle').textContent = 'Create Custom Character';
+        document.getElementById('customCharEditId').value = '';
+      }
+
+      modal.classList.add('active');
+    }
+
+    async function saveCustomCharacter(event) {
+      event.preventDefault();
+
+      const editId = document.getElementById('customCharEditId').value;
+      const characterData = {
+        name: document.getElementById('customCharName').value,
+        emoji: document.getElementById('customCharEmoji').value,
+        description: document.getElementById('customCharDescription').value,
+        imageUrl: document.getElementById('customCharImageUrl').value,
+        rarity: document.getElementById('customCharRarity').value,
+        obtainable: document.getElementById('customCharObtainable').value,
+        stats: {
+          hp: parseInt(document.getElementById('customCharHP').value) || 100,
+          attack: parseInt(document.getElementById('customCharAttack').value) || 10,
+          defense: parseInt(document.getElementById('customCharDefense').value) || 10,
+          speed: parseInt(document.getElementById('customCharSpeed').value) || 10
+        },
+        ability: {
+          name: document.getElementById('customCharAbilityName').value,
+          description: document.getElementById('customCharAbilityDesc').value,
+          effectType: document.getElementById('customCharAbilityEffectType').value,
+          effectValue: parseInt(document.getElementById('customCharAbilityEffectValue').value) || 15
+        },
+        specialMove: {
+          name: document.getElementById('customCharSpecialMoveName').value,
+          damage: parseInt(document.getElementById('customCharSpecialMoveDamage').value) || 25
+        }
+      };
+
+      try {
+        const url = editId 
+          ? `/admin/api/servers/${currentServer}/custom-characters/${editId}`
+          : `/admin/api/servers/${currentServer}/custom-characters`;
+        const method = editId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(characterData)
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast(editId ? 'Character updated' : 'Character created', 'success');
+          closeModal('customCharacterModal');
+          await loadCustomCharacters();
+          renderConfigTab('content');
+        } else {
+          const errorMsg = data.errors ? data.errors.join(', ') : (data.error || 'Failed to save character');
+          showToast(errorMsg, 'error');
+        }
+      } catch (error) {
+        showToast('Failed to save character', 'error');
+      }
+    }
+
+    async function editCustomCharacter(id) {
+      const char = customCharacters.find(c => (c._id || c.id) === id);
+      if (char) openCustomCharacterModal(char);
+    }
+
+    async function deleteCustomCharacter(id) {
+      if (!confirm('Are you sure you want to delete this custom character?')) return;
+
+      try {
+        const response = await fetch(`/admin/api/servers/${currentServer}/custom-characters/${id}`, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+        if (data.success) {
+          showToast('Character deleted', 'success');
+          await loadCustomCharacters();
+          renderConfigTab('content');
+        } else {
+          showToast(data.error || 'Failed to delete character', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to delete character', 'error');
+      }
+    }
+
+    function openCustomCollectibleModal(collectible = null) {
+      const modal = document.getElementById('customCollectibleModal');
+      const form = document.getElementById('customCollectibleForm');
+      form.reset();
+
+      document.getElementById('customCollectDroppable').classList.remove('active');
+      document.getElementById('customCollectCrateObtainable').classList.remove('active');
+      document.getElementById('customCollectTradable').classList.add('active');
+      document.getElementById('customCollectSellable').classList.add('active');
+      document.getElementById('dropSettingsSection').classList.add('hidden');
+      document.getElementById('crateSettingsSection').classList.add('hidden');
+      document.querySelectorAll('.crate-type-checkbox').forEach(cb => cb.checked = false);
+
+      if (collectible) {
+        document.getElementById('customCollectibleModalTitle').textContent = 'Edit Custom Collectible';
+        document.getElementById('customCollectEditId').value = collectible._id || collectible.id;
+        document.getElementById('customCollectName').value = collectible.name || '';
+        document.getElementById('customCollectEmoji').value = collectible.emoji || '';
+        document.getElementById('customCollectDescription').value = collectible.description || '';
+        document.getElementById('customCollectImageUrl').value = collectible.imageUrl || '';
+        document.getElementById('customCollectRarity').value = collectible.rarity || 'common';
+        document.getElementById('customCollectValue').value = collectible.baseValue || 100;
+
+        if (collectible.droppable?.enabled) {
+          document.getElementById('customCollectDroppable').classList.add('active');
+          document.getElementById('dropSettingsSection').classList.remove('hidden');
+          document.getElementById('customCollectDropProbability').value = collectible.droppable.probability || 50;
+        }
+        if (collectible.crateObtainable?.enabled) {
+          document.getElementById('customCollectCrateObtainable').classList.add('active');
+          document.getElementById('crateSettingsSection').classList.remove('hidden');
+          document.getElementById('customCollectCrateProbability').value = collectible.crateObtainable.probability || 50;
+          if (collectible.crateObtainable.crates) {
+            collectible.crateObtainable.crates.forEach(crate => {
+              const cb = document.querySelector(`.crate-type-checkbox[value="${crate}"]`);
+              if (cb) cb.checked = true;
+            });
+          }
+        }
+        if (collectible.tradable === false) document.getElementById('customCollectTradable').classList.remove('active');
+        if (collectible.sellable === false) document.getElementById('customCollectSellable').classList.remove('active');
+      } else {
+        document.getElementById('customCollectibleModalTitle').textContent = 'Create Custom Collectible';
+        document.getElementById('customCollectEditId').value = '';
+      }
+
+      modal.classList.add('active');
+    }
+
+    async function saveCustomCollectible(event) {
+      event.preventDefault();
+
+      const editId = document.getElementById('customCollectEditId').value;
+      const droppableEnabled = document.getElementById('customCollectDroppable').classList.contains('active');
+      const crateEnabled = document.getElementById('customCollectCrateObtainable').classList.contains('active');
+
+      const selectedCrates = [];
+      document.querySelectorAll('.crate-type-checkbox:checked').forEach(cb => {
+        selectedCrates.push(cb.value);
+      });
+
+      const collectibleData = {
+        name: document.getElementById('customCollectName').value,
+        emoji: document.getElementById('customCollectEmoji').value,
+        description: document.getElementById('customCollectDescription').value,
+        imageUrl: document.getElementById('customCollectImageUrl').value,
+        rarity: document.getElementById('customCollectRarity').value,
+        baseValue: parseInt(document.getElementById('customCollectValue').value) || 100,
+        droppable: {
+          enabled: droppableEnabled,
+          probability: droppableEnabled ? parseInt(document.getElementById('customCollectDropProbability').value) || 50 : 0
+        },
+        crateObtainable: {
+          enabled: crateEnabled,
+          probability: crateEnabled ? parseInt(document.getElementById('customCollectCrateProbability').value) || 50 : 0,
+          crates: crateEnabled ? selectedCrates : []
+        },
+        tradable: document.getElementById('customCollectTradable').classList.contains('active'),
+        sellable: document.getElementById('customCollectSellable').classList.contains('active')
+      };
+
+      try {
+        const url = editId 
+          ? `/admin/api/servers/${currentServer}/custom-collectibles/${editId}`
+          : `/admin/api/servers/${currentServer}/custom-collectibles`;
+        const method = editId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(collectibleData)
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast(editId ? 'Collectible updated' : 'Collectible created', 'success');
+          closeModal('customCollectibleModal');
+          await loadCustomCollectibles();
+          renderConfigTab('content');
+        } else {
+          const errorMsg = data.errors ? data.errors.join(', ') : (data.error || 'Failed to save collectible');
+          showToast(errorMsg, 'error');
+        }
+      } catch (error) {
+        showToast('Failed to save collectible', 'error');
+      }
+    }
+
+    async function editCustomCollectible(id) {
+      const item = customCollectibles.find(c => (c._id || c.id) === id);
+      if (item) openCustomCollectibleModal(item);
+    }
+
+    async function deleteCustomCollectible(id) {
+      if (!confirm('Are you sure you want to delete this custom collectible?')) return;
+
+      try {
+        const response = await fetch(`/admin/api/servers/${currentServer}/custom-collectibles/${id}`, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+        if (data.success) {
+          showToast('Collectible deleted', 'success');
+          await loadCustomCollectibles();
+          renderConfigTab('content');
+        } else {
+          showToast(data.error || 'Failed to delete collectible', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to delete collectible', 'error');
+      }
+    }
+
+    function renderCustomItems(items, type) {
+      if (!items || !items.length) {
+        return `<div class="empty-state" style="grid-column: 1/-1; padding: 24px;">
+          <p>No custom ${type}s created yet. Click the button above to create one!</p>
+        </div>`;
+      }
+
+      return items.map(item => {
+        const itemId = item._id || item.id;
+        return `
+          <div class="item-card">
+            <div class="item-actions">
+              <button class="item-action-btn" onclick="event.stopPropagation(); edit${type === 'character' ? 'CustomCharacter' : 'CustomCollectible'}('${itemId}')" title="Edit">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
+              <button class="item-action-btn delete" onclick="event.stopPropagation(); delete${type === 'character' ? 'CustomCharacter' : 'CustomCollectible'}('${itemId}')" title="Delete">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="item-image">
+              ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${item.name}">` : (item.emoji || '❓')}
+            </div>
+            <div class="item-name">${escapeHtml(item.name)}</div>
+            <span class="item-rarity rarity-${(item.rarity || 'common').replace(' ', '-')}">${item.rarity || 'common'}</span>
+            <div style="font-size: 10px; color: var(--primary); margin-top: 4px;">Custom</div>
+          </div>
+        `;
+      }).join('');
     }
 
     init();

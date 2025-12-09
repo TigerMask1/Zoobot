@@ -1523,6 +1523,147 @@ async function setItemAvailability(itemId, availableFrom, availableUntil) {
   });
 }
 
+async function getServerSpecificCollectiblesFromDB(serverId) {
+  if (!isMongoConnected()) return [];
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const collectibles = await db.collection('serverCollectibles')
+      .find({ serverId, status: 'active' })
+      .toArray();
+    
+    return collectibles.map(c => ({
+      ...c,
+      id: c._id.toString(),
+      isServerSpecific: true
+    }));
+  } catch (error) {
+    console.error(`[CollectibleItemsSystem] Error loading server collectibles for ${serverId}:`, error);
+    return [];
+  }
+}
+
+async function getServerCollectibleByName(serverId, name) {
+  if (!isMongoConnected()) return null;
+  
+  const db = getMongoDatabase();
+  
+  try {
+    const collectible = await db.collection('serverCollectibles').findOne({ 
+      serverId, 
+      name: { $regex: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      status: 'active'
+    });
+    
+    if (collectible) {
+      return {
+        ...collectible,
+        id: collectible._id.toString(),
+        isServerSpecific: true
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`[CollectibleItemsSystem] Error getting server collectible "${name}" for ${serverId}:`, error);
+    return null;
+  }
+}
+
+async function getAllCollectiblesForServer(serverId) {
+  const serverCollectibles = await getServerSpecificCollectiblesFromDB(serverId);
+  return serverCollectibles;
+}
+
+async function getDroppableServerCollectibles(serverId) {
+  const collectibles = await getServerSpecificCollectiblesFromDB(serverId);
+  return collectibles.filter(c => c.droppable?.enabled === true);
+}
+
+async function getCrateServerCollectibles(serverId, crateType = null) {
+  const collectibles = await getServerSpecificCollectiblesFromDB(serverId);
+  return collectibles.filter(c => {
+    if (!c.crateObtainable?.enabled) return false;
+    if (crateType && c.crateObtainable.crates && !c.crateObtainable.crates.includes(crateType)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+async function awardServerCollectible(userId, serverId, collectibleId, quantity = 1) {
+  if (!isMongoConnected()) {
+    return { success: false, message: '❌ MongoDB is not connected!' };
+  }
+  
+  const db = getMongoDatabase();
+  const { ObjectId } = require('mongodb');
+  
+  try {
+    const collectible = await db.collection('serverCollectibles').findOne({ 
+      _id: new ObjectId(collectibleId),
+      serverId: serverId,
+      status: 'active'
+    });
+    
+    if (!collectible) {
+      return { success: false, message: '❌ Server collectible not found!' };
+    }
+    
+    const existingUserItem = await db.collection(USER_COLLECTIBLE_ITEMS_COLLECTION).findOne({
+      userId: userId,
+      itemId: new ObjectId(collectibleId),
+      isServerItem: true,
+      serverId: serverId
+    });
+    
+    if (existingUserItem) {
+      if (collectible.stackable === false) {
+        return { success: false, message: '❌ Already owned - item is not stackable!', alreadyOwned: true };
+      }
+      
+      await db.collection(USER_COLLECTIBLE_ITEMS_COLLECTION).updateOne(
+        { _id: existingUserItem._id },
+        { 
+          $inc: { quantity },
+          $set: { updatedAt: new Date() }
+        }
+      );
+      
+      await db.collection('serverCollectibles').updateOne(
+        { _id: new ObjectId(collectibleId) },
+        { $inc: { totalQuantity: quantity } }
+      );
+    } else {
+      await db.collection(USER_COLLECTIBLE_ITEMS_COLLECTION).insertOne({
+        userId: userId,
+        itemId: new ObjectId(collectibleId),
+        serverId: serverId,
+        isServerItem: true,
+        quantity,
+        selectedForProfile: false,
+        obtainedAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      await db.collection('serverCollectibles').updateOne(
+        { _id: new ObjectId(collectibleId) },
+        { $inc: { ownerCount: 1, totalQuantity: quantity } }
+      );
+    }
+    
+    return { 
+      success: true, 
+      message: `✅ Received ${quantity}x **${collectible.name}**!`,
+      item: { ...collectible, id: collectible._id.toString(), isServerSpecific: true }
+    };
+  } catch (error) {
+    console.error('[CollectibleItemsSystem] Error awarding server collectible:', error);
+    return { success: false, message: '❌ Failed to award server collectible!' };
+  }
+}
+
 module.exports = {
   initCollectibleItemsIndexes,
   createCollectibleItem,
@@ -1567,6 +1708,12 @@ module.exports = {
   toggleItemTrait,
   setItemProbability,
   setItemAvailability,
+  getServerSpecificCollectiblesFromDB,
+  getServerCollectibleByName,
+  getAllCollectiblesForServer,
+  getDroppableServerCollectibles,
+  getCrateServerCollectibles,
+  awardServerCollectible,
   RARITY_CONFIG,
   VALID_CRATE_TYPES,
   ITEMS_PER_PAGE

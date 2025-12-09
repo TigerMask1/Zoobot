@@ -9,7 +9,7 @@ const { getEmojiForCharacter } = require('./emojiAssetManager.js');
 const { getServerGame, DEFAULT_GAME, getServerSelectedCharacters, isMainServer } = require('./serverConfigManager.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
 const { generateST } = require('./utils/shared.js');
-const { tryDropCollectibleFromCrate } = require('./collectibleItemsSystem.js');
+const { tryDropCollectibleFromCrate, getCrateServerCollectibles, awardCollectibleItem, awardServerCollectible } = require('./collectibleItemsSystem.js');
 const { isMongoConnected } = require('./mongoManager.js');
 
 async function safeDropCollectibleFromCrate(userId, serverGame, crateType, serverId) {
@@ -28,6 +28,35 @@ async function safeDropCollectibleFromCrate(userId, serverGame, crateType, serve
   }
   
   try {
+    // For non-main servers, use server-specific collectibles from serverCollectibles collection
+    if (serverId && !isMainServer(serverId)) {
+      const serverCollectibles = await getCrateServerCollectibles(serverId, crateType);
+      if (serverCollectibles && serverCollectibles.length > 0) {
+        // Roll for each eligible collectible
+        for (const item of serverCollectibles) {
+          const roll = Math.random();
+          const dropProbability = item.crateObtainable?.probability || 0.1;
+          if (roll < dropProbability) {
+            // Award the server-specific collectible
+            const result = await awardServerCollectible(userId, serverId, item._id.toString());
+            if (result && result.success) {
+              return {
+                item: {
+                  name: item.name,
+                  emoji: item.emoji || '📦',
+                  rarity: item.rarity,
+                  isServerSpecific: true
+                },
+                message: `🎁 **Bonus Collectible:** ${item.emoji || '📦'} ${item.name} (${item.rarity || 'common'})`
+              };
+            }
+          }
+        }
+        return null;
+      }
+    }
+    
+    // Fallback to global collectibles for main server or if no server-specific items
     const collectibleDrop = await tryDropCollectibleFromCrate(userId, serverGame, crateType, serverId);
     if (collectibleDrop && collectibleDrop.item && collectibleDrop.message) {
       return collectibleDrop;
@@ -220,19 +249,26 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
   
   if (roll < crate.charChance) {
     const serverGame = serverId ? (getServerGame(serverId) || DEFAULT_GAME) : DEFAULT_GAME;
-    const crateEligibleChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
-    const crateEligibleNames = new Set(crateEligibleChars.map(c => c.name));
+    let crateChars = [];
     
-    let crateChars;
+    // For non-main servers, use server-specific characters from serverCharacters collection
     if (serverId && !isMainServer(serverId)) {
-      const selectedChars = await getServerSelectedCharacters(serverId);
-      if (selectedChars && selectedChars.length > 0) {
-        const intersected = selectedChars.filter(c => crateEligibleNames.has(c.name));
-        crateChars = intersected.length > 0 ? intersected : crateEligibleChars;
-      } else {
-        crateChars = crateEligibleChars;
+      const serverCrateChars = await characterManager.getCrateServerCharacters(serverId, crateType);
+      if (serverCrateChars && serverCrateChars.length > 0) {
+        crateChars = serverCrateChars.map(c => ({
+          name: c.name,
+          emoji: c.emoji,
+          rarity: c.rarity,
+          isServerSpecific: true,
+          ability: c.ability,
+          specialMove: c.specialMove
+        }));
       }
-    } else {
+    }
+    
+    // Fallback to global characters for main server or if no server-specific characters
+    if (crateChars.length === 0) {
+      const crateEligibleChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
       crateChars = crateEligibleChars;
     }
     
@@ -348,14 +384,26 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
     const roll = Math.random() * 100;
     
     if (roll < crate.charChance) {
-      const crateEligibleChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
-      const crateEligibleNames = new Set(crateEligibleChars.map(c => c.name));
+      let crateChars = [];
       
-      let crateChars;
-      if (serverSelectedChars && serverSelectedChars.length > 0) {
-        const intersected = serverSelectedChars.filter(c => crateEligibleNames.has(c.name));
-        crateChars = intersected.length > 0 ? intersected : crateEligibleChars;
-      } else {
+      // For non-main servers, use server-specific characters from serverCharacters collection
+      if (serverId && !isMainServer(serverId)) {
+        const serverCrateChars = await characterManager.getCrateServerCharacters(serverId, crateType);
+        if (serverCrateChars && serverCrateChars.length > 0) {
+          crateChars = serverCrateChars.map(c => ({
+            name: c.name,
+            emoji: c.emoji,
+            rarity: c.rarity,
+            isServerSpecific: true,
+            ability: c.ability,
+            specialMove: c.specialMove
+          }));
+        }
+      }
+      
+      // Fallback to global characters for main server or if no server-specific characters
+      if (crateChars.length === 0) {
+        const crateEligibleChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
         crateChars = crateEligibleChars;
       }
       

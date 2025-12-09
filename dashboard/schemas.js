@@ -1,6 +1,8 @@
 const COLLECTIONS = {
   GLOBAL_CHARACTERS: 'globalCharacters',
   GLOBAL_COLLECTIBLES: 'globalCollectibles',
+  SERVER_CHARACTERS: 'serverCharacters',
+  SERVER_COLLECTIBLES: 'serverCollectibles',
   SERVER_CONFIGS: 'dashboardServerConfigs',
   CHARACTER_SUBMISSIONS: 'characterSubmissions',
   COLLECTIBLE_SUBMISSIONS: 'collectibleSubmissions',
@@ -39,6 +41,81 @@ const CHARACTER_SCHEMA = {
   updatedAt: Date,
   approvedBy: String,
   approvedAt: Date
+};
+
+const SERVER_CHARACTER_SCHEMA = {
+  serverId: { type: String, required: true },
+  name: { type: String, required: true },
+  emoji: { type: String, required: true },
+  customEmojiId: String,
+  description: { type: String, required: true },
+  imageUrl: { type: String, required: true },
+  rarity: { type: String, required: true },
+  obtainable: { type: String, required: true },
+  ability: {
+    name: { type: String, required: true },
+    emoji: { type: String, required: true },
+    description: { type: String, required: true },
+    effectType: { type: String, required: true },
+    effectValue: { type: Number, required: true }
+  },
+  specialMove: {
+    name: { type: String, required: true },
+    damage: { type: Number, required: true }
+  },
+  stats: {
+    hp: { type: Number, required: true },
+    attack: { type: Number, required: true },
+    defense: { type: Number, required: true },
+    speed: { type: Number, required: true }
+  },
+  dropSettings: {
+    enabled: { type: Boolean, default: false },
+    probability: { type: Number, default: 5 }
+  },
+  crateSettings: {
+    enabled: { type: Boolean, default: true },
+    probability: { type: Number, default: 10 },
+    crates: { type: Array, default: ['bronze', 'silver', 'gold'] }
+  },
+  status: { type: String, default: 'active' },
+  createdBy: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+};
+
+const SERVER_COLLECTIBLE_SCHEMA = {
+  serverId: { type: String, required: true },
+  name: { type: String, required: true },
+  description: { type: String, required: true },
+  emoji: { type: String, required: true },
+  imageUrl: { type: String, required: true },
+  rarity: { type: String, required: true },
+  droppable: {
+    enabled: { type: Boolean, default: false },
+    probability: { type: Number, default: 5 }
+  },
+  crateObtainable: {
+    enabled: { type: Boolean, default: false },
+    probability: { type: Number, default: 5 },
+    crates: { type: Array, default: [] }
+  },
+  tradable: { type: Boolean, default: true },
+  giftable: { type: Boolean, default: true },
+  sellable: { type: Boolean, default: true },
+  auctionable: { type: Boolean, default: false },
+  baseValue: { type: Number, required: true },
+  stackable: { type: Boolean, default: true },
+  availableFrom: { type: Date, default: null },
+  availableUntil: { type: Date, default: null },
+  limitedEdition: { type: Boolean, default: false },
+  maxSupply: { type: Number, default: null },
+  ownerCount: { type: Number, default: 0 },
+  totalQuantity: { type: Number, default: 0 },
+  status: { type: String, default: 'active' },
+  createdBy: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
 };
 
 const COLLECTIBLE_SCHEMA = {
@@ -370,14 +447,28 @@ const DEFAULT_PING_SETTINGS = DEFAULT_NOTIFICATIONS;
 
 const MINIMUM_CHARACTERS_REQUIRED = 5;
 
+const EFFECT_TYPES = [
+  'flatDamageBonus', 'percentDamageBonus', 'criticalChance', 'criticalDamage',
+  'damageReduction', 'healOnHit', 'lifeSteal', 'counterAttack', 'dodgeChance',
+  'accuracyBonus', 'speedBonus', 'firstStrikeBonus', 'poisonDamage', 'burnDamage',
+  'freezeChance', 'stunChance', 'bleedDamage', 'shieldOnTurn', 'reflectDamage',
+  'vampiric', 'thorns', 'bonusAttack', 'bonusDefense', 'bonusHp'
+];
+
+const CRATE_TYPES = ['bronze', 'silver', 'gold', 'emerald', 'legendary', 'tyrant'];
+
 module.exports = {
   COLLECTIONS,
   CHARACTER_SCHEMA,
+  SERVER_CHARACTER_SCHEMA,
+  SERVER_COLLECTIBLE_SCHEMA,
   COLLECTIBLE_SCHEMA,
   SERVER_CONFIG_SCHEMA,
   SUBMISSION_STATUS,
   RARITY_TYPES,
   OBTAINABLE_TYPES,
+  EFFECT_TYPES,
+  CRATE_TYPES,
   DEFAULT_CORE,
   DEFAULT_PERMISSIONS,
   DEFAULT_CHANNELS,

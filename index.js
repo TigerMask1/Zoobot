@@ -202,6 +202,7 @@ const {
   getDroppableCollectibleItems,
   getCrateCollectibleItems,
   awardCollectibleItem,
+  awardServerCollectible,
   getRarityTier
 } = require('./collectibleItemsSystem.js');
 const { viewKeys, unlockCharacter, openRandomCage } = require('./keySystem.js');
@@ -3673,6 +3674,48 @@ client.on('messageCreate', async (message) => {
               await message.reply({ embeds: [dropEmbed] });
             } else {
               await message.reply(`❌ You don't own **${drop.characterName}**, so you can't collect these tokens! Drop remains active.`);
+            }
+          } else if (drop.type === 'collectibleItem') {
+            // Handle collectible item drops
+            let awardResult;
+            if (drop.isServerSpecific) {
+              // Award server-specific collectible
+              awardResult = await awardServerCollectible(userId, serverId, drop.itemId);
+            } else {
+              // Award global collectible
+              awardResult = await awardCollectibleItem(userId, drop.itemId);
+            }
+            
+            if (awardResult && awardResult.success) {
+              delete data.serverDrops[serverId];
+              
+              if (!data.users[userId].questProgress) data.users[userId].questProgress = {};
+              data.users[userId].questProgress.dropsCaught = (data.users[userId].questProgress.dropsCaught || 0) + 1;
+              data.users[userId].lastActivity = Date.now();
+              
+              trackChallengeProgress(data.users[userId], 'dropsCaught', 1);
+              checkAchievements(data.users[userId]);
+              updateTaskProgress(data.users[userId], 'dropsCaught', 1);
+              if (message.guild) {
+                recordEvent(data, message.guild.id, 'dropsClaimed', 1, userId);
+              }
+              
+              await eventSystem.recordProgress(userId, data.users[userId].username, 1, 'drop_catcher');
+              
+              saveData(data);
+              
+              const collectibleEmbed = new EmbedBuilder()
+                .setColor('#9B59B6')
+                .setTitle('🎁 COLLECTIBLE CAUGHT!')
+                .setDescription(`<@${userId}> caught the drop!\n\n**Reward:** ${drop.emoji} **${drop.itemName}** (${drop.rarity?.name || 'common'})\n💰 Value: ${drop.itemValue} coins`)
+                .setThumbnail(drop.itemImage || null)
+                .setFooter({ text: 'Use !myitems to view your collection!' });
+              
+              await message.reply({ embeds: [collectibleEmbed] });
+            } else if (awardResult && awardResult.alreadyOwned) {
+              await message.reply(`❌ You already own **${drop.itemName}** and it's not stackable! Drop remains active.`);
+            } else {
+              await message.reply(`❌ Failed to award collectible. Drop remains active.`);
             }
           } else {
             delete data.serverDrops[serverId];

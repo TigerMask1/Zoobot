@@ -4,7 +4,7 @@ const characterManager = require('./characterManager.js');
 const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerGame, hasSelectedGame, DEFAULT_GAME, getServerSelectedCharacters, hasServerSelectedCharacters, isDashboardSetupComplete } = require('./serverConfigManager.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
 const { isKeyRushActive, getKeyRushTimeRemaining } = require('./characterKeySystem.js');
-const { getDroppableCollectibleItems, awardCollectibleItem, getRarityTier } = require('./collectibleItemsSystem.js');
+const { getDroppableCollectibleItems, awardCollectibleItem, awardServerCollectible, getRarityTier, getDroppableServerCollectibles } = require('./collectibleItemsSystem.js');
 
 let dropIntervals = new Map();
 let activeClient = null;
@@ -291,22 +291,29 @@ async function executeDrop(serverId) {
     
     const keyRushActive = isKeyRushActive(serverId);
     
-    // Get server-configured characters (for non-main servers that have set them up)
+    // Get server-configured characters (for non-main servers)
     const serverGame = getServerGame(serverId) || DEFAULT_GAME;
-    const gameChars = characterManager.getCharactersByGame(serverGame);
-    const gameCharNames = new Set(gameChars.map(c => c.name));
+    let availableChars = [];
     
-    let availableChars = null;
     if (!isMainServer(serverId)) {
-      const selectedChars = await getServerSelectedCharacters(serverId);
-      if (selectedChars && selectedChars.length > 0) {
-        availableChars = selectedChars.filter(c => gameCharNames.has(c.name));
+      // Use server-specific characters with drop enabled from serverCharacters collection
+      const serverDropChars = await characterManager.getDroppableServerCharacters(serverId);
+      if (serverDropChars && serverDropChars.length > 0) {
+        availableChars = serverDropChars.map(c => ({ 
+          name: c.name, 
+          emoji: c.emoji, 
+          rarity: c.rarity,
+          isServerSpecific: true 
+        }));
       }
     }
     
-    // Fallback to game-based characters if no valid server-specific selection
-    if (!availableChars || availableChars.length === 0) {
-      availableChars = gameChars.map(c => ({ name: c.name, emoji: c.emoji, rarity: c.rarity }));
+    // Fallback to game-based characters for main server or if no server-specific characters
+    if (availableChars.length === 0) {
+      const gameChars = characterManager.getCharactersByGame(serverGame);
+      availableChars = gameChars
+        .filter(c => c.obtainable === 'drop')
+        .map(c => ({ name: c.name, emoji: c.emoji, rarity: c.rarity }));
     }
     
     if (keyRushActive) {
@@ -360,22 +367,35 @@ async function executeDrop(serverId) {
     
     // Check for collectible item drop (separate roll with item-specific probability)
     try {
-      const droppableItems = await getDroppableCollectibleItems(serverGame);
+      let droppableItems = [];
+      
+      if (!isMainServer(serverId)) {
+        // Use server-specific collectibles with drop enabled from serverCollectibles collection
+        droppableItems = await getDroppableServerCollectibles(serverId);
+      }
+      
+      // Fallback to global collectibles for main server or if no server-specific items
+      if (droppableItems.length === 0) {
+        droppableItems = await getDroppableCollectibleItems(serverGame);
+      }
+      
       if (droppableItems.length > 0 && !keyRushActive) {
         for (const item of droppableItems) {
           const itemRoll = Math.random();
-          if (itemRoll < (item.droppable?.probability || 0.05)) {
-            const rarity = getRarityTier(item.ownerCount);
+          const dropProbability = item.droppable?.probability || 0.05;
+          if (itemRoll < dropProbability) {
+            const rarity = getRarityTier(item.ownerCount || 0);
             selectedDrop = { 
               type: 'collectibleItem', 
-              itemId: item._id.toString(),
+              itemId: item._id?.toString() || item.id,
               itemName: item.name,
               itemImage: item.imageUrl,
-              itemValue: item.computedValue,
+              itemValue: item.computedValue || item.baseValue || 100,
               rarity: rarity,
               emoji: rarity.emoji,
               min: 1, 
-              max: 1 
+              max: 1,
+              isServerSpecific: item.isServerSpecific || false
             };
             break;
           }
