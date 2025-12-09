@@ -260,7 +260,7 @@ async function handleCreate(message, serverId, userId, client) {
         const publicChoice = content.toLowerCase();
         if (publicChoice === 'yes' || publicChoice === 'public' || publicChoice === 'y') {
           colData.isPublic = true;
-          colData.pendingApproval = true;
+          colData.pendingApproval = false;
         } else {
           colData.isPublic = false;
           colData.pendingApproval = false;
@@ -382,9 +382,9 @@ async function sendStep8(m, colData) {
     .setDescription(
       '**Step 8: Public Visibility**\n' +
       'Would you like to make this collectible public so other servers can add it?\n\n' +
-      '• `yes` - Request public approval (Super Admins will review)\n' +
+      '• `yes` - Make public (other servers can add it)\n' +
       '• `no` - Keep private to your server only\n\n' +
-      '*Public collectibles can be added by any server once approved.*'
+      '*Your collectible is active immediately - no approval needed!*'
     )
     .setFooter({ text: 'Type "yes" or "no"' });
   await m.reply({ embeds: [embed] });

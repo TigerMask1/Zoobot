@@ -286,7 +286,7 @@ async function handleCreate(message, serverId, userId, client) {
         const publicChoice = content.toLowerCase();
         if (publicChoice === 'yes' || publicChoice === 'public' || publicChoice === 'y') {
           charData.isPublic = true;
-          charData.pendingApproval = true;
+          charData.pendingApproval = false;
         } else {
           charData.isPublic = false;
           charData.pendingApproval = false;
@@ -445,9 +445,9 @@ async function sendStep11(m, charData) {
     .setDescription(
       '**Step 11: Public Visibility**\n' +
       'Would you like to make this character public so other servers can add it?\n\n' +
-      '• `yes` - Request public approval (Super Admins will review)\n' +
+      '• `yes` - Make public (other servers can add it)\n' +
       '• `no` - Keep private to your server only\n\n' +
-      '*Public characters can be added by any server once approved.*'
+      '*Your character is active immediately - no approval needed!*'
     )
     .setFooter({ text: 'Type "yes" or "no"' });
   await m.reply({ embeds: [embed] });

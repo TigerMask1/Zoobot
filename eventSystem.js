@@ -4,7 +4,7 @@ const dataManager = require('./dataManager');
 const { ObjectId } = require('mongodb');
 const { sendMailToAll, addMailToUser } = require('./mailSystem');
 const { addCageKeys, initializeKeys } = require('./keySystem');
-const { getEventsChannel, isMainServer } = require('./serverConfigManager');
+const { getEventsChannel, isMainServer, formatPingMention } = require('./serverConfigManager');
 
 const EVENT_TYPES = ['trophy_hunt', 'crate_master', 'drop_catcher'];
 const EVENT_DURATION_MS = 24 * 60 * 60 * 1000;
@@ -401,7 +401,8 @@ async function announceEventStart(event) {
       if (targetChannelId) {
         const channel = await botClient.channels.fetch(targetChannelId).catch(() => null);
         if (channel) {
-          await channel.send({ content: '@everyone', embeds: [embed] }).catch(err => {
+          const pingMention = formatPingMention(guild.id, 'events');
+          await channel.send({ content: pingMention || '', embeds: [embed] }).catch(err => {
             console.error(`Failed to announce event start to server ${guild.id}:`, err.message);
           });
         }
@@ -480,7 +481,8 @@ async function announceEventEnd(event, leaderboard) {
       if (targetChannelId) {
         const channel = await botClient.channels.fetch(targetChannelId).catch(() => null);
         if (channel) {
-          await channel.send({ content: '@everyone', embeds: [embed] }).catch(err => {
+          const pingMention = formatPingMention(guild.id, 'events');
+          await channel.send({ content: pingMention || '', embeds: [embed] }).catch(err => {
             console.error(`Failed to announce event end to server ${guild.id}:`, err.message);
           });
         }
