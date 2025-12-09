@@ -27,7 +27,7 @@ The bot is built on Discord.js v14 and Node.js 20, using a dual-mode data storag
 - **Work System:** Five job types with cooldowns, rewarding various items, supported by a resource economy (ores, wood) and tool crafting system (4 tool types, 5 levels).
 - **Customization:** Custom profile picture system and Universal Skin Token (UST) system for cosmetics.
 - **Information & Engagement:** Character info command, comprehensive Q&A system with user submission, and a mail system.
-- **Multi-Game Support:** Allows servers to select specific character bundles for drops and crates.
+- **Server-Based Character System:** Each server is self-contained with their own characters and collectibles. Servers create/add characters that appear in their drops and crates (no predefined bundles for community servers).
 - **Permission System:** Five-tier role hierarchy (Super Admin, Global Bot Admin, Server Owner, Server Admin, ZooAdmin, Player) with granular access control.
 - **Admin Tools:** Extensive commands for managing resources, characters, skins, emojis, server settings, and bot updates.
 - **Anti-Cheat & Moderation:** Rate limiting, suspicious activity detection, transaction logging, user snapshots, and a full moderation toolkit with hierarchical permission checks.

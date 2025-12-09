@@ -291,12 +291,18 @@ async function executeDrop(serverId) {
     
     const keyRushActive = isKeyRushActive(serverId);
     
-    // Get server-configured characters (for non-main servers)
-    const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+    // Get server-configured characters
     let availableChars = [];
     
-    if (!isMainServer(serverId)) {
-      // Use server-specific characters with drop enabled from serverCharacters collection
+    if (isMainServer(serverId)) {
+      // Main server uses game-based characters from the default game
+      const serverGame = getServerGame(serverId) || DEFAULT_GAME;
+      const gameChars = characterManager.getCharactersByGame(serverGame);
+      availableChars = gameChars
+        .filter(c => c.obtainable === 'drop')
+        .map(c => ({ name: c.name, emoji: c.emoji, rarity: c.rarity }));
+    } else {
+      // Non-main servers ONLY use their own server-specific characters
       const serverDropChars = await characterManager.getDroppableServerCharacters(serverId);
       if (serverDropChars && serverDropChars.length > 0) {
         availableChars = serverDropChars.map(c => ({ 
@@ -306,14 +312,12 @@ async function executeDrop(serverId) {
           isServerSpecific: true 
         }));
       }
-    }
-    
-    // Fallback to game-based characters for main server or if no server-specific characters
-    if (availableChars.length === 0) {
-      const gameChars = characterManager.getCharactersByGame(serverGame);
-      availableChars = gameChars
-        .filter(c => c.obtainable === 'drop')
-        .map(c => ({ name: c.name, emoji: c.emoji, rarity: c.rarity }));
+      
+      // If no characters, notify once and skip this drop
+      if (availableChars.length === 0) {
+        console.log(`⚠️ Server ${serverId} has no characters configured for drops`);
+        return;
+      }
     }
     
     if (keyRushActive) {
@@ -369,14 +373,13 @@ async function executeDrop(serverId) {
     try {
       let droppableItems = [];
       
-      if (!isMainServer(serverId)) {
-        // Use server-specific collectibles with drop enabled from serverCollectibles collection
-        droppableItems = await getDroppableServerCollectibles(serverId);
-      }
-      
-      // Fallback to global collectibles for main server or if no server-specific items
-      if (droppableItems.length === 0) {
+      if (isMainServer(serverId)) {
+        // Main server uses global collectibles
+        const serverGame = getServerGame(serverId) || DEFAULT_GAME;
         droppableItems = await getDroppableCollectibleItems(serverGame);
+      } else {
+        // Non-main servers ONLY use their own server-specific collectibles
+        droppableItems = await getDroppableServerCollectibles(serverId);
       }
       
       if (droppableItems.length > 0 && !keyRushActive) {

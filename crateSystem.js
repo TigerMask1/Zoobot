@@ -248,11 +248,10 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
   const roll = Math.random() * 100;
   
   if (roll < crate.charChance) {
-    const serverGame = serverId ? (getServerGame(serverId) || DEFAULT_GAME) : DEFAULT_GAME;
     let crateChars = [];
     
-    // For non-main servers, use server-specific characters from serverCharacters collection
     if (serverId && !isMainServer(serverId)) {
+      // Non-main servers ONLY use their own server-specific characters
       const serverCrateChars = await characterManager.getCrateServerCharacters(serverId, crateType);
       if (serverCrateChars && serverCrateChars.length > 0) {
         crateChars = serverCrateChars.map(c => ({
@@ -264,10 +263,9 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
           specialMove: c.specialMove
         }));
       }
-    }
-    
-    // Fallback to global characters for main server or if no server-specific characters
-    if (crateChars.length === 0) {
+    } else {
+      // Main server uses game-based characters
+      const serverGame = serverId ? (getServerGame(serverId) || DEFAULT_GAME) : DEFAULT_GAME;
       const crateEligibleChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
       crateChars = crateEligibleChars;
     }
@@ -386,8 +384,8 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
     if (roll < crate.charChance) {
       let crateChars = [];
       
-      // For non-main servers, use server-specific characters from serverCharacters collection
       if (serverId && !isMainServer(serverId)) {
+        // Non-main servers ONLY use their own server-specific characters
         const serverCrateChars = await characterManager.getCrateServerCharacters(serverId, crateType);
         if (serverCrateChars && serverCrateChars.length > 0) {
           crateChars = serverCrateChars.map(c => ({
@@ -399,10 +397,8 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
             specialMove: c.specialMove
           }));
         }
-      }
-      
-      // Fallback to global characters for main server or if no server-specific characters
-      if (crateChars.length === 0) {
+      } else {
+        // Main server uses game-based characters
         const crateEligibleChars = characterManager.getCharacters().filter(c => c.obtainable === 'crate' && c.game === serverGame);
         crateChars = crateEligibleChars;
       }
