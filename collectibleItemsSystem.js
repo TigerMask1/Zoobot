@@ -60,6 +60,148 @@ async function initCollectibleItemsIndexes() {
   }
 }
 
+const DEFAULT_COLLECTIBLES = [
+  {
+    name: 'Golden Trophy',
+    description: 'A shiny golden trophy awarded to champions',
+    emoji: '🏆',
+    rarity: 'legendary',
+    isGlobal: true,
+    crateObtainable: { enabled: true, probability: 1, crates: ['legendary', 'tyrant'] },
+    baseValue: 500,
+    createdBy: 'system'
+  },
+  {
+    name: 'Diamond Ring',
+    description: 'A sparkling diamond ring of great value',
+    emoji: '💍',
+    rarity: 'epic',
+    isGlobal: true,
+    crateObtainable: { enabled: true, probability: 3, crates: ['gold', 'emerald', 'legendary'] },
+    baseValue: 300,
+    createdBy: 'system'
+  },
+  {
+    name: 'Ancient Coin',
+    description: 'A mysterious coin from ancient times',
+    emoji: '🪙',
+    rarity: 'rare',
+    isGlobal: true,
+    crateObtainable: { enabled: true, probability: 8, crates: ['silver', 'gold', 'emerald'] },
+    baseValue: 150,
+    createdBy: 'system'
+  },
+  {
+    name: 'Magic Crystal',
+    description: 'A crystal that glows with magical energy',
+    emoji: '🔮',
+    rarity: 'ultra rare',
+    isGlobal: true,
+    crateObtainable: { enabled: true, probability: 5, crates: ['gold', 'emerald', 'legendary'] },
+    baseValue: 200,
+    createdBy: 'system'
+  },
+  {
+    name: 'Lucky Clover',
+    description: 'A four-leaf clover that brings good luck',
+    emoji: '🍀',
+    rarity: 'uncommon',
+    isGlobal: true,
+    crateObtainable: { enabled: true, probability: 15, crates: ['bronze', 'silver', 'gold'] },
+    baseValue: 75,
+    createdBy: 'system'
+  },
+  {
+    name: 'Seashell',
+    description: 'A beautiful seashell from the ocean',
+    emoji: '🐚',
+    rarity: 'common',
+    isGlobal: true,
+    crateObtainable: { enabled: true, probability: 25, crates: ['bronze', 'silver'] },
+    baseValue: 30,
+    createdBy: 'system'
+  },
+  {
+    name: 'Star Fragment',
+    description: 'A piece of a fallen star',
+    emoji: '⭐',
+    rarity: 'rare',
+    isGlobal: true,
+    crateObtainable: { enabled: true, probability: 10, crates: ['silver', 'gold', 'emerald'] },
+    baseValue: 120,
+    createdBy: 'system'
+  },
+  {
+    name: 'Rainbow Feather',
+    description: 'A feather that shimmers with all colors',
+    emoji: '🪶',
+    rarity: 'epic',
+    isGlobal: true,
+    crateObtainable: { enabled: true, probability: 4, crates: ['emerald', 'legendary'] },
+    baseValue: 250,
+    createdBy: 'system'
+  },
+  {
+    name: 'Crown Jewel',
+    description: 'A precious gem fit for royalty',
+    emoji: '👑',
+    rarity: 'legendary',
+    isGlobal: true,
+    crateObtainable: { enabled: true, probability: 0.5, crates: ['tyrant'] },
+    baseValue: 750,
+    createdBy: 'system'
+  },
+  {
+    name: 'Mystic Orb',
+    description: 'An orb filled with swirling energy',
+    emoji: '🌐',
+    rarity: 'ultra rare',
+    isGlobal: true,
+    crateObtainable: { enabled: true, probability: 6, crates: ['gold', 'emerald', 'legendary'] },
+    baseValue: 180,
+    createdBy: 'system'
+  }
+];
+
+async function seedDefaultCollectibles() {
+  if (!isMongoConnected()) {
+    console.log('[CollectibleItemsSystem] MongoDB not connected, skipping default collectibles seed');
+    return { success: false, message: 'MongoDB not connected' };
+  }
+  
+  const db = getMongoDatabase();
+  let created = 0;
+  let skipped = 0;
+  
+  try {
+    for (const collectibleData of DEFAULT_COLLECTIBLES) {
+      const existing = await db.collection(COLLECTIBLE_ITEMS_COLLECTION).findOne({
+        name: collectibleData.name,
+        createdBy: 'system'
+      });
+      
+      if (existing) {
+        skipped++;
+        continue;
+      }
+      
+      const result = await createCollectibleItem(collectibleData);
+      if (result.success) {
+        created++;
+      }
+    }
+    
+    if (created > 0) {
+      console.log(`[CollectibleItemsSystem] Seeded ${created} default collectibles (${skipped} already existed)`);
+    }
+    
+    return { success: true, created, skipped };
+  } catch (error) {
+    console.error('[CollectibleItemsSystem] Error seeding default collectibles:', error);
+    return { success: false, message: error.message };
+  }
+}
+
 async function createCollectibleItem(itemData) {
   if (!isMongoConnected()) {
     return { success: false, message: '❌ MongoDB is not connected!' };
@@ -1714,6 +1856,7 @@ module.exports = {
   getDroppableServerCollectibles,
   getCrateServerCollectibles,
   awardServerCollectible,
+  seedDefaultCollectibles,
   RARITY_CONFIG,
   VALID_CRATE_TYPES,
   ITEMS_PER_PAGE

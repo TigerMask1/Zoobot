@@ -175,6 +175,7 @@ const characterManager = require('./characterManager.js');
 const eventSystem = require('./eventSystem.js');
 const {
   initCollectibleItemsIndexes,
+  seedDefaultCollectibles,
   displayCollectibleItemsList,
   displayUserCollectibleItems,
   handleCollectibleItemsButton,
@@ -574,6 +575,7 @@ client.on('clientReady', async () => {
     try {
       await initCollectibleItemsIndexes();
       console.log('✅ Collectible items indexes initialized');
+      await seedDefaultCollectibles();
     } catch (error) {
       console.warn('⚠️ Collectible items init error:', error.message);
     }

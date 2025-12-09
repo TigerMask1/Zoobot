@@ -1,20 +1,52 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const { canSetupServer, isServerOwner, getServerConfig, saveServerConfig } = require('../../serverConfigManager.js');
-const { getCollection } = require('../../mongoManager.js');
+const characterManager = require('../../characterManager.js');
 const crypto = require('crypto');
 
 function generateUniqueId() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
-const RARITY_OPTIONS = ['common', 'uncommon', 'rare', 'ultra rare', 'epic', 'legendary'];
-const OBTAINABLE_OPTIONS = ['drop', 'crate', 'event', 'exclusive'];
 const VALID_EFFECT_TYPES = [
   'criticalDamageBonus', 'energyCostReduction', 'startingShield', 'firstAttackBonus',
   'healPerTurn', 'healingBonus', 'damageReduction', 'dodgeChance', 'startingEnergyBonus',
   'burnChance', 'criticalChanceBonus', 'highHpDamageBonus', 'lifesteal', 'defenseBonus',
-  'flatDamageBonus', 'doubleAttackChance', 'extraTurnChance', 'freezeChance'
+  'flatDamageBonus', 'doubleAttackChance', 'extraTurnChance', 'freezeChance',
+  'opponentCritReduction', 'healToEnergy', 'statusImmunity', 'energyRegenPerTurn',
+  'paralyzeChance', 'healRestoresEnergy', 'lowHpDamageBonus', 'stackingDefense',
+  'specialEnergyRefund', 'energySteal', 'defenseIgnore', 'specialDamageBonus',
+  'lowHpSelfDamageBonus', 'hpRegenPerTurn', 'firstHitReduction', 'energyRegenBonus',
+  'allHealingBonus', 'burnDamageChance', 'startWithMaxEnergy', 'debuffDurationReduction',
+  'normalMoveCostReduction', 'criticalEnergyGain', 'immovable', 'opponentMissChance',
+  'damagePerBuff', 'damageBlock', 'emergencyHeal', 'stackingDamage', 'randomStartBuff',
+  'damageToEnergy', 'autoCleansePerTurn', 'opponentEndTurnDamage', 'highHpDefenseBonus'
 ];
+
+const EFFECT_DESCRIPTIONS = {
+  'criticalDamageBonus': 'Critical hits deal X% more damage (e.g., 0.5 = 50%)',
+  'energyCostReduction': 'All moves cost X% less energy (e.g., 0.2 = 20%)',
+  'startingShield': 'Gain X% max HP as shield at battle start (e.g., 0.1 = 10%)',
+  'firstAttackBonus': 'First attack deals X% bonus damage (e.g., 1.0 = 100%)',
+  'healPerTurn': 'Heal X% max HP every turn (e.g., 0.05 = 5%)',
+  'healingBonus': 'Healing moves restore X% more HP (e.g., 0.3 = 30%)',
+  'damageReduction': 'Take X% reduced damage (e.g., 0.15 = 15%)',
+  'dodgeChance': 'X% chance to dodge attacks (e.g., 0.15 = 15%)',
+  'startingEnergyBonus': 'Start battle with +X energy (e.g., 20)',
+  'burnChance': 'X% chance to burn opponent (e.g., 0.25 = 25%)',
+  'criticalChanceBonus': '+X% critical hit chance (e.g., 0.15 = 15%)',
+  'highHpDamageBonus': 'Deal X% more damage when HP is above 70% (e.g., 0.1 = 10%)',
+  'lifesteal': 'Lifesteal X% of damage dealt (e.g., 0.15 = 15%)',
+  'defenseBonus': '+X% defense bonus (e.g., 0.1 = 10%)',
+  'flatDamageBonus': 'Deal +X flat damage on all attacks (e.g., 5)',
+  'doubleAttackChance': 'X% chance to attack twice (e.g., 0.3 = 30%)',
+  'extraTurnChance': 'X% chance to get an extra turn (e.g., 0.2 = 20%)',
+  'freezeChance': 'X% chance to freeze opponent (e.g., 0.2 = 20%)',
+  'energyRegenPerTurn': 'Regenerate +X energy per turn (e.g., 3)',
+  'paralyzeChance': 'X% chance to paralyze opponent (e.g., 0.2 = 20%)',
+  'hpRegenPerTurn': 'Restore +X HP every turn (e.g., 3)',
+  'specialDamageBonus': 'Deal X% more damage with special move (e.g., 0.15 = 15%)',
+  'opponentEndTurnDamage': 'Opponent takes X damage at end of their turn (e.g., 3)'
+};
 
 const pendingCreations = new Map();
 
@@ -54,14 +86,9 @@ module.exports = {
       case 'view':
       case 'show':
         return handleView(message, serverId, args.slice(1).join(' '));
-      case 'edit':
-      case 'modify':
-        return handleEdit(message, serverId, args.slice(1).join(' '), userId, client);
       case 'delete':
       case 'remove':
         return handleDelete(message, serverId, args.slice(1).join(' '), userId, client);
-      case 'toggle':
-        return handleToggle(message, serverId, args.slice(1).join(' '), userId);
       default:
         return showHelp(message);
     }
@@ -72,20 +99,18 @@ function showHelp(message) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
     .setTitle('Server Character Management')
-    .setDescription('Create and manage characters exclusive to your server!')
+    .setDescription('Create and manage characters for your server!')
     .addFields(
       { name: '`!sc create`', value: 'Start creating a new character (interactive)', inline: true },
       { name: '`!sc list`', value: 'View all your server characters', inline: true },
       { name: '`!sc view <name>`', value: 'View details of a character', inline: true },
-      { name: '`!sc edit <name>`', value: 'Edit an existing character', inline: true },
-      { name: '`!sc delete <name>`', value: 'Delete a character', inline: true },
-      { name: '`!sc toggle <name>`', value: 'Enable/disable a character', inline: true }
+      { name: '`!sc delete <name>`', value: 'Delete a character', inline: true }
     )
     .addFields(
       { name: 'Important Notes', value: 
-        '- Characters you create are **exclusive** to your server\n' +
-        '- They will only appear in drops on **your server**\n' +
-        '- Players can only collect them in **your server**\n' +
+        '- Characters are added to the main character pool\n' +
+        '- They can be obtained from **crates** with a set chance\n' +
+        '- All battle commands work with your characters\n' +
         '- You **cannot** create coins, gems, or currency items'
       }
     )
@@ -97,23 +122,17 @@ function showHelp(message) {
 
 async function handleCreate(message, serverId, userId, client) {
   const creationId = `${serverId}-${userId}-${Date.now()}`;
-  
   const uniqueId = generateUniqueId();
   
   const newCharacter = {
     serverId,
     uniqueId,
     createdBy: userId,
-    createdAt: new Date(),
-    status: 'active',
     step: 1,
     name: null,
     emoji: null,
     description: null,
     imageUrl: null,
-    rarity: 'common',
-    obtainable: 'drop',
-    isPublic: false,
     ability: {
       name: null,
       emoji: '⚡',
@@ -123,22 +142,7 @@ async function handleCreate(message, serverId, userId, client) {
     },
     specialMove: {
       name: null,
-      damage: 30
-    },
-    stats: {
-      hp: 100,
-      attack: 15,
-      defense: 10,
-      speed: 10
-    },
-    dropSettings: {
-      enabled: true,
-      probability: 5
-    },
-    crateSettings: {
-      enabled: true,
-      probability: 10,
-      crates: ['bronze', 'silver', 'gold']
+      damage: 90
     }
   };
   
@@ -146,7 +150,7 @@ async function handleCreate(message, serverId, userId, client) {
   
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle('Create New Server Character - Step 1/11')
+    .setTitle('Create New Character - Step 1/9')
     .setDescription(
       'Let\'s create a new character for your server!\n\n' +
       '**Step 1: Character Name**\n' +
@@ -159,7 +163,7 @@ async function handleCreate(message, serverId, userId, client) {
   await message.reply({ embeds: [embed] });
   
   const filter = m => m.author.id === userId;
-  const collector = message.channel.createMessageCollector({ filter, time: 300000, max: 20 });
+  const collector = message.channel.createMessageCollector({ filter, time: 600000, max: 30 });
   
   collector.on('collect', async (m) => {
     const charData = pendingCreations.get(creationId);
@@ -183,9 +187,9 @@ async function handleCreate(message, serverId, userId, client) {
           await m.reply('Name must be between 2 and 30 characters. Please try again.');
           return;
         }
-        const existingChar = await getServerCharacterByName(serverId, content);
+        const existingChar = characterManager.getCharacterByName(content);
         if (existingChar) {
-          await m.reply('A character with this name already exists in your server. Please choose a different name.');
+          await m.reply('A character with this name already exists. Please choose a different name.');
           return;
         }
         charData.name = content;
@@ -223,39 +227,43 @@ async function handleCreate(message, serverId, userId, client) {
         break;
         
       case 5:
-        const rarityLower = content.toLowerCase();
-        if (!RARITY_OPTIONS.includes(rarityLower)) {
-          await m.reply(`Invalid rarity. Please choose from: ${RARITY_OPTIONS.join(', ')}`);
-          return;
-        }
-        charData.rarity = rarityLower;
+        charData.ability.name = content.substring(0, 50);
         charData.step = 6;
         await sendStep6(m, charData);
         break;
         
       case 6:
-        const obtainableLower = content.toLowerCase();
-        if (!OBTAINABLE_OPTIONS.includes(obtainableLower)) {
-          await m.reply(`Invalid option. Please choose from: ${OBTAINABLE_OPTIONS.join(', ')}`);
-          return;
-        }
-        charData.obtainable = obtainableLower;
-        charData.step = 7;
-        await sendStep7(m, charData);
-        break;
-        
-      case 7:
-        charData.ability.name = content.substring(0, 50);
-        charData.step = 8;
-        await sendStep8(m, charData);
-        break;
-        
-      case 8:
         if (content.length < 10 || content.length > 150) {
           await m.reply('Ability description must be between 10 and 150 characters. Please try again.');
           return;
         }
         charData.ability.description = content;
+        charData.step = 7;
+        await sendStep7(m, charData);
+        break;
+        
+      case 7:
+        const effectTypeLower = content.toLowerCase();
+        const matchedType = VALID_EFFECT_TYPES.find(t => t.toLowerCase() === effectTypeLower);
+        if (!matchedType) {
+          await m.reply(`Invalid effect type. Please choose from the list above or type "list" to see all options.`);
+          if (content.toLowerCase() === 'list') {
+            await sendEffectTypeList(m);
+          }
+          return;
+        }
+        charData.ability.effectType = matchedType;
+        charData.step = 8;
+        await sendStep8(m, charData);
+        break;
+        
+      case 8:
+        const effectValue = parseFloat(content);
+        if (isNaN(effectValue)) {
+          await m.reply('Please enter a valid number for the effect value.');
+          return;
+        }
+        charData.ability.effectValue = effectValue;
         charData.step = 9;
         await sendStep9(m, charData);
         break;
@@ -267,30 +275,12 @@ async function handleCreate(message, serverId, userId, client) {
         break;
         
       case 10:
-        const stats = content.split(/[\s,]+/).map(s => parseInt(s));
-        if (stats.length !== 4 || stats.some(isNaN)) {
-          await m.reply('Please enter 4 numbers separated by spaces: HP Attack Defense Speed (e.g., 100 15 10 10)');
+        const damage = parseInt(content);
+        if (isNaN(damage) || damage < 50 || damage > 150) {
+          await m.reply('Special move damage must be a number between 50 and 150. Please try again.');
           return;
         }
-        const [hp, attack, defense, speed] = stats;
-        if (hp < 50 || hp > 200 || attack < 5 || attack > 50 || defense < 5 || defense > 50 || speed < 5 || speed > 50) {
-          await m.reply('Stats must be in range: HP (50-200), Attack (5-50), Defense (5-50), Speed (5-50). Please try again.');
-          return;
-        }
-        charData.stats = { hp, attack, defense, speed };
-        charData.step = 11;
-        await sendStep11(m, charData);
-        break;
-        
-      case 11:
-        const publicChoice = content.toLowerCase();
-        if (publicChoice === 'yes' || publicChoice === 'public' || publicChoice === 'y') {
-          charData.isPublic = true;
-          charData.pendingApproval = false;
-        } else {
-          charData.isPublic = false;
-          charData.pendingApproval = false;
-        }
+        charData.specialMove.damage = damage;
         await finalizeCharacter(m, serverId, charData, creationId);
         collector.stop('completed');
         break;
@@ -310,7 +300,7 @@ async function handleCreate(message, serverId, userId, client) {
 async function sendStep2(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 2/11`)
+    .setTitle(`Create "${charData.name}" - Step 2/9`)
     .setDescription(
       '**Step 2: Character Emoji**\n' +
       'Enter an emoji or custom emoji for your character.\n\n' +
@@ -323,7 +313,7 @@ async function sendStep2(m, charData) {
 async function sendStep3(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 3/11`)
+    .setTitle(`Create "${charData.name}" - Step 3/9`)
     .setDescription(
       '**Step 3: Character Description**\n' +
       'Enter a description for your character (10-200 characters).\n\n' +
@@ -336,7 +326,7 @@ async function sendStep3(m, charData) {
 async function sendStep4(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 4/11`)
+    .setTitle(`Create "${charData.name}" - Step 4/9`)
     .setDescription(
       '**Step 4: Character Image (Optional)**\n' +
       'Enter an image URL for your character, or type "skip".\n\n' +
@@ -349,43 +339,9 @@ async function sendStep4(m, charData) {
 async function sendStep5(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 5/11`)
+    .setTitle(`Create "${charData.name}" - Step 5/9`)
     .setDescription(
-      '**Step 5: Character Rarity**\n' +
-      'Choose how rare this character will be:\n\n' +
-      '• `common` - Easy to find (40% drop chance)\n' +
-      '• `uncommon` - Somewhat rare (20% drop chance)\n' +
-      '• `rare` - Hard to find (10% drop chance)\n' +
-      '• `ultra rare` - Very hard to find (5% drop chance)\n' +
-      '• `epic` - Extremely rare (2% drop chance)\n' +
-      '• `legendary` - Almost impossible (0.5% drop chance)'
-    )
-    .setFooter({ text: 'Type a rarity level' });
-  await m.reply({ embeds: [embed] });
-}
-
-async function sendStep6(m, charData) {
-  const embed = new EmbedBuilder()
-    .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 6/11`)
-    .setDescription(
-      '**Step 6: How to Obtain**\n' +
-      'Choose how players can get this character:\n\n' +
-      '• `drop` - Appears in drops in your drop channel\n' +
-      '• `crate` - Can be found in crates\n' +
-      '• `event` - Only available during special events\n' +
-      '• `exclusive` - Can only be given by admins'
-    )
-    .setFooter({ text: 'Type an option' });
-  await m.reply({ embeds: [embed] });
-}
-
-async function sendStep7(m, charData) {
-  const embed = new EmbedBuilder()
-    .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 7/11`)
-    .setDescription(
-      '**Step 7: Ability Name**\n' +
+      '**Step 5: Ability Name**\n' +
       'Enter the name of your character\'s special ability.\n\n' +
       '*Example: Forest Guardian, Shadow Strike, Healing Aura*'
     )
@@ -393,12 +349,12 @@ async function sendStep7(m, charData) {
   await m.reply({ embeds: [embed] });
 }
 
-async function sendStep8(m, charData) {
+async function sendStep6(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 8/11`)
+    .setTitle(`Create "${charData.name}" - Step 6/9`)
     .setDescription(
-      '**Step 8: Ability Description**\n' +
+      '**Step 6: Ability Description**\n' +
       'Describe what the ability does (10-150 characters).\n\n' +
       '*Example: Deals 20% extra damage when HP is above 50%*'
     )
@@ -406,10 +362,76 @@ async function sendStep8(m, charData) {
   await m.reply({ embeds: [embed] });
 }
 
+async function sendStep7(m, charData) {
+  const popularTypes = [
+    'flatDamageBonus', 'criticalDamageBonus', 'lifesteal', 'damageReduction',
+    'dodgeChance', 'healPerTurn', 'burnChance', 'freezeChance',
+    'doubleAttackChance', 'extraTurnChance', 'energyRegenPerTurn', 'defenseBonus'
+  ];
+  
+  const typeList = popularTypes.map(t => {
+    const desc = EFFECT_DESCRIPTIONS[t] || t;
+    return `\`${t}\` - ${desc}`;
+  }).join('\n');
+  
+  const embed = new EmbedBuilder()
+    .setColor(0x00D9FF)
+    .setTitle(`Create "${charData.name}" - Step 7/9`)
+    .setDescription(
+      '**Step 7: Ability Effect Type**\n' +
+      'Choose an effect type for your ability. Popular options:\n\n' +
+      typeList + '\n\n' +
+      '*Type "list" to see all available effect types.*'
+    )
+    .setFooter({ text: 'Type an effect type name' });
+  await m.reply({ embeds: [embed] });
+}
+
+async function sendEffectTypeList(m) {
+  const chunks = [];
+  for (let i = 0; i < VALID_EFFECT_TYPES.length; i += 15) {
+    chunks.push(VALID_EFFECT_TYPES.slice(i, i + 15));
+  }
+  
+  let description = '**All Available Effect Types:**\n\n';
+  description += chunks[0].map(t => `\`${t}\``).join(', ');
+  if (chunks[1]) description += ',\n' + chunks[1].map(t => `\`${t}\``).join(', ');
+  if (chunks[2]) description += ',\n' + chunks[2].map(t => `\`${t}\``).join(', ');
+  if (chunks[3]) description += ',\n' + chunks[3].map(t => `\`${t}\``).join(', ');
+  
+  const embed = new EmbedBuilder()
+    .setColor(0x00D9FF)
+    .setTitle('All Effect Types')
+    .setDescription(description)
+    .setFooter({ text: 'Type one of these effect types' });
+  await m.reply({ embeds: [embed] });
+}
+
+async function sendStep8(m, charData) {
+  const desc = EFFECT_DESCRIPTIONS[charData.ability.effectType] || 'Enter the numeric value for this effect';
+  
+  const embed = new EmbedBuilder()
+    .setColor(0x00D9FF)
+    .setTitle(`Create "${charData.name}" - Step 8/9`)
+    .setDescription(
+      '**Step 8: Ability Effect Value**\n' +
+      `You selected: \`${charData.ability.effectType}\`\n\n` +
+      `${desc}\n\n` +
+      '*Enter a number (decimals allowed for percentages)*\n\n' +
+      '**Examples:**\n' +
+      '- For 25% bonus, enter: `0.25`\n' +
+      '- For 50% bonus, enter: `0.5`\n' +
+      '- For flat +5 damage, enter: `5`\n' +
+      '- For +20 energy, enter: `20`'
+    )
+    .setFooter({ text: 'Type a number value' });
+  await m.reply({ embeds: [embed] });
+}
+
 async function sendStep9(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 9/11`)
+    .setTitle(`Create "${charData.name}" - Step 9/9`)
     .setDescription(
       '**Step 9: Special Move Name**\n' +
       'Enter the name of your character\'s special attack move.\n\n' +
@@ -422,95 +444,64 @@ async function sendStep9(m, charData) {
 async function sendStep10(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 10/11`)
+    .setTitle(`Create "${charData.name}" - Final Step`)
     .setDescription(
-      '**Step 10: Character Stats**\n' +
-      'Enter 4 numbers separated by spaces:\n' +
-      '**HP** **Attack** **Defense** **Speed**\n\n' +
-      'Ranges:\n' +
-      '• HP: 50-200\n' +
-      '• Attack: 5-50\n' +
-      '• Defense: 5-50\n' +
-      '• Speed: 5-50\n\n' +
-      '*Example: 100 15 10 10*'
+      '**Step 10: Special Move Damage**\n' +
+      'Enter the base damage for your character\'s special move.\n\n' +
+      '**Recommended ranges:**\n' +
+      '- Balanced: 85-95 damage\n' +
+      '- Strong: 95-100 damage\n' +
+      '- Very Strong: 100-110 damage\n\n' +
+      '*Enter a number between 50 and 150*'
     )
-    .setFooter({ text: 'Enter 4 numbers: HP Attack Defense Speed' });
-  await m.reply({ embeds: [embed] });
-}
-
-async function sendStep11(m, charData) {
-  const embed = new EmbedBuilder()
-    .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 11/11`)
-    .setDescription(
-      '**Step 11: Public Visibility**\n' +
-      'Would you like to make this character public so other servers can add it?\n\n' +
-      '• `yes` - Make public (other servers can add it)\n' +
-      '• `no` - Keep private to your server only\n\n' +
-      '*Your character is active immediately - no approval needed!*'
-    )
-    .setFooter({ text: 'Type "yes" or "no"' });
+    .setFooter({ text: 'Type a damage number' });
   await m.reply({ embeds: [embed] });
 }
 
 async function finalizeCharacter(m, serverId, charData, creationId) {
   try {
-    const collection = await getCollection('serverCharacters');
-    
-    const characterDoc = {
-      serverId: charData.serverId,
-      uniqueId: charData.uniqueId,
+    const result = await characterManager.createCharacterFromSubmission({
       name: charData.name,
       emoji: charData.emoji,
-      description: charData.description,
-      imageUrl: charData.imageUrl,
-      rarity: charData.rarity,
-      obtainable: charData.obtainable,
-      isPublic: charData.isPublic,
-      pendingApproval: charData.pendingApproval || false,
-      ability: charData.ability,
-      specialMove: charData.specialMove,
-      stats: charData.stats,
-      dropSettings: charData.dropSettings,
-      crateSettings: charData.crateSettings,
-      status: 'active',
+      obtainable: 'crate',
+      customEmojiId: null,
+      game: 'ZooBot',
       createdBy: charData.createdBy,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    await collection.insertOne(characterDoc);
+      serverId: serverId,
+      imageUrl: charData.imageUrl,
+      description: charData.description,
+      ability: {
+        name: charData.ability.name,
+        emoji: charData.ability.emoji,
+        description: charData.ability.description,
+        effectType: charData.ability.effectType,
+        effectValue: charData.ability.effectValue
+      },
+      specialMove: {
+        name: charData.specialMove.name,
+        damage: charData.specialMove.damage
+      }
+    });
     
     pendingCreations.delete(creationId);
     
-    const rarityColors = {
-      common: 0x95A5A6,
-      uncommon: 0x2ECC71,
-      rare: 0x3498DB,
-      'ultra rare': 0x00CED1,
-      epic: 0x9B59B6,
-      legendary: 0xFFD700
-    };
-    
-    const visibilityStatus = charData.pendingApproval 
-      ? '⏳ Pending Approval (will be public once approved)' 
-      : (charData.isPublic ? '🌐 Public' : '🔒 Private');
+    if (!result.success) {
+      await m.reply(`Failed to create character: ${result.message}`);
+      return;
+    }
     
     const embed = new EmbedBuilder()
-      .setColor(rarityColors[charData.rarity] || 0x00D9FF)
+      .setColor(0x00FF00)
       .setTitle('Character Created Successfully!')
-      .setDescription(`${charData.emoji} **${charData.name}** has been added to your server!`)
+      .setDescription(`${charData.emoji} **${charData.name}** has been added to the game!`)
       .addFields(
         { name: 'Unique ID', value: `\`${charData.uniqueId}\``, inline: true },
-        { name: 'Visibility', value: visibilityStatus, inline: true },
-        { name: 'Description', value: charData.description, inline: false },
-        { name: 'Rarity', value: charData.rarity.toUpperCase(), inline: true },
-        { name: 'Obtainable', value: charData.obtainable, inline: true },
-        { name: 'Stats', value: `HP: ${charData.stats.hp} | ATK: ${charData.stats.attack} | DEF: ${charData.stats.defense} | SPD: ${charData.stats.speed}`, inline: false },
-        { name: 'Ability', value: `**${charData.ability.name}**: ${charData.ability.description}`, inline: false },
-        { name: 'Special Move', value: charData.specialMove.name, inline: true }
+        { name: 'Obtainable', value: 'Crate', inline: true },
+        { name: 'Description', value: charData.description || 'No description', inline: false },
+        { name: 'Ability', value: `**${charData.ability.name}**: ${charData.ability.description}\n*Effect: ${charData.ability.effectType} = ${charData.ability.effectValue}*`, inline: false },
+        { name: 'Special Move', value: `**${charData.specialMove.name}** (${charData.specialMove.damage} DMG)`, inline: true }
       )
-      .setFooter({ text: charData.isPublic ? 'Other servers can add this character once approved!' : 'This character is exclusive to your server!' })
+      .setFooter({ text: 'Character can be obtained from crates!' })
       .setTimestamp();
     
     if (charData.imageUrl) {
@@ -526,25 +517,12 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
   }
 }
 
-async function getServerCharacterByName(serverId, name) {
-  try {
-    const collection = await getCollection('serverCharacters');
-    return await collection.findOne({ 
-      serverId, 
-      name: { $regex: new RegExp(`^${name}$`, 'i') } 
-    });
-  } catch (error) {
-    console.error('Error getting server character:', error);
-    return null;
-  }
-}
-
 async function handleList(message, serverId) {
   try {
-    const collection = await getCollection('serverCharacters');
-    const characters = await collection.find({ serverId }).sort({ createdAt: -1 }).toArray();
+    const allCharacters = characterManager.listAllCharacters();
+    const serverCharacters = allCharacters.filter(c => c.serverId === serverId);
     
-    if (characters.length === 0) {
+    if (serverCharacters.length === 0) {
       const embed = new EmbedBuilder()
         .setColor(0xFFAA00)
         .setTitle('No Server Characters')
@@ -553,28 +531,14 @@ async function handleList(message, serverId) {
       return message.reply({ embeds: [embed] });
     }
     
-    const rarityEmojis = {
-      common: '⚪',
-      uncommon: '🟢',
-      rare: '🔵',
-      'ultra rare': '💎',
-      epic: '💜',
-      legendary: '🌟'
-    };
-    
-    const charList = characters.map((c, i) => {
-      const statusIcon = c.status === 'active' ? '✅' : '❌';
-      const rarityIcon = rarityEmojis[c.rarity] || '⚪';
-      return `${i + 1}. ${statusIcon} ${c.emoji} **${c.name}** ${rarityIcon} ${c.rarity}`;
+    const charList = serverCharacters.map((c, i) => {
+      return `${i + 1}. ${c.emoji} **${c.name}** - Obtainable: ${c.obtainable}`;
     }).join('\n');
     
     const embed = new EmbedBuilder()
       .setColor(0x00D9FF)
-      .setTitle(`Server Characters (${characters.length})`)
+      .setTitle(`Server Characters (${serverCharacters.length})`)
       .setDescription(charList)
-      .addFields(
-        { name: 'Legend', value: '✅ Active | ❌ Disabled | ⚪ Common | 🟢 Uncommon | 🔵 Rare | 💎 Ultra Rare | 💜 Epic | 🌟 Legendary' }
-      )
       .setFooter({ text: 'Use !sc view <name> to see details' })
       .setTimestamp();
     
@@ -591,41 +555,46 @@ async function handleView(message, serverId, name) {
     return message.reply('Please specify a character name: `!sc view <name>`');
   }
   
-  const character = await getServerCharacterByName(serverId, name);
+  const character = characterManager.getCharacterByName(name);
   
   if (!character) {
     return message.reply(`No character found with name "${name}". Use \`!sc list\` to see all characters.`);
   }
   
-  const rarityColors = {
-    common: 0x95A5A6,
-    uncommon: 0x2ECC71,
-    rare: 0x3498DB,
-    'ultra rare': 0x00CED1,
-    epic: 0x9B59B6,
-    legendary: 0xFFD700
-  };
+  const ability = characterManager.getCharacterAbility(name);
+  const move = characterManager.getSpecialMove(name);
   
   const embed = new EmbedBuilder()
-    .setColor(rarityColors[character.rarity] || 0x00D9FF)
+    .setColor(0x00D9FF)
     .setTitle(`${character.emoji} ${character.name}`)
     .setDescription(character.description || 'No description')
     .addFields(
-      { name: 'Rarity', value: character.rarity.toUpperCase(), inline: true },
-      { name: 'Obtainable', value: character.obtainable, inline: true },
-      { name: 'Status', value: character.status === 'active' ? '✅ Active' : '❌ Disabled', inline: true },
-      { name: 'Stats', value: `❤️ HP: ${character.stats.hp}\n⚔️ ATK: ${character.stats.attack}\n🛡️ DEF: ${character.stats.defense}\n💨 SPD: ${character.stats.speed}`, inline: true },
-      { name: 'Ability', value: `**${character.ability.name}**\n${character.ability.description}`, inline: true },
-      { name: 'Special Move', value: character.specialMove.name, inline: true },
-      { name: 'Drop Settings', value: `Enabled: ${character.dropSettings?.enabled ? 'Yes' : 'No'}\nProbability: ${character.dropSettings?.probability || 5}%`, inline: true },
-      { name: 'Crate Settings', value: `Enabled: ${character.crateSettings?.enabled ? 'Yes' : 'No'}\nProbability: ${character.crateSettings?.probability || 10}%`, inline: true }
-    )
-    .setFooter({ text: `Created by ${character.createdBy} | ID: ${character._id}` })
-    .setTimestamp(character.createdAt);
+      { name: 'Obtainable', value: character.obtainable || 'crate', inline: true },
+      { name: 'Game', value: character.game || 'ZooBot', inline: true },
+      { name: 'Created By', value: `<@${character.createdBy}>`, inline: true }
+    );
+  
+  if (ability) {
+    let abilityText = `${ability.emoji} **${ability.name}**\n${ability.description}`;
+    if (ability.effect) {
+      const effectEntries = Object.entries(ability.effect);
+      if (effectEntries.length > 0) {
+        abilityText += `\n*Effect: ${effectEntries.map(([k, v]) => `${k}: ${v}`).join(', ')}*`;
+      }
+    }
+    embed.addFields({ name: 'Ability', value: abilityText, inline: false });
+  }
+  
+  if (move) {
+    embed.addFields({ name: 'Special Move', value: `**${move.name}** (${move.damage} DMG)`, inline: true });
+  }
   
   if (character.imageUrl) {
     embed.setThumbnail(character.imageUrl);
   }
+  
+  embed.setFooter({ text: `Server ID: ${character.serverId || 'Global'}` });
+  embed.setTimestamp(character.createdAt ? new Date(character.createdAt) : new Date());
   
   return message.reply({ embeds: [embed] });
 }
@@ -635,288 +604,43 @@ async function handleDelete(message, serverId, name, userId, client) {
     return message.reply('Please specify a character name: `!sc delete <name>`');
   }
   
-  const character = await getServerCharacterByName(serverId, name);
+  const character = characterManager.getCharacterByName(name);
   
   if (!character) {
     return message.reply(`No character found with name "${name}".`);
+  }
+  
+  if (character.serverId !== serverId) {
+    return message.reply('You can only delete characters created by your server!');
   }
   
   const embed = new EmbedBuilder()
     .setColor(0xFF0000)
     .setTitle('Confirm Deletion')
-    .setDescription(`Are you sure you want to delete **${character.name}**?\n\n⚠️ This action cannot be undone!`)
-    .setTimestamp();
-  
-  const row = new ActionRowBuilder()
-    .addComponents(
-      new ButtonBuilder()
-        .setCustomId(`delete_char_confirm_${character._id}`)
-        .setLabel('Delete')
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId(`delete_char_cancel_${character._id}`)
-        .setLabel('Cancel')
-        .setStyle(ButtonStyle.Secondary)
-    );
-  
-  const reply = await message.reply({ embeds: [embed], components: [row] });
-  
-  const filter = i => i.user.id === userId && i.customId.includes(character._id.toString());
-  
-  try {
-    const interaction = await reply.awaitMessageComponent({ filter, time: 30000 });
-    
-    if (interaction.customId.startsWith('delete_char_confirm')) {
-      const collection = await getCollection('serverCharacters');
-      await collection.deleteOne({ _id: character._id });
-      
-      await interaction.update({
-        embeds: [new EmbedBuilder()
-          .setColor(0x00FF00)
-          .setTitle('Character Deleted')
-          .setDescription(`**${character.name}** has been deleted.`)
-          .setTimestamp()
-        ],
-        components: []
-      });
-    } else {
-      await interaction.update({
-        embeds: [new EmbedBuilder()
-          .setColor(0x95A5A6)
-          .setTitle('Deletion Cancelled')
-          .setDescription('The character was not deleted.')
-          .setTimestamp()
-        ],
-        components: []
-      });
-    }
-  } catch (error) {
-    await reply.edit({
-      embeds: [new EmbedBuilder()
-        .setColor(0x95A5A6)
-        .setTitle('Timed Out')
-        .setDescription('Deletion cancelled due to timeout.')
-        .setTimestamp()
-      ],
-      components: []
-    });
-  }
-}
-
-async function handleToggle(message, serverId, name, userId) {
-  if (!name) {
-    return message.reply('Please specify a character name: `!sc toggle <name>`');
-  }
-  
-  const character = await getServerCharacterByName(serverId, name);
-  
-  if (!character) {
-    return message.reply(`No character found with name "${name}".`);
-  }
-  
-  try {
-    const collection = await getCollection('serverCharacters');
-    const newStatus = character.status === 'active' ? 'disabled' : 'active';
-    
-    await collection.updateOne(
-      { _id: character._id },
-      { $set: { status: newStatus, updatedAt: new Date() } }
-    );
-    
-    const embed = new EmbedBuilder()
-      .setColor(newStatus === 'active' ? 0x00FF00 : 0xFF6B6B)
-      .setTitle('Character Status Updated')
-      .setDescription(`${character.emoji} **${character.name}** is now ${newStatus === 'active' ? '✅ **Active**' : '❌ **Disabled**'}`)
-      .setTimestamp();
-    
-    return message.reply({ embeds: [embed] });
-    
-  } catch (error) {
-    console.error('Error toggling character:', error);
-    return message.reply('An error occurred while updating the character.');
-  }
-}
-
-async function handleEdit(message, serverId, name, userId, client) {
-  if (!name) {
-    return message.reply('Please specify a character name: `!sc edit <name>`');
-  }
-  
-  const character = await getServerCharacterByName(serverId, name);
-  
-  if (!character) {
-    return message.reply(`No character found with name "${name}".`);
-  }
-  
-  const embed = new EmbedBuilder()
-    .setColor(0x00D9FF)
-    .setTitle(`Edit ${character.name}`)
-    .setDescription('What would you like to edit? Reply with a number:\n\n' +
-      '1. Name\n' +
-      '2. Emoji\n' +
-      '3. Description\n' +
-      '4. Image URL\n' +
-      '5. Rarity\n' +
-      '6. Obtainable Type\n' +
-      '7. Stats (HP, ATK, DEF, SPD)\n' +
-      '8. Ability Name\n' +
-      '9. Ability Description\n' +
-      '10. Special Move Name\n' +
-      '11. Drop Settings\n' +
-      '12. Crate Settings\n\n' +
-      'Or type "cancel" to exit.'
-    )
-    .setTimestamp();
+    .setDescription(`Are you sure you want to delete **${character.emoji} ${character.name}**?\n\nThis action cannot be undone!`)
+    .setFooter({ text: 'Reply with "yes" to confirm or "no" to cancel' });
   
   await message.reply({ embeds: [embed] });
   
-  const filter = m => m.author.id === userId;
-  const collector = message.channel.createMessageCollector({ filter, time: 120000, max: 10 });
-  
-  let editField = null;
+  const filter = m => m.author.id === userId && ['yes', 'no'].includes(m.content.toLowerCase());
+  const collector = message.channel.createMessageCollector({ filter, time: 30000, max: 1 });
   
   collector.on('collect', async (m) => {
-    const content = m.content.trim().toLowerCase();
-    
-    if (content === 'cancel') {
-      collector.stop('cancelled');
-      await m.reply('Edit cancelled.');
-      return;
-    }
-    
-    if (!editField) {
-      const choice = parseInt(content);
-      if (isNaN(choice) || choice < 1 || choice > 12) {
-        await m.reply('Please enter a number between 1 and 12.');
-        return;
+    if (m.content.toLowerCase() === 'yes') {
+      const result = await characterManager.removeCharacter(userId, name);
+      if (result.success) {
+        await m.reply(`Character **${character.emoji} ${character.name}** has been deleted.`);
+      } else {
+        await m.reply(`Failed to delete character: ${result.message}`);
       }
-      
-      editField = choice;
-      await sendEditPrompt(m, choice, character);
-      return;
-    }
-    
-    try {
-      const collection = await getCollection('serverCharacters');
-      let updateData = {};
-      
-      switch (editField) {
-        case 1:
-          if (m.content.length < 2 || m.content.length > 30) {
-            await m.reply('Name must be 2-30 characters.');
-            return;
-          }
-          updateData.name = m.content;
-          break;
-        case 2:
-          updateData.emoji = m.content.substring(0, 50);
-          break;
-        case 3:
-          if (m.content.length < 10 || m.content.length > 200) {
-            await m.reply('Description must be 10-200 characters.');
-            return;
-          }
-          updateData.description = m.content;
-          break;
-        case 4:
-          if (m.content.toLowerCase() !== 'clear' && !m.content.startsWith('http')) {
-            await m.reply('Enter a valid URL or "clear".');
-            return;
-          }
-          updateData.imageUrl = m.content.toLowerCase() === 'clear' ? null : m.content;
-          break;
-        case 5:
-          if (!RARITY_OPTIONS.includes(m.content.toLowerCase())) {
-            await m.reply(`Invalid. Options: ${RARITY_OPTIONS.join(', ')}`);
-            return;
-          }
-          updateData.rarity = m.content.toLowerCase();
-          break;
-        case 6:
-          if (!OBTAINABLE_OPTIONS.includes(m.content.toLowerCase())) {
-            await m.reply(`Invalid. Options: ${OBTAINABLE_OPTIONS.join(', ')}`);
-            return;
-          }
-          updateData.obtainable = m.content.toLowerCase();
-          break;
-        case 7:
-          const stats = m.content.split(/[\s,]+/).map(s => parseInt(s));
-          if (stats.length !== 4 || stats.some(isNaN)) {
-            await m.reply('Enter 4 numbers: HP Attack Defense Speed');
-            return;
-          }
-          const [hp, atk, def, spd] = stats;
-          if (hp < 50 || hp > 200 || atk < 5 || atk > 50 || def < 5 || def > 50 || spd < 5 || spd > 50) {
-            await m.reply('Stats out of range.');
-            return;
-          }
-          updateData.stats = { hp, attack: atk, defense: def, speed: spd };
-          break;
-        case 8:
-          updateData['ability.name'] = m.content.substring(0, 50);
-          break;
-        case 9:
-          if (m.content.length < 10 || m.content.length > 150) {
-            await m.reply('Must be 10-150 characters.');
-            return;
-          }
-          updateData['ability.description'] = m.content;
-          break;
-        case 10:
-          updateData['specialMove.name'] = m.content.substring(0, 50);
-          break;
-        case 11:
-          const dropParts = m.content.toLowerCase().split(/[\s,]+/);
-          const dropEnabled = dropParts[0] === 'on' || dropParts[0] === 'true' || dropParts[0] === 'yes';
-          const dropProb = parseInt(dropParts[1]) || 5;
-          updateData.dropSettings = { enabled: dropEnabled, probability: Math.min(100, Math.max(1, dropProb)) };
-          break;
-        case 12:
-          const crateParts = m.content.toLowerCase().split(/[\s,]+/);
-          const crateEnabled = crateParts[0] === 'on' || crateParts[0] === 'true' || crateParts[0] === 'yes';
-          const crateProb = parseInt(crateParts[1]) || 10;
-          updateData.crateSettings = { enabled: crateEnabled, probability: Math.min(100, Math.max(1, crateProb)) };
-          break;
-      }
-      
-      updateData.updatedAt = new Date();
-      
-      await collection.updateOne(
-        { _id: character._id },
-        { $set: updateData }
-      );
-      
-      await m.reply(`✅ Character updated successfully!`);
-      collector.stop('completed');
-      
-    } catch (error) {
-      console.error('Error updating character:', error);
-      await m.reply('Error updating character.');
+    } else {
+      await m.reply('Deletion cancelled.');
     }
   });
   
   collector.on('end', (collected, reason) => {
-    if (reason !== 'completed' && reason !== 'cancelled') {
-      message.channel.send('Edit timed out.');
+    if (collected.size === 0) {
+      message.channel.send('Deletion timed out. Please try again.');
     }
   });
-}
-
-async function sendEditPrompt(m, choice, character) {
-  const prompts = {
-    1: `Current name: **${character.name}**\nEnter new name:`,
-    2: `Current emoji: ${character.emoji}\nEnter new emoji:`,
-    3: `Current description: ${character.description}\nEnter new description (10-200 chars):`,
-    4: `Current image: ${character.imageUrl || 'None'}\nEnter new URL or "clear":`,
-    5: `Current rarity: ${character.rarity}\nOptions: ${RARITY_OPTIONS.join(', ')}`,
-    6: `Current type: ${character.obtainable}\nOptions: ${OBTAINABLE_OPTIONS.join(', ')}`,
-    7: `Current: HP ${character.stats.hp}, ATK ${character.stats.attack}, DEF ${character.stats.defense}, SPD ${character.stats.speed}\nEnter 4 numbers:`,
-    8: `Current: ${character.ability.name}\nEnter new ability name:`,
-    9: `Current: ${character.ability.description}\nEnter new description (10-150 chars):`,
-    10: `Current: ${character.specialMove.name}\nEnter new special move name:`,
-    11: `Current: ${character.dropSettings?.enabled ? 'On' : 'Off'}, ${character.dropSettings?.probability}%\nEnter: on/off probability (e.g., "on 5")`,
-    12: `Current: ${character.crateSettings?.enabled ? 'On' : 'Off'}, ${character.crateSettings?.probability}%\nEnter: on/off probability (e.g., "on 10")`
-  };
-  
-  await m.reply(prompts[choice]);
 }

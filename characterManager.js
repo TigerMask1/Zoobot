@@ -321,7 +321,10 @@ async function createCharacterFromSubmission(charData) {
     game: game || DEFAULT_GAME,
     createdBy: createdBy || DEFAULT_CREATOR,
     createdAt: new Date().toISOString(),
-    fromSubmission: true
+    fromSubmission: true,
+    serverId: charData.serverId || null,
+    imageUrl: charData.imageUrl || null,
+    description: charData.description || null
   };
   
   CHARACTERS.push(newChar);
