@@ -399,6 +399,7 @@ const {
   isHubInteraction,
   initializeUserHubData
 } = require('./hubInteractionHandler.js');
+const { initializeCommands, executeCommand } = require('./commands/commandHandler.js');
 
 const PREFIX = '!';
 let data;
@@ -506,6 +507,14 @@ client.on('clientReady', async () => {
     await initializeBot();
   } catch (error) {
     console.error('Error in initializeBot:', error.message);
+  }
+  
+  // Initialize command handler for commands in /commands directory
+  try {
+    initializeCommands();
+    console.log('✅ Command handler initialized');
+  } catch (error) {
+    console.error('Error initializing command handler:', error.message);
   }
   
   if (USE_MONGODB) {
@@ -9122,7 +9131,16 @@ client.on('messageCreate', async (message) => {
         break;
         
       default:
-        return;
+        // Try to execute command from command handler (commands in /commands directory)
+        const cmdResult = await executeCommand(command, { message, args, data, client });
+        if (!cmdResult.executed) {
+          // Command not found in handler either, silently ignore
+          if (cmdResult.reason === 'no_permission' && cmdResult.message) {
+            await message.reply(cmdResult.message);
+          }
+          return;
+        }
+        break;
     }
     
     if (data.users[userId] && data.users[userId].started) {
