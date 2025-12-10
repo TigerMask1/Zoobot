@@ -180,3 +180,42 @@ The dashboard has been completely redesigned as a fully functional bot configura
 - `public/dashboard.html` - Complete UI redesign with settings panels
 - `index.js` - Expanded dashboardConfigUpdate event handler
 - `serverConfigManager.js` - Added reloadServerConfigFromMongo function
+
+### Interactive Setup Wizard & Global Character Directory (December 2025)
+
+**Setup Wizard (`!setup`):**
+- Replaced static dashboard with 4-step interactive wizard
+- Step 1: Drop Channel - Where character drops appear
+- Step 2: Events Channel - For tournaments and announcements
+- Step 3: Updates Channel - For bot updates and patch notes
+- Step 4: Notification Role - Role to ping for drops and events
+- All settings saved to MongoDB immediately
+- Cancel/skip options at each step
+
+**Public/Private Characters (`!sc create`):**
+- New step 5/11 in character creation wizard
+- Characters can be marked as public (visible in global directory) or private
+- Handles direct image uploads from Discord attachments (uses Discord CDN)
+- Supports both URL input and direct file attachment
+
+**Global Character Directory (`!chars`):**
+- Paginated grid view showing all public characters
+- 9 characters per page with navigation buttons
+- View individual character details (stats, abilities, creator info)
+- Add characters from other servers to your server
+- Tracks how many servers have added each character
+- Characters added to server automatically increment usage count
+
+**Admin Cleanup Utilities (`!admincleanup`):**
+- Super Admin command for database maintenance
+- `!admincleanup duplicates` - Remove duplicate characters/collectibles
+- `!admincleanup setupservers` - Setup all existing servers with default content
+- Safe operation with preview before execution
+
+**Files Added/Modified:**
+- `commands/admin/setup.js` - New interactive setup wizard
+- `commands/admin/serverCharacter.js` - Added public/private option and image uploads
+- `commands/admin/serverCollectible.js` - Added image upload support
+- `commands/characters/globalDirectory.js` - New global character browser
+- `commands/admin/adminCleanup.js` - New cleanup utilities
+- `characterManager.js` - Added isPublic, addCount, addedByServers fields and helper functions
