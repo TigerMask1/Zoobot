@@ -324,7 +324,10 @@ async function createCharacterFromSubmission(charData) {
     fromSubmission: true,
     serverId: charData.serverId || null,
     imageUrl: charData.imageUrl || null,
-    description: charData.description || null
+    description: charData.description || null,
+    isPublic: charData.isPublic || false,
+    addedByServers: [],
+    addCount: 0
   };
   
   CHARACTERS.push(newChar);
@@ -800,6 +803,81 @@ async function getCrateServerCharacters(serverId, crateType = null) {
   });
 }
 
+async function incrementCharacterAddCount(charName, serverId) {
+  const charIndex = CHARACTERS.findIndex(c => c.name.toLowerCase() === charName.toLowerCase());
+  
+  if (charIndex === -1) {
+    return { success: false, message: 'Character not found' };
+  }
+  
+  if (!CHARACTERS[charIndex].addedByServers) {
+    CHARACTERS[charIndex].addedByServers = [];
+  }
+  
+  if (!CHARACTERS[charIndex].addedByServers.includes(serverId)) {
+    CHARACTERS[charIndex].addedByServers.push(serverId);
+    CHARACTERS[charIndex].addCount = (CHARACTERS[charIndex].addCount || 0) + 1;
+    await saveCharactersToDB();
+  }
+  
+  return { success: true, addCount: CHARACTERS[charIndex].addCount };
+}
+
+async function deleteCharacter(charName) {
+  const charIndex = CHARACTERS.findIndex(c => c.name.toLowerCase() === charName.toLowerCase());
+  
+  if (charIndex === -1) {
+    return { success: false, message: `Character "${charName}" not found!` };
+  }
+  
+  const removedChar = CHARACTERS[charIndex];
+  CHARACTERS.splice(charIndex, 1);
+  
+  delete CHARACTER_ABILITIES[removedChar.name];
+  delete SPECIAL_MOVES[removedChar.name];
+  
+  await saveCharactersToDB();
+  
+  return { 
+    success: true, 
+    message: `Character **${removedChar.emoji} ${removedChar.name}** has been deleted!`
+  };
+}
+
+async function getPublicCharacters() {
+  return CHARACTERS.filter(c => c.isPublic === true);
+}
+
+async function cleanupDuplicateCharacters() {
+  const seen = new Map();
+  const duplicates = [];
+  
+  for (let i = 0; i < CHARACTERS.length; i++) {
+    const nameLower = CHARACTERS[i].name.toLowerCase();
+    if (seen.has(nameLower)) {
+      duplicates.push({ index: i, character: CHARACTERS[i] });
+    } else {
+      seen.set(nameLower, i);
+    }
+  }
+  
+  for (let i = duplicates.length - 1; i >= 0; i--) {
+    CHARACTERS.splice(duplicates[i].index, 1);
+    delete CHARACTER_ABILITIES[duplicates[i].character.name];
+    delete SPECIAL_MOVES[duplicates[i].character.name];
+  }
+  
+  if (duplicates.length > 0) {
+    await saveCharactersToDB();
+  }
+  
+  return {
+    success: true,
+    removed: duplicates.length,
+    message: `Removed ${duplicates.length} duplicate characters`
+  };
+}
+
 module.exports = {
   initializeCharacterSystem,
   getCharacters,
@@ -838,6 +916,10 @@ module.exports = {
   getServerSpecialMove,
   getDroppableServerCharacters,
   getCrateServerCharacters,
+  incrementCharacterAddCount,
+  deleteCharacter,
+  getPublicCharacters,
+  cleanupDuplicateCharacters,
   VALID_EFFECT_TYPES,
   OBTAINABLE_TYPES,
   DEFAULT_GAME,

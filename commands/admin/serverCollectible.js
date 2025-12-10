@@ -205,10 +205,18 @@ async function handleCreate(message, serverId, userId, client) {
         break;
         
       case 4:
-        if (content.toLowerCase() === 'skip') {
+        if (m.attachments.size > 0) {
+          const attachment = m.attachments.first();
+          if (attachment.contentType && attachment.contentType.startsWith('image/')) {
+            colData.imageUrl = attachment.url;
+          } else {
+            await m.reply('Please upload an image file (PNG, JPG, GIF), enter a URL, or type "skip".');
+            return;
+          }
+        } else if (content.toLowerCase() === 'skip') {
           colData.imageUrl = null;
         } else if (!content.startsWith('http')) {
-          await m.reply('Please enter a valid image URL starting with http:// or https://, or type "skip".');
+          await m.reply('Please upload an image, enter a valid URL starting with http://, or type "skip".');
           return;
         } else {
           colData.imageUrl = content;
@@ -313,10 +321,13 @@ async function sendStep4(m, colData) {
     .setTitle(`Create "${colData.name}" - Step 4/8`)
     .setDescription(
       '**Step 4: Collectible Image (Optional)**\n' +
-      'Enter an image URL for your collectible, or type "skip".\n\n' +
+      'You can:\n' +
+      '• **Upload an image** directly to this message\n' +
+      '• Enter an **image URL**\n' +
+      '• Type **skip** to skip\n\n' +
       '*The image will be shown when viewing the collectible.*'
     )
-    .setFooter({ text: 'Enter a URL or type "skip"' });
+    .setFooter({ text: 'Upload image, enter URL, or type "skip"' });
   await m.reply({ embeds: [embed] });
 }
 

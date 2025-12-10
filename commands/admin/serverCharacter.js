@@ -1,5 +1,5 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
-const { canSetupServer, isServerOwner, getServerConfig, saveServerConfig } = require('../../serverConfigManager.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { canSetupServer, isServerOwner } = require('../../serverConfigManager.js');
 const characterManager = require('../../characterManager.js');
 const crypto = require('crypto');
 
@@ -111,7 +111,8 @@ function showHelp(message) {
         '- Characters are added to the main character pool\n' +
         '- They can be obtained from **crates** with a set chance\n' +
         '- All battle commands work with your characters\n' +
-        '- You **cannot** create coins, gems, or currency items'
+        '- You **cannot** create coins, gems, or currency items\n' +
+        '- **Public** characters can be added by other servers!'
       }
     )
     .setFooter({ text: 'Server owners and admins only' })
@@ -133,6 +134,7 @@ async function handleCreate(message, serverId, userId, client) {
     emoji: null,
     description: null,
     imageUrl: null,
+    isPublic: false,
     ability: {
       name: null,
       emoji: '⚡',
@@ -150,7 +152,7 @@ async function handleCreate(message, serverId, userId, client) {
   
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle('Create New Character - Step 1/9')
+    .setTitle('Create New Character - Step 1/11')
     .setDescription(
       'Let\'s create a new character for your server!\n\n' +
       '**Step 1: Character Name**\n' +
@@ -163,7 +165,7 @@ async function handleCreate(message, serverId, userId, client) {
   await message.reply({ embeds: [embed] });
   
   const filter = m => m.author.id === userId;
-  const collector = message.channel.createMessageCollector({ filter, time: 600000, max: 30 });
+  const collector = message.channel.createMessageCollector({ filter, time: 600000, max: 35 });
   
   collector.on('collect', async (m) => {
     const charData = pendingCreations.get(creationId);
@@ -214,35 +216,57 @@ async function handleCreate(message, serverId, userId, client) {
         break;
         
       case 4:
-        if (content.toLowerCase() === 'skip') {
+        if (m.attachments.size > 0) {
+          const attachment = m.attachments.first();
+          if (attachment.contentType && attachment.contentType.startsWith('image/')) {
+            charData.imageUrl = attachment.url;
+          } else {
+            await m.reply('Please upload an image file (PNG, JPG, GIF), enter a URL, or type "skip".');
+            return;
+          }
+        } else if (content.toLowerCase() === 'skip') {
           charData.imageUrl = null;
         } else if (!content.startsWith('http')) {
-          await m.reply('Please enter a valid image URL starting with http:// or https://, or type "skip".');
+          await m.reply('Please upload an image, enter a valid URL starting with http://, or type "skip".');
           return;
         } else {
           charData.imageUrl = content;
         }
         charData.step = 5;
-        await sendStep5(m, charData);
+        await sendStep5Public(m, charData);
         break;
         
       case 5:
-        charData.ability.name = content.substring(0, 50);
+        const publicChoice = content.toLowerCase();
+        if (publicChoice === 'yes' || publicChoice === 'public' || publicChoice === 'y') {
+          charData.isPublic = true;
+        } else if (publicChoice === 'no' || publicChoice === 'private' || publicChoice === 'n') {
+          charData.isPublic = false;
+        } else {
+          await m.reply('Please type **yes** (public) or **no** (private).');
+          return;
+        }
         charData.step = 6;
-        await sendStep6(m, charData);
+        await sendStep6Ability(m, charData);
         break;
         
       case 6:
+        charData.ability.name = content.substring(0, 50);
+        charData.step = 7;
+        await sendStep7AbilityDesc(m, charData);
+        break;
+        
+      case 7:
         if (content.length < 10 || content.length > 150) {
           await m.reply('Ability description must be between 10 and 150 characters. Please try again.');
           return;
         }
         charData.ability.description = content;
-        charData.step = 7;
-        await sendStep7(m, charData);
+        charData.step = 8;
+        await sendStep8EffectType(m, charData);
         break;
         
-      case 7:
+      case 8:
         const effectTypeLower = content.toLowerCase();
         const matchedType = VALID_EFFECT_TYPES.find(t => t.toLowerCase() === effectTypeLower);
         if (!matchedType) {
@@ -253,28 +277,28 @@ async function handleCreate(message, serverId, userId, client) {
           return;
         }
         charData.ability.effectType = matchedType;
-        charData.step = 8;
-        await sendStep8(m, charData);
+        charData.step = 9;
+        await sendStep9EffectValue(m, charData);
         break;
         
-      case 8:
+      case 9:
         const effectValue = parseFloat(content);
         if (isNaN(effectValue)) {
           await m.reply('Please enter a valid number for the effect value.');
           return;
         }
         charData.ability.effectValue = effectValue;
-        charData.step = 9;
-        await sendStep9(m, charData);
-        break;
-        
-      case 9:
-        charData.specialMove.name = content.substring(0, 50);
         charData.step = 10;
-        await sendStep10(m, charData);
+        await sendStep10MoveName(m, charData);
         break;
         
       case 10:
+        charData.specialMove.name = content.substring(0, 50);
+        charData.step = 11;
+        await sendStep11MoveDamage(m, charData);
+        break;
+        
+      case 11:
         const damage = parseInt(content);
         if (isNaN(damage) || damage < 50 || damage > 150) {
           await m.reply('Special move damage must be a number between 50 and 150. Please try again.');
@@ -300,7 +324,7 @@ async function handleCreate(message, serverId, userId, client) {
 async function sendStep2(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 2/9`)
+    .setTitle(`Create "${charData.name}" - Step 2/11`)
     .setDescription(
       '**Step 2: Character Emoji**\n' +
       'Enter an emoji or custom emoji for your character.\n\n' +
@@ -313,7 +337,7 @@ async function sendStep2(m, charData) {
 async function sendStep3(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 3/9`)
+    .setTitle(`Create "${charData.name}" - Step 3/11`)
     .setDescription(
       '**Step 3: Character Description**\n' +
       'Enter a description for your character (10-200 characters).\n\n' +
@@ -326,22 +350,39 @@ async function sendStep3(m, charData) {
 async function sendStep4(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 4/9`)
+    .setTitle(`Create "${charData.name}" - Step 4/11`)
     .setDescription(
       '**Step 4: Character Image (Optional)**\n' +
-      'Enter an image URL for your character, or type "skip".\n\n' +
+      'You can:\n' +
+      '• **Upload an image** directly to this message\n' +
+      '• Enter an **image URL**\n' +
+      '• Type **skip** to skip\n\n' +
       '*The image will be shown when viewing the character.*'
     )
-    .setFooter({ text: 'Enter a URL or type "skip"' });
+    .setFooter({ text: 'Upload image, enter URL, or type "skip"' });
   await m.reply({ embeds: [embed] });
 }
 
-async function sendStep5(m, charData) {
+async function sendStep5Public(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 5/9`)
+    .setTitle(`Create "${charData.name}" - Step 5/11`)
     .setDescription(
-      '**Step 5: Ability Name**\n' +
+      '**Step 5: Public or Private?**\n\n' +
+      '• **Public** - Other servers can browse and add this character to their server\n' +
+      '• **Private** - Only available in your server\n\n' +
+      'Type **yes** for public or **no** for private.'
+    )
+    .setFooter({ text: 'Type "yes" or "no"' });
+  await m.reply({ embeds: [embed] });
+}
+
+async function sendStep6Ability(m, charData) {
+  const embed = new EmbedBuilder()
+    .setColor(0x00D9FF)
+    .setTitle(`Create "${charData.name}" - Step 6/11`)
+    .setDescription(
+      '**Step 6: Ability Name**\n' +
       'Enter the name of your character\'s special ability.\n\n' +
       '*Example: Forest Guardian, Shadow Strike, Healing Aura*'
     )
@@ -349,12 +390,12 @@ async function sendStep5(m, charData) {
   await m.reply({ embeds: [embed] });
 }
 
-async function sendStep6(m, charData) {
+async function sendStep7AbilityDesc(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 6/9`)
+    .setTitle(`Create "${charData.name}" - Step 7/11`)
     .setDescription(
-      '**Step 6: Ability Description**\n' +
+      '**Step 7: Ability Description**\n' +
       'Describe what the ability does (10-150 characters).\n\n' +
       '*Example: Deals 20% extra damage when HP is above 50%*'
     )
@@ -362,7 +403,7 @@ async function sendStep6(m, charData) {
   await m.reply({ embeds: [embed] });
 }
 
-async function sendStep7(m, charData) {
+async function sendStep8EffectType(m, charData) {
   const popularTypes = [
     'flatDamageBonus', 'criticalDamageBonus', 'lifesteal', 'damageReduction',
     'dodgeChance', 'healPerTurn', 'burnChance', 'freezeChance',
@@ -376,9 +417,9 @@ async function sendStep7(m, charData) {
   
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 7/9`)
+    .setTitle(`Create "${charData.name}" - Step 8/11`)
     .setDescription(
-      '**Step 7: Ability Effect Type**\n' +
+      '**Step 8: Ability Effect Type**\n' +
       'Choose an effect type for your ability. Popular options:\n\n' +
       typeList + '\n\n' +
       '*Type "list" to see all available effect types.*'
@@ -407,14 +448,14 @@ async function sendEffectTypeList(m) {
   await m.reply({ embeds: [embed] });
 }
 
-async function sendStep8(m, charData) {
+async function sendStep9EffectValue(m, charData) {
   const desc = EFFECT_DESCRIPTIONS[charData.ability.effectType] || 'Enter the numeric value for this effect';
   
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 8/9`)
+    .setTitle(`Create "${charData.name}" - Step 9/11`)
     .setDescription(
-      '**Step 8: Ability Effect Value**\n' +
+      '**Step 9: Ability Effect Value**\n' +
       `You selected: \`${charData.ability.effectType}\`\n\n` +
       `${desc}\n\n` +
       '*Enter a number (decimals allowed for percentages)*\n\n' +
@@ -428,12 +469,12 @@ async function sendStep8(m, charData) {
   await m.reply({ embeds: [embed] });
 }
 
-async function sendStep9(m, charData) {
+async function sendStep10MoveName(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle(`Create "${charData.name}" - Step 9/9`)
+    .setTitle(`Create "${charData.name}" - Step 10/11`)
     .setDescription(
-      '**Step 9: Special Move Name**\n' +
+      '**Step 10: Special Move Name**\n' +
       'Enter the name of your character\'s special attack move.\n\n' +
       '*Example: Thunder Strike, Dark Slash, Healing Wave*'
     )
@@ -441,12 +482,12 @@ async function sendStep9(m, charData) {
   await m.reply({ embeds: [embed] });
 }
 
-async function sendStep10(m, charData) {
+async function sendStep11MoveDamage(m, charData) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
     .setTitle(`Create "${charData.name}" - Final Step`)
     .setDescription(
-      '**Step 10: Special Move Damage**\n' +
+      '**Step 11: Special Move Damage**\n' +
       'Enter the base damage for your character\'s special move.\n\n' +
       '**Recommended ranges:**\n' +
       '- Balanced: 85-95 damage\n' +
@@ -470,6 +511,7 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
       serverId: serverId,
       imageUrl: charData.imageUrl,
       description: charData.description,
+      isPublic: charData.isPublic,
       ability: {
         name: charData.ability.name,
         emoji: charData.ability.emoji,
@@ -490,18 +532,23 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
       return;
     }
     
+    const visibilityText = charData.isPublic 
+      ? '🌐 Public - Other servers can add this character!' 
+      : '🔒 Private - Only available in your server';
+    
     const embed = new EmbedBuilder()
       .setColor(0x00FF00)
       .setTitle('Character Created Successfully!')
       .setDescription(`${charData.emoji} **${charData.name}** has been added to the game!`)
       .addFields(
         { name: 'Unique ID', value: `\`${charData.uniqueId}\``, inline: true },
+        { name: 'Visibility', value: visibilityText, inline: true },
         { name: 'Obtainable', value: 'Crate', inline: true },
         { name: 'Description', value: charData.description || 'No description', inline: false },
         { name: 'Ability', value: `**${charData.ability.name}**: ${charData.ability.description}\n*Effect: ${charData.ability.effectType} = ${charData.ability.effectValue}*`, inline: false },
         { name: 'Special Move', value: `**${charData.specialMove.name}** (${charData.specialMove.damage} DMG)`, inline: true }
       )
-      .setFooter({ text: 'Character can be obtained from crates!' })
+      .setFooter({ text: charData.isPublic ? 'Other servers can find this in !chars' : 'Character can be obtained from crates!' })
       .setTimestamp();
     
     if (charData.imageUrl) {
@@ -532,13 +579,15 @@ async function handleList(message, serverId) {
     }
     
     const charList = serverCharacters.map((c, i) => {
-      return `${i + 1}. ${c.emoji} **${c.name}** - Obtainable: ${c.obtainable}`;
+      const visibility = c.isPublic ? '🌐' : '🔒';
+      return `${i + 1}. ${visibility} ${c.emoji} **${c.name}** - Obtainable: ${c.obtainable}`;
     }).join('\n');
     
     const embed = new EmbedBuilder()
       .setColor(0x00D9FF)
       .setTitle(`Server Characters (${serverCharacters.length})`)
       .setDescription(charList)
+      .addFields({ name: 'Legend', value: '🌐 Public | 🔒 Private' })
       .setFooter({ text: 'Use !sc view <name> to see details' })
       .setTimestamp();
     
@@ -571,7 +620,8 @@ async function handleView(message, serverId, name) {
     .addFields(
       { name: 'Obtainable', value: character.obtainable || 'crate', inline: true },
       { name: 'Game', value: character.game || 'ZooBot', inline: true },
-      { name: 'Created By', value: `<@${character.createdBy}>`, inline: true }
+      { name: 'Created By', value: `<@${character.createdBy}>`, inline: true },
+      { name: 'Visibility', value: character.isPublic ? '🌐 Public' : '🔒 Private', inline: true }
     );
   
   if (ability) {
@@ -618,29 +668,75 @@ async function handleDelete(message, serverId, name, userId, client) {
     .setColor(0xFF0000)
     .setTitle('Confirm Deletion')
     .setDescription(`Are you sure you want to delete **${character.emoji} ${character.name}**?\n\nThis action cannot be undone!`)
-    .setFooter({ text: 'Reply with "yes" to confirm or "no" to cancel' });
+    .setTimestamp();
   
-  await message.reply({ embeds: [embed] });
+  const row = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId(`delete_char_confirm_${name}`)
+        .setLabel('Delete')
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(`delete_char_cancel_${name}`)
+        .setLabel('Cancel')
+        .setStyle(ButtonStyle.Secondary)
+    );
   
-  const filter = m => m.author.id === userId && ['yes', 'no'].includes(m.content.toLowerCase());
-  const collector = message.channel.createMessageCollector({ filter, time: 30000, max: 1 });
+  const reply = await message.reply({ embeds: [embed], components: [row] });
   
-  collector.on('collect', async (m) => {
-    if (m.content.toLowerCase() === 'yes') {
-      const result = await characterManager.removeCharacter(userId, name);
+  const filter = i => i.user.id === userId && (i.customId.includes('delete_char_confirm') || i.customId.includes('delete_char_cancel'));
+  
+  try {
+    const interaction = await reply.awaitMessageComponent({ filter, time: 30000 });
+    
+    if (interaction.customId.startsWith('delete_char_confirm')) {
+      const result = await characterManager.deleteCharacter(name);
+      
       if (result.success) {
-        await m.reply(`Character **${character.emoji} ${character.name}** has been deleted.`);
+        await interaction.update({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0x00FF00)
+              .setTitle('Character Deleted')
+              .setDescription(`**${character.emoji} ${character.name}** has been permanently deleted.`)
+              .setTimestamp()
+          ],
+          components: []
+        });
       } else {
-        await m.reply(`Failed to delete character: ${result.message}`);
+        await interaction.update({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle('Deletion Failed')
+              .setDescription(result.message)
+              .setTimestamp()
+          ],
+          components: []
+        });
       }
     } else {
-      await m.reply('Deletion cancelled.');
+      await interaction.update({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x808080)
+            .setTitle('Deletion Cancelled')
+            .setDescription('The character was not deleted.')
+            .setTimestamp()
+        ],
+        components: []
+      });
     }
-  });
-  
-  collector.on('end', (collected, reason) => {
-    if (collected.size === 0) {
-      message.channel.send('Deletion timed out. Please try again.');
-    }
-  });
+  } catch (error) {
+    await reply.edit({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x808080)
+          .setTitle('Deletion Cancelled')
+          .setDescription('No response received. The character was not deleted.')
+          .setTimestamp()
+      ],
+      components: []
+    });
+  }
 }
