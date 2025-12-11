@@ -7,7 +7,7 @@ module.exports = {
   name: 'setup',
   aliases: ['configure', 'config'],
   category: 'admin',
-  description: 'Interactive setup wizard to configure ZooBot for your server',
+  description: 'Simple setup to configure ZooBot channels for your server',
   usage: '!setup',
   adminOnly: false,
   
@@ -35,15 +35,14 @@ module.exports = {
       userId,
       dropChannelId: config.dropChannelId || null,
       eventsChannelId: config.eventsChannelId || null,
-      updatesChannelId: config.updatesChannelId || null,
-      notifyRoleId: config.notifyRoleId || null
+      updatesChannelId: config.updatesChannelId || null
     };
     
     pendingSetups.set(setupId, setupData);
     
     const embed = new EmbedBuilder()
       .setColor(0x00D9FF)
-      .setTitle('ZooBot Setup Wizard - Step 1/4')
+      .setTitle('ZooBot Setup - Step 1/3')
       .setDescription(
         'Welcome! Let\'s set up ZooBot for your server.\n\n' +
         '**Step 1: Drop Channel**\n' +
@@ -61,7 +60,7 @@ module.exports = {
     await message.reply({ embeds: [embed] });
     
     const filter = m => m.author.id === userId;
-    const collector = message.channel.createMessageCollector({ filter, time: 300000, max: 20 });
+    const collector = message.channel.createMessageCollector({ filter, time: 300000, max: 15 });
     
     collector.on('collect', async (m) => {
       const data = pendingSetups.get(setupId);
@@ -129,23 +128,6 @@ module.exports = {
             }
             data.updatesChannelId = channel.id;
           }
-          data.step = 4;
-          await sendStep4(m, data);
-          break;
-        }
-        
-        case 4: {
-          const role = m.mentions.roles.first();
-          if (content === 'none' || content === 'disable') {
-            data.notifyRoleId = null;
-            data.notifyDisabled = true;
-          } else if (content !== 'skip') {
-            if (!role) {
-              await m.reply('Please mention a role (e.g., @Gamers), type "none" to disable pings, or type "skip".');
-              return;
-            }
-            data.notifyRoleId = role.id;
-          }
           await finalizeSetup(m, data, setupId, member);
           collector.stop('completed');
           break;
@@ -167,7 +149,7 @@ module.exports = {
 async function sendStep2(m, data) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle('ZooBot Setup Wizard - Step 2/4')
+    .setTitle('ZooBot Setup - Step 2/3')
     .setDescription(
       '**Step 2: Events Channel**\n' +
       'Where should special events, tournaments, and announcements be posted?\n\n' +
@@ -185,7 +167,7 @@ async function sendStep2(m, data) {
 async function sendStep3(m, data) {
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
-    .setTitle('ZooBot Setup Wizard - Step 3/4')
+    .setTitle('ZooBot Setup - Step 3/3')
     .setDescription(
       '**Step 3: Updates Channel**\n' +
       'Where should bot updates and patch notes be posted?\n\n' +
@@ -197,27 +179,6 @@ async function sendStep3(m, data) {
       inline: true
     })
     .setFooter({ text: 'Mention a channel or type "skip"' });
-  await m.reply({ embeds: [embed] });
-}
-
-async function sendStep4(m, data) {
-  const embed = new EmbedBuilder()
-    .setColor(0x00D9FF)
-    .setTitle('ZooBot Setup Wizard - Step 4/4')
-    .setDescription(
-      '**Step 4: Notification Role (Optional)**\n' +
-      'Which role should be pinged for drops and events?\n\n' +
-      '**Options:**\n' +
-      '• Mention a role (e.g., @Gamers)\n' +
-      '• Type **none** to disable all pings\n' +
-      '• Type **skip** to keep current setting'
-    )
-    .addFields({
-      name: 'Current Setting',
-      value: data.notifyRoleId ? `<@&${data.notifyRoleId}>` : 'Not set (no pings)',
-      inline: true
-    })
-    .setFooter({ text: 'Mention a role, type "none", or "skip"' });
   await m.reply({ embeds: [embed] });
 }
 
@@ -233,10 +194,6 @@ async function finalizeSetup(m, data, setupId, member) {
     }
     if (data.updatesChannelId) {
       config.updatesChannelId = data.updatesChannelId;
-    }
-    if (data.notifyRoleId !== undefined) {
-      config.notifyRoleId = data.notifyRoleId;
-      config.notifyRoleEnabled = !data.notifyDisabled;
     }
     
     const allChannelsSet = config.dropChannelId && config.eventsChannelId && config.updatesChannelId;
@@ -258,7 +215,7 @@ async function finalizeSetup(m, data, setupId, member) {
     const embed = new EmbedBuilder()
       .setColor(allChannelsSet ? 0x00FF00 : 0xFFAA00)
       .setTitle(`${statusEmoji} ${statusText}`)
-      .setDescription('ZooBot has been configured for your server!')
+      .setDescription('ZooBot has been configured for your server! You can now start using all features.')
       .addFields(
         { 
           name: 'Drop Channel', 
@@ -274,11 +231,6 @@ async function finalizeSetup(m, data, setupId, member) {
           name: 'Updates Channel', 
           value: config.updatesChannelId ? `<#${config.updatesChannelId}>` : '❌ Not set', 
           inline: true 
-        },
-        { 
-          name: 'Notification Role', 
-          value: config.notifyRoleId ? `<@&${config.notifyRoleId}>` : 'Disabled', 
-          inline: true 
         }
       )
       .addFields({
@@ -286,8 +238,8 @@ async function finalizeSetup(m, data, setupId, member) {
         value: 
           '• `!chars` - Browse the global character directory\n' +
           '• `!sc create` - Create custom characters for your server\n' +
-          '• `!scol create` - Create custom collectibles\n' +
-          '• `!help` - See all available commands'
+          '• `!help` - See all available commands\n\n' +
+          '**Note:** All 51 ZooBot characters are available by default!'
       })
       .setFooter({ text: 'Run !setup again anytime to change settings' })
       .setTimestamp();

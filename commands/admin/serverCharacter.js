@@ -510,6 +510,7 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
       createdBy: charData.createdBy,
       serverId: serverId,
       imageUrl: charData.imageUrl,
+      defaultSkin: charData.imageUrl,
       description: charData.description,
       isPublic: charData.isPublic,
       ability: {
@@ -567,28 +568,59 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
 async function handleList(message, serverId) {
   try {
     const allCharacters = characterManager.listAllCharacters();
-    const serverCharacters = allCharacters.filter(c => c.serverId === serverId);
+    const serverCreatedChars = allCharacters.filter(c => c.serverId === serverId);
     
-    if (serverCharacters.length === 0) {
+    let addedFromGlobal = [];
+    const USE_MONGODB = process.env.USE_MONGODB === 'true';
+    
+    if (USE_MONGODB) {
+      try {
+        const { getCollection } = require('../../mongoManager.js');
+        const collection = await getCollection('serverAddedCharacters');
+        const addedRecords = await collection.find({ serverId }).toArray();
+        
+        for (const record of addedRecords) {
+          const char = characterManager.getCharacterByName(record.characterName);
+          if (char) {
+            addedFromGlobal.push({ ...char, addedFrom: 'global' });
+          }
+        }
+      } catch (e) {
+        console.warn('Could not fetch added characters from MongoDB:', e.message);
+      }
+    }
+    
+    const allServerChars = [
+      ...serverCreatedChars.map(c => ({ ...c, source: 'created' })),
+      ...addedFromGlobal.map(c => ({ ...c, source: 'added' }))
+    ];
+    
+    if (allServerChars.length === 0) {
       const embed = new EmbedBuilder()
         .setColor(0xFFAA00)
         .setTitle('No Server Characters')
-        .setDescription('Your server doesn\'t have any custom characters yet!\n\nUse `!sc create` to create your first character.')
+        .setDescription(
+          'Your server doesn\'t have any custom characters yet!\n\n' +
+          '**Options:**\n' +
+          '• `!sc create` - Create a new character\n' +
+          '• `!chars add <name>` - Add a public character from the directory'
+        )
         .setTimestamp();
       return message.reply({ embeds: [embed] });
     }
     
-    const charList = serverCharacters.map((c, i) => {
-      const visibility = c.isPublic ? '🌐' : '🔒';
-      return `${i + 1}. ${visibility} ${c.emoji} **${c.name}** - Obtainable: ${c.obtainable}`;
+    const charList = allServerChars.map((c, i) => {
+      const sourceIcon = c.source === 'added' ? '🌍' : (c.isPublic ? '🌐' : '🔒');
+      const sourceText = c.source === 'added' ? '(added)' : '';
+      return `${i + 1}. ${sourceIcon} ${c.emoji} **${c.name}** ${sourceText}`;
     }).join('\n');
     
     const embed = new EmbedBuilder()
       .setColor(0x00D9FF)
-      .setTitle(`Server Characters (${serverCharacters.length})`)
+      .setTitle(`Server Characters (${allServerChars.length})`)
       .setDescription(charList)
-      .addFields({ name: 'Legend', value: '🌐 Public | 🔒 Private' })
-      .setFooter({ text: 'Use !sc view <name> to see details' })
+      .addFields({ name: 'Legend', value: '🏠 Created by you | 🌐 Public | 🌍 Added from directory' })
+      .setFooter({ text: 'Use !sc view <name> to see details | !chars to browse more' })
       .setTimestamp();
     
     return message.reply({ embeds: [embed] });
@@ -657,10 +689,10 @@ async function handleDelete(message, serverId, name, userId, client) {
   const character = characterManager.getCharacterByName(name);
   
   if (!character) {
-    return message.reply(`No character found with name "${name}".`);
+    return message.reply(`No character found with name "${name}". The character may have already been deleted.`);
   }
   
-  if (character.serverId !== serverId) {
+  if (character.serverId && character.serverId !== serverId) {
     return message.reply('You can only delete characters created by your server!');
   }
   
@@ -690,7 +722,7 @@ async function handleDelete(message, serverId, name, userId, client) {
     const interaction = await reply.awaitMessageComponent({ filter, time: 30000 });
     
     if (interaction.customId.startsWith('delete_char_confirm')) {
-      const result = await characterManager.deleteCharacter(name);
+      const result = await characterManager.deleteCharacter(name, serverId);
       
       if (result.success) {
         await interaction.update({

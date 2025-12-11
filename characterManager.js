@@ -91,14 +91,17 @@ async function migrateHardcodedCharacters() {
     CHARACTERS = hardcodedChars.map(c => ({
       ...c,
       game: DEFAULT_GAME,
-      createdBy: DEFAULT_CREATOR
+      createdBy: DEFAULT_CREATOR,
+      isPublic: c.isPublic !== undefined ? c.isPublic : true,
+      addedByServers: c.addedByServers || [],
+      addCount: c.addCount || 0
     }));
     CHARACTER_ABILITIES = { ...hardcodedAbilities };
     SPECIAL_MOVES = { ...hardcodedMoves };
     
     if (USE_MONGODB) {
       await saveCharactersToDB();
-      console.log(`✅ Migrated ${CHARACTERS.length} hardcoded characters to MongoDB with game/createdBy fields`);
+      console.log(`✅ Migrated ${CHARACTERS.length} hardcoded characters to MongoDB`);
     } else {
       console.log(`✅ Loaded ${CHARACTERS.length} hardcoded characters (JSON mode)`);
     }
@@ -123,6 +126,14 @@ async function backfillGameAndCreator() {
     if (!CHARACTERS[i].createdBy) {
       CHARACTERS[i].createdBy = DEFAULT_CREATOR;
       changed = true;
+    }
+    
+    if (!CHARACTERS[i].addedByServers) {
+      CHARACTERS[i].addedByServers = [];
+    }
+    
+    if (CHARACTERS[i].addCount === undefined) {
+      CHARACTERS[i].addCount = 0;
     }
     
     if (changed) {
@@ -324,6 +335,7 @@ async function createCharacterFromSubmission(charData) {
     fromSubmission: true,
     serverId: charData.serverId || null,
     imageUrl: charData.imageUrl || null,
+    defaultSkin: charData.defaultSkin || charData.imageUrl || null,
     description: charData.description || null,
     isPublic: charData.isPublic || false,
     addedByServers: [],
@@ -823,7 +835,7 @@ async function incrementCharacterAddCount(charName, serverId) {
   return { success: true, addCount: CHARACTERS[charIndex].addCount };
 }
 
-async function deleteCharacter(charName) {
+async function deleteCharacter(charName, serverId = null) {
   const charIndex = CHARACTERS.findIndex(c => c.name.toLowerCase() === charName.toLowerCase());
   
   if (charIndex === -1) {
@@ -838,9 +850,29 @@ async function deleteCharacter(charName) {
   
   await saveCharactersToDB();
   
+  if (USE_MONGODB && mongoManager && serverId) {
+    try {
+      const serverAddedCol = await mongoManager.getCollection('serverAddedCharacters');
+      await serverAddedCol.deleteMany({ 
+        characterName: removedChar.name,
+        serverId: serverId
+      });
+      
+      const serverCharsCol = await mongoManager.getCollection('serverCharacters');
+      await serverCharsCol.deleteMany({ 
+        name: removedChar.name,
+        serverId: serverId
+      });
+      
+      console.log(`✅ Purged character "${removedChar.name}" records for server ${serverId}`);
+    } catch (error) {
+      console.error('Error purging character from server collections:', error);
+    }
+  }
+  
   return { 
     success: true, 
-    message: `Character **${removedChar.emoji} ${removedChar.name}** has been deleted!`
+    message: `Character **${removedChar.emoji} ${removedChar.name}** has been permanently deleted!`
   };
 }
 

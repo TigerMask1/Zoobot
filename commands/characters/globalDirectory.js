@@ -273,15 +273,21 @@ async function handleAddCharacter(message, serverId, name, userId, member) {
     
     const result = await characterManager.incrementCharacterAddCount(character.name, serverId);
     
+    const allCharacters = characterManager.listAllCharacters();
+    const serverCreatedChars = allCharacters.filter(c => c.serverId === serverId);
+    const addedFromGlobal = await collection.find({ serverId }).toArray();
+    const totalCharacters = serverCreatedChars.length + addedFromGlobal.length;
+    
     const embed = new EmbedBuilder()
       .setColor(0x00FF00)
       .setTitle('Character Added!')
       .setDescription(`**${character.emoji} ${character.name}** has been added to your server!`)
       .addFields(
         { name: 'Description', value: character.description || 'No description', inline: false },
-        { name: 'Now Available', value: 'Players can now obtain this character from crates in your server!', inline: false }
+        { name: 'Your Server Now Has', value: `${totalCharacters} custom/added characters`, inline: true },
+        { name: 'Now Available', value: 'Players can now obtain this character from crates!', inline: false }
       )
-      .setFooter({ text: `Added by ${message.author.tag}` })
+      .setFooter({ text: `Added by ${message.author.tag} | Use !sc list to see all` })
       .setTimestamp();
     
     if (character.imageUrl) {
