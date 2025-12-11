@@ -880,6 +880,33 @@ async function getPublicCharacters() {
   return CHARACTERS.filter(c => c.isPublic === true);
 }
 
+async function getServerCharacterCount(serverId) {
+  let count = 0;
+  
+  const createdCharacters = CHARACTERS.filter(c => c.serverId === serverId);
+  count += createdCharacters.length;
+  
+  if (USE_MONGODB && mongoManager) {
+    try {
+      const collection = await mongoManager.getCollection('serverAddedCharacters');
+      const addedRecords = await collection.find({ serverId }).toArray();
+      count += addedRecords.length;
+    } catch (e) {
+      console.warn('Could not count added characters from MongoDB:', e.message);
+    }
+    
+    try {
+      const serverCharsCollection = await mongoManager.getCollection('serverCharacters');
+      const serverChars = await serverCharsCollection.countDocuments({ serverId, status: 'active' });
+      count += serverChars;
+    } catch (e) {
+      console.warn('Could not count server characters from MongoDB:', e.message);
+    }
+  }
+  
+  return count;
+}
+
 async function cleanupDuplicateCharacters() {
   const seen = new Map();
   const duplicates = [];
@@ -951,6 +978,7 @@ module.exports = {
   incrementCharacterAddCount,
   deleteCharacter,
   getPublicCharacters,
+  getServerCharacterCount,
   cleanupDuplicateCharacters,
   VALID_EFFECT_TYPES,
   OBTAINABLE_TYPES,

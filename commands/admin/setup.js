@@ -1,5 +1,8 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType } = require('discord.js');
 const { canSetupServer, isServerOwner, getServerConfig, saveServerConfig } = require('../../serverConfigManager.js');
+const characterManager = require('../../characterManager.js');
+
+const REQUIRED_CHARACTER_COUNT = 5;
 
 const pendingSetups = new Map();
 
@@ -40,11 +43,16 @@ module.exports = {
     
     pendingSetups.set(setupId, setupData);
     
+    const currentCharCount = await characterManager.getServerCharacterCount(serverId);
+    
     const embed = new EmbedBuilder()
       .setColor(0x00D9FF)
       .setTitle('ZooBot Setup - Step 1/3')
       .setDescription(
         'Welcome! Let\'s set up ZooBot for your server.\n\n' +
+        `**Requirements:**\n` +
+        `• 3 Channels (drop, events, updates)\n` +
+        `• ${REQUIRED_CHARACTER_COUNT} Characters (currently: ${currentCharCount}/${REQUIRED_CHARACTER_COUNT})\n\n` +
         '**Step 1: Drop Channel**\n' +
         'Where should characters appear for players to catch?\n\n' +
         'Please **mention a channel** (e.g., #game-drops) or type **skip** to keep the current setting.'
@@ -197,9 +205,16 @@ async function finalizeSetup(m, data, setupId, member) {
     }
     
     const allChannelsSet = config.dropChannelId && config.eventsChannelId && config.updatesChannelId;
-    if (allChannelsSet) {
+    
+    const characterCount = await characterManager.getServerCharacterCount(data.serverId);
+    const hasEnoughCharacters = characterCount >= REQUIRED_CHARACTER_COUNT;
+    
+    const isFullySetup = allChannelsSet && hasEnoughCharacters;
+    if (isFullySetup) {
       config.setupComplete = true;
       config.setupDate = new Date().toISOString();
+    } else {
+      config.setupComplete = false;
     }
     
     config.serverId = data.serverId;
@@ -207,15 +222,27 @@ async function finalizeSetup(m, data, setupId, member) {
     
     pendingSetups.delete(setupId);
     
-    const statusEmoji = allChannelsSet ? '✅' : '⚠️';
-    const statusText = allChannelsSet 
-      ? 'Setup Complete!' 
-      : 'Partial Setup - Some channels not configured';
+    let statusEmoji, statusText, embedColor;
+    if (isFullySetup) {
+      statusEmoji = '✅';
+      statusText = 'Setup Complete!';
+      embedColor = 0x00FF00;
+    } else if (allChannelsSet && !hasEnoughCharacters) {
+      statusEmoji = '⚠️';
+      statusText = 'Channels Set - Characters Needed';
+      embedColor = 0xFFAA00;
+    } else {
+      statusEmoji = '⚠️';
+      statusText = 'Partial Setup';
+      embedColor = 0xFFAA00;
+    }
     
     const embed = new EmbedBuilder()
-      .setColor(allChannelsSet ? 0x00FF00 : 0xFFAA00)
+      .setColor(embedColor)
       .setTitle(`${statusEmoji} ${statusText}`)
-      .setDescription('ZooBot has been configured for your server! You can now start using all features.')
+      .setDescription(isFullySetup 
+        ? 'ZooBot has been fully configured for your server! You can now start using all features.'
+        : 'Channel settings saved! Complete the requirements below to finish setup.')
       .addFields(
         { 
           name: 'Drop Channel', 
@@ -234,14 +261,24 @@ async function finalizeSetup(m, data, setupId, member) {
         }
       )
       .addFields({
+        name: `Characters: ${characterCount}/${REQUIRED_CHARACTER_COUNT}`,
+        value: hasEnoughCharacters 
+          ? '✅ Character requirement met!' 
+          : `❌ You need **${REQUIRED_CHARACTER_COUNT - characterCount} more character(s)** to complete setup.\n\nAdd characters using:\n• \`!sc create\` - Create a custom character\n• \`!chars add <name>\` - Add a public character from the directory`,
+        inline: false
+      });
+    
+    if (isFullySetup) {
+      embed.addFields({
         name: 'What\'s Next?',
         value: 
           '• `!chars` - Browse the global character directory\n' +
-          '• `!sc create` - Create custom characters for your server\n' +
-          '• `!help` - See all available commands\n\n' +
-          '**Note:** All 51 ZooBot characters are available by default!'
-      })
-      .setFooter({ text: 'Run !setup again anytime to change settings' })
+          '• `!sc create` - Create more custom characters\n' +
+          '• `!help` - See all available commands'
+      });
+    }
+    
+    embed.setFooter({ text: 'Run !setup again anytime to check status or change settings' })
       .setTimestamp();
     
     await m.reply({ embeds: [embed] });
