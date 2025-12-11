@@ -883,8 +883,8 @@ async function getPublicCharacters() {
 async function getServerCharacterCount(serverId) {
   let count = 0;
   
-  const createdCharacters = CHARACTERS.filter(c => c.serverId === serverId);
-  count += createdCharacters.length;
+  const serverCreatedCharacters = CHARACTERS.filter(c => c.serverId === serverId);
+  count += serverCreatedCharacters.length;
   
   if (USE_MONGODB && mongoManager) {
     try {
