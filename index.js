@@ -1718,16 +1718,23 @@ client.on('messageCreate', async (message) => {
   ];
   
   if (serverId && !isMainServer(serverId) && GAMEPLAY_COMMANDS.includes(command)) {
-    const dashboardSetupComplete = await dashboardDb.isServerSetupComplete(serverId);
-    if (!dashboardSetupComplete) {
-      const serverConfig = await dashboardDb.getServerConfig(serverId);
-      const currentCount = serverConfig?.selectedCharacterIds?.length || 0;
+    const characterCount = await characterManager.getServerCharacterCount(serverId);
+    const setupStatusCheck = getSetupStatus(serverId);
+    const channelsSet = setupStatusCheck.hasDropChannel && setupStatusCheck.hasEventsChannel && setupStatusCheck.hasUpdatesChannel;
+    const hasEnoughChars = characterCount >= MINIMUM_CHARACTERS_REQUIRED;
+    
+    if (!hasEnoughChars || !channelsSet) {
+      let missingItems = [];
+      if (!hasEnoughChars) missingItems.push(`Add ${MINIMUM_CHARACTERS_REQUIRED - characterCount} more character(s) using \`!chars add <name>\` or \`!sc create\``);
+      if (!setupStatusCheck.hasDropChannel) missingItems.push('Set drop channel using `!setdropchannel #channel`');
+      if (!setupStatusCheck.hasEventsChannel) missingItems.push('Set events channel using `!seteventschannel #channel`');
+      if (!setupStatusCheck.hasUpdatesChannel) missingItems.push('Set updates channel using `!ss updates #channel`');
       
       await message.reply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setTitle('⚠️ Server Setup Required')
-          .setDescription(`This server needs to complete setup before gameplay commands work.\n\n**Current Status:**\n🎭 Characters Selected: **${currentCount}/${MINIMUM_CHARACTERS_REQUIRED}**\n\n**How to Complete Setup:**\n1. Server owner visits the **Dashboard** at the bot's website\n2. Select at least **${MINIMUM_CHARACTERS_REQUIRED} characters** for this server\n3. Once complete, all gameplay commands will be unlocked!\n\n*Alternatively, use \`!setup\` to configure basic server settings.*`)
+          .setDescription(`This server needs to complete setup before gameplay commands work.\n\n**Current Status:**\n🎭 Characters: **${characterCount}/${MINIMUM_CHARACTERS_REQUIRED}** ${hasEnoughChars ? '✅' : '❌'}\n📣 Channels: ${channelsSet ? '✅ All set' : '❌ Missing'}\n\n**To complete setup:**\n${missingItems.map(item => `• ${item}`).join('\n')}\n\nUse \`!setup\` to see full status.`)
           .setFooter({ text: 'Need help? Use !help or join our support server' })]
       });
       return;
@@ -1748,37 +1755,45 @@ client.on('messageCreate', async (message) => {
         }
         
         const setupStatusInfo = getSetupStatus(serverId);
-        const dashboardServerConfig = await dashboardDb.getServerConfig(serverId);
-        const selectedCharCount = dashboardServerConfig?.selectedCharacterIds?.length || 0;
-        const setupIsComplete = selectedCharCount >= MINIMUM_CHARACTERS_REQUIRED;
-        
-        const websiteUrl = process.env.WEBSITE_URL || 
-          (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000');
-        const dashboardLoginUrl = `${websiteUrl}/dashboard/login`;
+        const characterCount = await characterManager.getServerCharacterCount(serverId);
+        const channelsConfigured = setupStatusInfo.hasDropChannel && setupStatusInfo.hasEventsChannel && setupStatusInfo.hasUpdatesChannel;
+        const hasEnoughChars = characterCount >= MINIMUM_CHARACTERS_REQUIRED;
+        const setupIsComplete = channelsConfigured && hasEnoughChars;
         
         const setupEmbed = new EmbedBuilder()
           .setColor(setupIsComplete ? '#10B981' : '#F59E0B')
-          .setTitle(setupIsComplete ? '✅ Server Setup Complete!' : '🛠️ Server Setup Required')
+          .setTitle(setupIsComplete ? '✅ Server Setup Complete!' : '🛠️ Server Setup')
           .setDescription(setupIsComplete 
-            ? `Your server is fully set up and ready to go!\n\n**Status:**\n🎭 Characters: **${selectedCharCount}/${MINIMUM_CHARACTERS_REQUIRED}** ✅\n🎮 Game: ${setupStatusInfo.selectedGame || 'Default'}\n📣 Drop Channel: ${setupStatusInfo.hasDropChannel ? '✅' : '❌'}\n🎉 Events Channel: ${setupStatusInfo.hasEventsChannel ? '✅' : '❌'}\n📢 Updates Channel: ${setupStatusInfo.hasUpdatesChannel ? '✅' : '❌'}\n\nUse the Dashboard to manage characters and settings.`
-            : `Welcome! Let's set up ZooBot for your server.\n\n**Current Status:**\n🎭 Characters: **${selectedCharCount}/${MINIMUM_CHARACTERS_REQUIRED}**\n🎮 Game: ${setupStatusInfo.selectedGame || '❌ Not set'}\n📣 Drop Channel: ${setupStatusInfo.hasDropChannel ? '✅' : '❌'}\n🎉 Events Channel: ${setupStatusInfo.hasEventsChannel ? '✅' : '❌'}\n📢 Updates Channel: ${setupStatusInfo.hasUpdatesChannel ? '✅' : '❌'}\n\n**To complete setup:**\n1. Click the button below to open the Dashboard\n2. Log in with Discord\n3. Select at least **${MINIMUM_CHARACTERS_REQUIRED} characters** for this server\n4. Configure your drop and event channels`)
-          .setThumbnail(message.guild?.iconURL({ dynamic: true }) || null)
-          .setFooter({ text: setupIsComplete ? 'Your server is ready for gameplay!' : 'Complete setup to unlock all gameplay features' });
+            ? `Your server is fully set up and ready to go!`
+            : `Welcome! Let's set up ZooBot for your server.`)
+          .addFields(
+            { name: 'Characters', value: `${characterCount}/${MINIMUM_CHARACTERS_REQUIRED} ${hasEnoughChars ? '✅' : '❌'}`, inline: true },
+            { name: 'Drop Channel', value: setupStatusInfo.hasDropChannel ? '✅ Set' : '❌ Not set', inline: true },
+            { name: 'Events Channel', value: setupStatusInfo.hasEventsChannel ? '✅ Set' : '❌ Not set', inline: true },
+            { name: 'Updates Channel', value: setupStatusInfo.hasUpdatesChannel ? '✅ Set' : '❌ Not set', inline: true }
+          )
+          .setThumbnail(message.guild?.iconURL({ dynamic: true }) || null);
         
-        const setupRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setLabel('Open Dashboard')
-            .setStyle(ButtonStyle.Link)
-            .setURL(dashboardLoginUrl)
-            .setEmoji('🌐'),
-          new ButtonBuilder()
-            .setCustomId('setup_help_guide')
-            .setLabel('Setup Guide')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('❓')
-        );
+        if (!setupIsComplete) {
+          let todoList = '';
+          if (!hasEnoughChars) {
+            todoList += `\n• Add **${MINIMUM_CHARACTERS_REQUIRED - characterCount}** more character(s):\n  \`!chars\` - Browse & add from global directory\n  \`!sc create\` - Create a custom character`;
+          }
+          if (!setupStatusInfo.hasDropChannel) {
+            todoList += `\n• \`!setdropchannel #channel\` - Set drop channel`;
+          }
+          if (!setupStatusInfo.hasEventsChannel) {
+            todoList += `\n• \`!seteventschannel #channel\` - Set events channel`;
+          }
+          if (!setupStatusInfo.hasUpdatesChannel) {
+            todoList += `\n• \`!ss updates #channel\` - Set updates channel`;
+          }
+          setupEmbed.addFields({ name: 'To Complete Setup:', value: todoList, inline: false });
+        }
         
-        await message.reply({ embeds: [setupEmbed], components: [setupRow] });
+        setupEmbed.setFooter({ text: setupIsComplete ? 'Your server is ready for gameplay!' : 'Complete the steps above to unlock gameplay' });
+        
+        await message.reply({ embeds: [setupEmbed] });
         break;
         
       case 'setdropchannel':

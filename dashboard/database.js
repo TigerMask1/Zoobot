@@ -798,8 +798,14 @@ async function isServerSetupComplete(serverId) {
   const config = await getServerConfig(serverId);
   if (!config) return false;
   
-  const characterCount = config.selectedCharacterNames?.length || 0;
-  return characterCount >= MINIMUM_CHARACTERS_REQUIRED;
+  try {
+    const characterManager = require('../characterManager.js');
+    const characterCount = await characterManager.getServerCharacterCount(serverId);
+    return characterCount >= MINIMUM_CHARACTERS_REQUIRED;
+  } catch (e) {
+    const characterCount = config.selectedCharacterNames?.length || 0;
+    return characterCount >= MINIMUM_CHARACTERS_REQUIRED;
+  }
 }
 
 async function getServerCharacters(serverId) {

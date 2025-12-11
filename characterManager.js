@@ -136,6 +136,11 @@ async function backfillGameAndCreator() {
       CHARACTERS[i].addCount = 0;
     }
     
+    if (CHARACTERS[i].isPublic === undefined) {
+      CHARACTERS[i].isPublic = true;
+      changed = true;
+    }
+    
     if (changed) {
       updated++;
     }
