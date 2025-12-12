@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { canSetupServer, isServerOwner } = require('../../serverConfigManager.js');
 const characterManager = require('../../characterManager.js');
+const { getCollection } = require('../../mongoManager.js');
 const crypto = require('crypto');
 
 function generateUniqueId() {
@@ -369,8 +370,9 @@ async function sendStep5Public(m, charData) {
     .setTitle(`Create "${charData.name}" - Step 5/11`)
     .setDescription(
       '**Step 5: Public or Private?**\n\n' +
-      '• **Public** - Other servers can browse and add this character to their server\n' +
-      '• **Private** - Only available in your server\n\n' +
+      '• **Public** - Other servers can browse and add this character\n' +
+      '  *(Requires approval from bot admins before becoming public)*\n' +
+      '• **Private** - Only available in your server (instant)\n\n' +
       'Type **yes** for public or **no** for private.'
     )
     .setFooter({ text: 'Type "yes" or "no"' });
@@ -501,6 +503,8 @@ async function sendStep11MoveDamage(m, charData) {
 
 async function finalizeCharacter(m, serverId, charData, creationId) {
   try {
+    const wantsPublic = charData.isPublic;
+    
     const result = await characterManager.createCharacterFromSubmission({
       name: charData.name,
       emoji: charData.emoji,
@@ -512,7 +516,9 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
       imageUrl: charData.imageUrl,
       defaultSkin: charData.imageUrl,
       description: charData.description,
-      isPublic: charData.isPublic,
+      isPublic: false,
+      uniqueId: charData.uniqueId,
+      pendingApproval: wantsPublic,
       ability: {
         name: charData.ability.name,
         emoji: charData.ability.emoji,
@@ -533,12 +539,54 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
       return;
     }
     
-    const visibilityText = charData.isPublic 
-      ? '🌐 Public - Other servers can add this character!' 
-      : '🔒 Private - Only available in your server';
+    if (wantsPublic) {
+      try {
+        const serverCharsCol = await getCollection('serverCharacters');
+        
+        const serverCharDoc = {
+          uniqueId: charData.uniqueId,
+          name: charData.name,
+          emoji: charData.emoji,
+          description: charData.description,
+          serverId: serverId,
+          createdBy: charData.createdBy,
+          imageUrl: charData.imageUrl,
+          isPublic: false,
+          pendingApproval: true,
+          status: 'active',
+          rarity: 'rare',
+          ability: {
+            name: charData.ability.name,
+            emoji: charData.ability.emoji,
+            description: charData.ability.description,
+            effectType: charData.ability.effectType,
+            effectValue: charData.ability.effectValue
+          },
+          specialMove: {
+            name: charData.specialMove.name,
+            damage: charData.specialMove.damage
+          },
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        await serverCharsCol.insertOne(serverCharDoc);
+      } catch (dbError) {
+        console.error('Error saving to serverCharacters collection:', dbError);
+      }
+    }
+    
+    let visibilityText, footerText;
+    if (wantsPublic) {
+      visibilityText = '⏳ Pending Approval - Waiting for bot admin review';
+      footerText = 'Your character works on your server now! Public visibility pending admin approval.';
+    } else {
+      visibilityText = '🔒 Private - Only available in your server';
+      footerText = 'Character can be obtained from crates!';
+    }
     
     const embed = new EmbedBuilder()
-      .setColor(0x00FF00)
+      .setColor(wantsPublic ? 0xFFAA00 : 0x00FF00)
       .setTitle('Character Created Successfully!')
       .setDescription(`${charData.emoji} **${charData.name}** has been added to the game!`)
       .addFields(
@@ -549,7 +597,7 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
         { name: 'Ability', value: `**${charData.ability.name}**: ${charData.ability.description}\n*Effect: ${charData.ability.effectType} = ${charData.ability.effectValue}*`, inline: false },
         { name: 'Special Move', value: `**${charData.specialMove.name}** (${charData.specialMove.damage} DMG)`, inline: true }
       )
-      .setFooter({ text: charData.isPublic ? 'Other servers can find this in !chars' : 'Character can be obtained from crates!' })
+      .setFooter({ text: footerText })
       .setTimestamp();
     
     if (charData.imageUrl) {
@@ -610,8 +658,17 @@ async function handleList(message, serverId) {
     }
     
     const charList = allServerChars.map((c, i) => {
-      const sourceIcon = c.source === 'added' ? '🌍' : (c.isPublic ? '🌐' : '🔒');
-      const sourceText = c.source === 'added' ? '(added)' : '';
+      let sourceIcon;
+      if (c.source === 'added') {
+        sourceIcon = '🌍';
+      } else if (c.pendingApproval) {
+        sourceIcon = '⏳';
+      } else if (c.isPublic) {
+        sourceIcon = '🌐';
+      } else {
+        sourceIcon = '🔒';
+      }
+      const sourceText = c.source === 'added' ? '(added)' : (c.pendingApproval ? '(pending)' : '');
       return `${i + 1}. ${sourceIcon} ${c.emoji} **${c.name}** ${sourceText}`;
     }).join('\n');
     
@@ -619,7 +676,7 @@ async function handleList(message, serverId) {
       .setColor(0x00D9FF)
       .setTitle(`Server Characters (${allServerChars.length})`)
       .setDescription(charList)
-      .addFields({ name: 'Legend', value: '🏠 Created by you | 🌐 Public | 🌍 Added from directory' })
+      .addFields({ name: 'Legend', value: '🔒 Private | ⏳ Pending Approval | 🌐 Public | 🌍 Added from directory' })
       .setFooter({ text: 'Use !sc view <name> to see details | !chars to browse more' })
       .setTimestamp();
     

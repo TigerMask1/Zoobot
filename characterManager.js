@@ -343,6 +343,8 @@ async function createCharacterFromSubmission(charData) {
     defaultSkin: charData.defaultSkin || charData.imageUrl || null,
     description: charData.description || null,
     isPublic: charData.isPublic || false,
+    uniqueId: charData.uniqueId || null,
+    pendingApproval: charData.pendingApproval || false,
     addedByServers: [],
     addCount: 0
   };
@@ -439,6 +441,30 @@ async function editCharacter(userId, charName, updates) {
     success: true, 
     message: `✅ Character **${char.emoji} ${char.name}** updated!`,
     character: char
+  };
+}
+
+async function updateCharacterVisibility(charNameOrId, isPublic, pendingApproval = false) {
+  let charIndex = CHARACTERS.findIndex(c => c.name.toLowerCase() === charNameOrId.toLowerCase());
+  
+  if (charIndex === -1) {
+    charIndex = CHARACTERS.findIndex(c => c.uniqueId === charNameOrId.toUpperCase());
+  }
+  
+  if (charIndex === -1) {
+    return { success: false, message: `Character not found` };
+  }
+  
+  CHARACTERS[charIndex].isPublic = isPublic;
+  CHARACTERS[charIndex].pendingApproval = pendingApproval;
+  CHARACTERS[charIndex].updatedAt = new Date().toISOString();
+  
+  await saveCharactersToDB();
+  
+  return { 
+    success: true, 
+    message: `Character visibility updated`,
+    character: CHARACTERS[charIndex]
   };
 }
 
@@ -957,6 +983,7 @@ module.exports = {
   createCharacter,
   createCharacterFromSubmission,
   editCharacter,
+  updateCharacterVisibility,
   setCharacterGame,
   bulkSetCharacterGame,
   importCharactersToGame,

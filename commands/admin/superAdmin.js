@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { isSuperAdmin, isGlobalBotAdmin } = require('../../serverConfigManager.js');
 const { getCollection } = require('../../mongoManager.js');
+const characterManager = require('../../characterManager.js');
 const crypto = require('crypto');
 
 function generateUniqueId() {
@@ -72,7 +73,7 @@ function showHelp(message) {
       { name: 'Approval System', value: 
         '`!sa pending` - View pending character approvals\n' +
         '`!sa approve <id>` - Approve a character to be public\n' +
-        '`!sa reject <id>` - Reject a character approval'
+        '`!sa reject <id> [reason]` - Reject with optional reason'
       },
       { name: 'Statistics', value: 
         '`!sa stats` - View global statistics'
@@ -584,22 +585,57 @@ async function handleApproveCharacter(message, args, userId) {
     const serverCharsCol = await getCollection('serverCharacters');
     const serverColsCol = await getCollection('serverCollectibles');
     
-    let result = await serverCharsCol.updateOne(
-      { uniqueId: identifier.toUpperCase(), pendingApproval: true },
-      { $set: { isPublic: true, pendingApproval: false, approvedBy: userId, approvedAt: new Date() } }
-    );
+    const pendingChar = await serverCharsCol.findOne({ uniqueId: identifier.toUpperCase(), pendingApproval: true });
     
-    if (result.modifiedCount > 0) {
-      return message.reply(`✅ Character approved and made public!`);
+    if (pendingChar) {
+      await serverCharsCol.updateOne(
+        { uniqueId: identifier.toUpperCase(), pendingApproval: true },
+        { $set: { isPublic: true, pendingApproval: false, approvedBy: userId, approvedAt: new Date() } }
+      );
+      
+      await characterManager.updateCharacterVisibility(pendingChar.name, true, false);
+      
+      try {
+        const creator = await message.client.users.fetch(pendingChar.createdBy).catch(() => null);
+        if (creator) {
+          const approvalEmbed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle('Character Approved!')
+            .setDescription(`Your character **${pendingChar.emoji} ${pendingChar.name}** has been approved and is now public!`)
+            .addFields(
+              { name: 'ID', value: `\`${pendingChar.uniqueId}\``, inline: true }
+            )
+            .setFooter({ text: 'Other servers can now add your character!' })
+            .setTimestamp();
+          await creator.send({ embeds: [approvalEmbed] }).catch(() => {});
+        }
+      } catch (e) {}
+      
+      return message.reply(`✅ Character **${pendingChar.emoji} ${pendingChar.name}** approved and made public!`);
     }
     
-    result = await serverColsCol.updateOne(
-      { uniqueId: identifier.toUpperCase(), pendingApproval: true },
-      { $set: { isPublic: true, pendingApproval: false, approvedBy: userId, approvedAt: new Date() } }
-    );
+    const pendingCol = await serverColsCol.findOne({ uniqueId: identifier.toUpperCase(), pendingApproval: true });
     
-    if (result.modifiedCount > 0) {
-      return message.reply(`✅ Collectible approved and made public!`);
+    if (pendingCol) {
+      await serverColsCol.updateOne(
+        { uniqueId: identifier.toUpperCase(), pendingApproval: true },
+        { $set: { isPublic: true, pendingApproval: false, approvedBy: userId, approvedAt: new Date() } }
+      );
+      
+      try {
+        const creator = await message.client.users.fetch(pendingCol.createdBy).catch(() => null);
+        if (creator) {
+          const approvalEmbed = new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle('Collectible Approved!')
+            .setDescription(`Your collectible **${pendingCol.emoji} ${pendingCol.name}** has been approved and is now public!`)
+            .setFooter({ text: 'Other servers can now add your collectible!' })
+            .setTimestamp();
+          await creator.send({ embeds: [approvalEmbed] }).catch(() => {});
+        }
+      } catch (e) {}
+      
+      return message.reply(`✅ Collectible **${pendingCol.emoji} ${pendingCol.name}** approved and made public!`);
     }
     
     return message.reply(`No pending item found with ID "${identifier}".`);
@@ -611,31 +647,71 @@ async function handleApproveCharacter(message, args, userId) {
 }
 
 async function handleRejectCharacter(message, args, userId) {
-  const identifier = args.join(' ');
+  const identifier = args[0];
+  const reason = args.slice(1).join(' ') || 'No reason provided';
+  
   if (!identifier) {
-    return message.reply('Please specify an ID: `!sa reject <id>`');
+    return message.reply('Please specify an ID: `!sa reject <id> [reason]`');
   }
   
   try {
     const serverCharsCol = await getCollection('serverCharacters');
     const serverColsCol = await getCollection('serverCollectibles');
     
-    let result = await serverCharsCol.updateOne(
-      { uniqueId: identifier.toUpperCase(), pendingApproval: true },
-      { $set: { pendingApproval: false, rejectedBy: userId, rejectedAt: new Date() } }
-    );
+    const pendingChar = await serverCharsCol.findOne({ uniqueId: identifier.toUpperCase(), pendingApproval: true });
     
-    if (result.modifiedCount > 0) {
-      return message.reply(`❌ Character rejected.`);
+    if (pendingChar) {
+      await serverCharsCol.updateOne(
+        { uniqueId: identifier.toUpperCase(), pendingApproval: true },
+        { $set: { pendingApproval: false, rejectedBy: userId, rejectedAt: new Date(), rejectionReason: reason } }
+      );
+      
+      await characterManager.updateCharacterVisibility(pendingChar.name, false, false);
+      
+      try {
+        const creator = await message.client.users.fetch(pendingChar.createdBy).catch(() => null);
+        if (creator) {
+          const rejectionEmbed = new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle('Character Rejected')
+            .setDescription(`Your character **${pendingChar.emoji} ${pendingChar.name}** was not approved for public visibility.`)
+            .addFields(
+              { name: 'Reason', value: reason, inline: false }
+            )
+            .setFooter({ text: 'Your character still works on your server!' })
+            .setTimestamp();
+          await creator.send({ embeds: [rejectionEmbed] }).catch(() => {});
+        }
+      } catch (e) {}
+      
+      return message.reply(`❌ Character **${pendingChar.emoji} ${pendingChar.name}** rejected.`);
     }
     
-    result = await serverColsCol.updateOne(
-      { uniqueId: identifier.toUpperCase(), pendingApproval: true },
-      { $set: { pendingApproval: false, rejectedBy: userId, rejectedAt: new Date() } }
-    );
+    const pendingCol = await serverColsCol.findOne({ uniqueId: identifier.toUpperCase(), pendingApproval: true });
     
-    if (result.modifiedCount > 0) {
-      return message.reply(`❌ Collectible rejected.`);
+    if (pendingCol) {
+      await serverColsCol.updateOne(
+        { uniqueId: identifier.toUpperCase(), pendingApproval: true },
+        { $set: { pendingApproval: false, rejectedBy: userId, rejectedAt: new Date(), rejectionReason: reason } }
+      );
+      
+      try {
+        const creator = await message.client.users.fetch(pendingCol.createdBy).catch(() => null);
+        if (creator) {
+          const rejectionEmbed = new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle('Collectible Rejected')
+            .setDescription(`Your collectible **${pendingCol.emoji} ${pendingCol.name}** was not approved for public visibility.`)
+            .addFields(
+              { name: 'Reason', value: reason, inline: false }
+            )
+            .setFooter({ text: 'Your collectible still works on your server!' })
+            .setTimestamp();
+          await creator.send({ embeds: [rejectionEmbed] }).catch(() => {});
+        }
+      } catch (e) {}
+      
+      return message.reply(`❌ Collectible **${pendingCol.emoji} ${pendingCol.name}** rejected.`);
     }
     
     return message.reply(`No pending item found with ID "${identifier}".`);
