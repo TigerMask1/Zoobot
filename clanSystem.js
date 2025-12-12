@@ -1,6 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { saveDataImmediate } = require('./dataManager.js');
 const { distributeUSTRewards } = require('./ustSystem.js');
+const { getAllServersWeeklyAura, resetWeeklyAura, getServerAura } = require('./serverAuraSystem.js');
 
 const WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
 const MINIMUM_REWARD_POOL = 1000;
@@ -176,8 +177,30 @@ function getClanLeaderboard(data) {
   return clans;
 }
 
-function formatClanProfile(clan, guildName = 'Unknown Server', data) {
+async function getClanLeaderboardByAura() {
+  try {
+    const servers = await getAllServersWeeklyAura();
+    return servers.map(server => ({
+      serverId: server.serverId,
+      weeklyAura: server.weeklyAura || 0,
+      totalAura: server.totalAura || 0,
+      level: server.level || 1
+    })).sort((a, b) => b.weeklyAura - a.weeklyAura);
+  } catch (error) {
+    console.error('Error getting clan leaderboard by aura:', error);
+    return [];
+  }
+}
+
+async function formatClanProfile(clan, guildName = 'Unknown Server', data, serverId = null) {
   const memberCount = Object.keys(clan.members).length;
+  
+  let serverAura = null;
+  if (serverId) {
+    try {
+      serverAura = await getServerAura(serverId);
+    } catch (e) {}
+  }
   
   const embed = new EmbedBuilder()
     .setColor('#FFD700')
@@ -186,10 +209,19 @@ function formatClanProfile(clan, guildName = 'Unknown Server', data) {
       { name: '💎 Clan Points', value: `${clan.clanPoints.toLocaleString()}`, inline: true },
       { name: '👥 Members', value: `${memberCount}`, inline: true },
       { name: '🏆 Weekly Rank', value: clan.weeklyRank ? `#${clan.weeklyRank}` : 'Unranked', inline: true }
-    )
-    .addFields(
-      { name: '📊 Total Donations', value: `💰 ${clan.totalDonations.coins.toLocaleString()} coins\n💎 ${clan.totalDonations.gems.toLocaleString()} gems\n🏆 ${clan.totalDonations.trophies.toLocaleString()} trophies`, inline: false }
     );
+  
+  if (serverAura) {
+    embed.addFields(
+      { name: '✨ Weekly Aura', value: `${(serverAura.weeklyAura || 0).toLocaleString()}`, inline: true },
+      { name: '✨ Total Aura', value: `${(serverAura.totalAura || 0).toLocaleString()}`, inline: true },
+      { name: '📊 Server Level', value: `${serverAura.level || 1}`, inline: true }
+    );
+  }
+  
+  embed.addFields(
+    { name: '📊 Total Donations', value: `💰 ${clan.totalDonations.coins.toLocaleString()} coins\n💎 ${clan.totalDonations.gems.toLocaleString()} gems\n🏆 ${clan.totalDonations.trophies.toLocaleString()} trophies`, inline: false }
+  );
   
   if (clan.lastWeekReward > 0) {
     embed.addFields({ name: '🎁 Last Week Reward', value: `${clan.lastWeekReward.toLocaleString()} points`, inline: true });
@@ -199,6 +231,8 @@ function formatClanProfile(clan, guildName = 'Unknown Server', data) {
     const timeRemaining = getTimeUntilReset(data);
     embed.addFields({ name: '⏰ Week Resets In', value: timeRemaining, inline: false });
   }
+  
+  embed.setFooter({ text: 'Earn aura by being active! Commands, drops, battles, and more give aura.' });
   
   return embed;
 }
@@ -228,38 +262,64 @@ function getTimeUntilReset(data) {
   }
 }
 
-function formatClanLeaderboard(clans, client, data) {
+async function formatClanLeaderboard(clans, client, data, useAura = true) {
   const embed = new EmbedBuilder()
     .setColor('#00D9FF')
     .setTitle('🏆 Global Clan Wars Leaderboard')
-    .setDescription('Top clans competing for weekly rewards!');
+    .setDescription('Top servers competing for weekly rewards based on **Server Aura**!');
   
-  if (clans.length === 0) {
-    embed.setDescription('No clans have earned points yet! Be the first!');
-    return embed;
+  if (useAura) {
+    const auraLeaderboard = await getClanLeaderboardByAura();
+    
+    if (auraLeaderboard.length === 0) {
+      embed.setDescription('No servers have earned aura this week! Be the first!');
+      return embed;
+    }
+    
+    const topServers = auraLeaderboard.slice(0, 10);
+    
+    const leaderboardText = topServers.map((server, index) => {
+      const guild = client.guilds.cache.get(server.serverId);
+      const guildName = guild ? guild.name : 'Unknown Server';
+      
+      let medal = '';
+      if (index === 0) medal = '🥇';
+      else if (index === 1) medal = '🥈';
+      else if (index === 2) medal = '🥉';
+      else medal = `**${index + 1}.**`;
+      
+      return `${medal} **${guildName}** - ✨ ${server.weeklyAura.toLocaleString()} aura (Lv.${server.level})`;
+    }).join('\n');
+    
+    embed.addFields({ name: '📊 Weekly Rankings (By Aura)', value: leaderboardText, inline: false });
+  } else {
+    if (clans.length === 0) {
+      embed.setDescription('No clans have earned points yet! Be the first!');
+      return embed;
+    }
+    
+    const topClans = clans.slice(0, 10);
+    
+    const leaderboardText = topClans.map((clan, index) => {
+      const guild = client.guilds.cache.get(clan.serverId);
+      const guildName = guild ? guild.name : 'Unknown Server';
+      const memberCount = Object.keys(clan.members).length;
+      
+      let medal = '';
+      if (index === 0) medal = '🥇';
+      else if (index === 1) medal = '🥈';
+      else if (index === 2) medal = '🥉';
+      else medal = `**${index + 1}.**`;
+      
+      return `${medal} **${guildName}** - ${clan.clanPoints.toLocaleString()} pts (${memberCount} members)`;
+    }).join('\n');
+    
+    embed.addFields({ name: '📊 Rankings', value: leaderboardText, inline: false });
   }
-  
-  const topClans = clans.slice(0, 10);
-  
-  const leaderboardText = topClans.map((clan, index) => {
-    const guild = client.guilds.cache.get(clan.serverId);
-    const guildName = guild ? guild.name : 'Unknown Server';
-    const memberCount = Object.keys(clan.members).length;
-    
-    let medal = '';
-    if (index === 0) medal = '🥇';
-    else if (index === 1) medal = '🥈';
-    else if (index === 2) medal = '🥉';
-    else medal = `**${index + 1}.**`;
-    
-    return `${medal} **${guildName}** - ${clan.clanPoints.toLocaleString()} pts (${memberCount} members)`;
-  }).join('\n');
-  
-  embed.addFields({ name: '📊 Rankings', value: leaderboardText, inline: false });
   
   if (data && data.clanWars) {
     const timeRemaining = getTimeUntilReset(data);
-    embed.setFooter({ text: `⏰ Week resets in: ${timeRemaining}` });
+    embed.setFooter({ text: `⏰ Week resets in: ${timeRemaining} | Earn aura from commands, drops, battles & more!` });
   }
   
   return embed;
@@ -270,10 +330,10 @@ async function performWeeklyReset(client, data) {
   
   console.log('🏆 Starting weekly clan wars reset...');
   
-  const clans = getClanLeaderboard(data);
+  const auraLeaderboard = await getClanLeaderboardByAura();
   
-  if (clans.length === 0) {
-    console.log('No clans to process this week.');
+  if (auraLeaderboard.length === 0) {
+    console.log('No servers with aura to process this week.');
     data.clanWars.currentWeekStart = Date.now();
     data.clanWars.lastReset = Date.now();
     data.clanWars.weekNumber += 1;
@@ -281,8 +341,21 @@ async function performWeeklyReset(client, data) {
     return;
   }
   
-  const top3 = clans.slice(0, 3);
-  const others = clans.slice(3);
+  const top3Aura = auraLeaderboard.slice(0, 3);
+  const othersAura = auraLeaderboard.slice(3);
+  
+  const clans = getClanLeaderboard(data);
+  const top3 = top3Aura.map(aura => {
+    const clan = data.clans[aura.serverId];
+    return clan ? { ...clan, weeklyAura: aura.weeklyAura } : { 
+      serverId: aura.serverId, 
+      weeklyAura: aura.weeklyAura,
+      members: {},
+      clanPoints: 0,
+      totalDonations: { coins: 0, gems: 0, trophies: 0 }
+    };
+  });
+  const others = othersAura.map(aura => data.clans[aura.serverId]).filter(Boolean);
   
   let totalPointsFromLosers = 0;
   for (const clan of others) {
@@ -356,10 +429,15 @@ async function performWeeklyReset(client, data) {
     clan.clanPoints = 0;
   }
   
+  for (const aura of auraLeaderboard) {
+    await resetWeeklyAura(aura.serverId);
+  }
+  console.log('✅ Reset weekly aura for all servers');
+  
   const leaderboardEmbed = new EmbedBuilder()
     .setColor('#FFD700')
     .setTitle('🏆 Weekly Clan Wars Results!')
-    .setDescription(`Week ${data.clanWars.weekNumber} has ended!\n\n**Winners:**`)
+    .setDescription(`Week ${data.clanWars.weekNumber} has ended!\n\n**Winners (By Server Aura):**`)
     .setTimestamp();
   
   if (top3.length > 0) {
@@ -367,13 +445,14 @@ async function performWeeklyReset(client, data) {
       const guild = client.guilds.cache.get(clan.serverId);
       const guildName = guild ? guild.name : 'Unknown Server';
       const medals = ['🥇', '🥈', '🥉'];
-      return `${medals[index]} **${guildName}** - Reward: ${clan.lastWeekReward.toLocaleString()} points`;
+      const weeklyAura = clan.weeklyAura || 0;
+      return `${medals[index]} **${guildName}** - ✨ ${weeklyAura.toLocaleString()} aura | Reward: ${clan.lastWeekReward?.toLocaleString() || 0} points`;
     }).join('\n');
     
-    leaderboardEmbed.addFields({ name: '🎖️ Top 3 Clans', value: winnersText, inline: false });
+    leaderboardEmbed.addFields({ name: '🎖️ Top 3 Servers', value: winnersText, inline: false });
   }
   
-  leaderboardEmbed.addFields({ name: '🔄 New Week Started', value: 'Clan points have been reset! Start donating to compete for next week!', inline: false });
+  leaderboardEmbed.addFields({ name: '🔄 New Week Started', value: 'Weekly aura has been reset! Earn aura from commands, drops, battles, and more to compete!', inline: false });
   
   for (const [serverId, clan] of Object.entries(data.clans)) {
     try {
@@ -429,6 +508,7 @@ module.exports = {
   leaveClan,
   donateToClan,
   getClanLeaderboard,
+  getClanLeaderboardByAura,
   formatClanProfile,
   formatClanLeaderboard,
   performWeeklyReset,

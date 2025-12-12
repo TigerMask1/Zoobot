@@ -5,6 +5,7 @@ const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServe
 const { updateTaskProgress } = require('./seasonSystem.js');
 const { isKeyRushActive, getKeyRushTimeRemaining } = require('./characterKeySystem.js');
 const { getDroppableCollectibleItems, awardCollectibleItem, awardServerCollectible, getRarityTier, getDroppableServerCollectibles } = require('./collectibleItemsSystem.js');
+const { addAura } = require('./serverAuraSystem.js');
 
 let dropIntervals = new Map();
 let activeClient = null;

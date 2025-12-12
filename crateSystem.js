@@ -11,6 +11,7 @@ const { updateTaskProgress } = require('./seasonSystem.js');
 const { generateST } = require('./utils/shared.js');
 const { tryDropCollectibleFromCrate, getCrateServerCollectibles, awardCollectibleItem, awardServerCollectible } = require('./collectibleItemsSystem.js');
 const { isMongoConnected } = require('./mongoManager.js');
+const { addAura } = require('./serverAuraSystem.js');
 
 async function safeDropCollectibleFromCrate(userId, serverGame, crateType, serverId) {
   if (!isMongoConnected()) {
@@ -205,6 +206,7 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
   
   if (serverId) {
     recordEvent(data, serverId, 'cratesOpened', 1, userId);
+    addAura(serverId, 4, 'crate_open').catch(e => console.error('Error adding crate aura:', e));
   }
   
   if (client) {

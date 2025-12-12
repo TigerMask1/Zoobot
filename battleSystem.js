@@ -10,6 +10,7 @@ const { trackChallengeProgress } = require('./weeklyChallengeSystem.js');
 const { checkAchievements } = require('./achievementSystem.js');
 const { recordEvent } = require('./analyticsSystem.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
+const { addAura } = require('./serverAuraSystem.js');
 
 const activeBattles = new Map();
 const battleInvites = new Map();
@@ -1069,6 +1070,8 @@ async function endBattle(battle, channel, data, reason, winner = null) {
     
     if (channel.guild) {
       recordEvent(data, channel.guild.id, 'battlesPlayed', 1, winner);
+      addAura(channel.guild.id, 8, 'battle_win').catch(e => console.error('Error adding battle win aura:', e));
+      addAura(channel.guild.id, 3, 'battle_loss').catch(e => console.error('Error adding battle loss aura:', e));
     }
     
     const ptDataWinner = initializePersonalizedTaskData(data.users[winner]);

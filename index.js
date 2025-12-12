@@ -538,6 +538,13 @@ client.on('clientReady', async () => {
     }
     
     try {
+      const { initializeServerAuraIndexes } = require('./serverAuraSystem.js');
+      await initializeServerAuraIndexes();
+    } catch (error) {
+      console.warn('⚠️ Could not initialize server aura indexes');
+    }
+    
+    try {
       await dashboardDb.backfillServersFromBot(client);
       console.log('✅ Dashboard server backfill complete');
     } catch (error) {
@@ -3650,6 +3657,8 @@ client.on('messageCreate', async (message) => {
               updateTaskProgress(data.users[userId], 'dropsCaught', 1);
               if (message.guild) {
                 recordEvent(data, message.guild.id, 'dropsClaimed', 1, userId);
+                const { addAura } = require('./serverAuraSystem.js');
+                addAura(message.guild.id, 5, 'drop_catch').catch(e => console.error('Error adding drop aura:', e));
               }
               
               const keyEmbed = new EmbedBuilder()
@@ -3678,6 +3687,8 @@ client.on('messageCreate', async (message) => {
               updateTaskProgress(data.users[userId], 'dropsCaught', 1);
               if (message.guild) {
                 recordEvent(data, message.guild.id, 'dropsClaimed', 1, userId);
+                const { addAura } = require('./serverAuraSystem.js');
+                addAura(message.guild.id, 5, 'drop_catch').catch(e => console.error('Error adding drop aura:', e));
               }
               
               const ptData = initializePersonalizedTaskData(data.users[userId]);
@@ -3718,6 +3729,11 @@ client.on('messageCreate', async (message) => {
               if (!data.users[userId].questProgress) data.users[userId].questProgress = {};
               data.users[userId].questProgress.dropsCaught = (data.users[userId].questProgress.dropsCaught || 0) + 1;
               data.users[userId].lastActivity = Date.now();
+              
+              if (message.guild) {
+                const { addAura } = require('./serverAuraSystem.js');
+                addAura(message.guild.id, 6, 'collectible_drop').catch(e => console.error('Error adding collectible aura:', e));
+              }
               
               trackChallengeProgress(data.users[userId], 'dropsCaught', 1);
               checkAchievements(data.users[userId]);
@@ -5285,6 +5301,10 @@ client.on('messageCreate', async (message) => {
         await claimDaily(message, data);
         if (data.users[userId]?.started) {
           updateTaskProgress(data.users[userId], 'dailyClaimed', 1);
+          if (serverId) {
+            const { addAura } = require('./serverAuraSystem.js');
+            addAura(serverId, 10, 'daily_claim').catch(e => console.error('Error adding daily aura:', e));
+          }
           await saveDataImmediate(data);
         }
         break;
@@ -7239,6 +7259,12 @@ client.on('messageCreate', async (message) => {
         // Track coins earned for daily tasks
         if (jobResult.rewards.coins > 0) {
           updateTaskProgress(data.users[userId], 'coinsEarned', jobResult.rewards.coins);
+        }
+        
+        // Add server aura for work completion
+        if (serverId) {
+          const { addAura } = require('./serverAuraSystem.js');
+          addAura(serverId, 3, 'work_complete').catch(e => console.error('Error adding work aura:', e));
         }
         
         const workEmbed = new EmbedBuilder()
