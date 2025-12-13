@@ -21,6 +21,7 @@ const SERVER_LEVEL_CONFIG = [
 
 const AURA_REWARDS = {
   command: 1,
+  message: 1,
   drop_catch: 5,
   battle_win: 8,
   battle_loss: 3,

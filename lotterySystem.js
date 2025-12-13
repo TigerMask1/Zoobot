@@ -72,27 +72,30 @@ async function loadLotteryFromMongo() {
   }
 }
 
-function getNextUTC12HourSlot() {
+function getNextLotterySlot() {
   const now = new Date();
   const currentHour = now.getUTCHours();
   
+  // Lottery runs at 3:00 UTC (8:30 IST) and 15:00 UTC (20:30 IST)
   let nextSlot;
-  if (currentHour < 12) {
-    nextSlot = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12, 0, 0, 0));
+  if (currentHour < 3) {
+    nextSlot = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 3, 0, 0, 0));
+  } else if (currentHour < 15) {
+    nextSlot = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 15, 0, 0, 0));
   } else {
-    nextSlot = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0));
+    nextSlot = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 3, 0, 0, 0));
   }
   return nextSlot.getTime();
 }
 
-function isUTC12HourSlot() {
+function isLotteryTime() {
   const now = new Date();
-  return (now.getUTCHours() === 0 || now.getUTCHours() === 12) && now.getUTCMinutes() === 0;
+  return (now.getUTCHours() === 3 || now.getUTCHours() === 15) && now.getUTCMinutes() === 0;
 }
 
 async function enableAutoLottery(serverId, entryFee, currency, channelId) {
   const targetChannel = channelId || LOTTERY_CHANNEL_ID;
-  const nextRunTime = getNextUTC12HourSlot();
+  const nextRunTime = getNextLotterySlot();
   
   if (!activeLotteries[serverId]) {
     activeLotteries[serverId] = {
@@ -136,7 +139,7 @@ async function enableAutoLottery(serverId, entryFee, currency, channelId) {
   
   return { 
     success: true, 
-    message: `✅ Auto lottery enabled!\n\n📅 **Schedule:** Every 12 hours (00:00 & 12:00 UTC)\n⏰ **Next:** <t:${Math.floor(nextRunTime / 1000)}:F>\n📍 **Channel:** <#${targetChannel}>\n💰 **Entry Fee:** ${entryFee} ${currency === 'gems' ? '💎' : '💰'}` 
+    message: `✅ Auto lottery enabled!\n\n📅 **Schedule:** Every 12 hours (03:00 & 15:00 UTC / 8:30 & 20:30 IST)\n⏰ **Next:** <t:${Math.floor(nextRunTime / 1000)}:F>\n📍 **Channel:** <#${targetChannel}>\n💰 **Entry Fee:** ${entryFee} ${currency === 'gems' ? '💎' : '💰'}` 
   };
 }
 
@@ -184,7 +187,8 @@ async function checkAllUTCLotterySchedules() {
   
   const now = new Date();
   
-  if (!((now.getUTCHours() === 0 || now.getUTCHours() === 12) && now.getUTCMinutes() === 0)) {
+  // Check for lottery times: 3:00 UTC (8:30 IST) and 15:00 UTC (20:30 IST)
+  if (!((now.getUTCHours() === 3 || now.getUTCHours() === 15) && now.getUTCMinutes() === 0)) {
     return;
   }
   
@@ -247,7 +251,7 @@ async function startAutomaticLottery(serverId) {
   
   if (lottery.active) {
     console.log(`⚠️ Automatic lottery skipped for ${serverId} - already active`);
-    lottery.autoSchedule.nextRunTime = getNextUTC12HourSlot();
+    lottery.autoSchedule.nextRunTime = getNextLotterySlot();
     await saveLotteryToMongo();
     return;
   }
@@ -258,7 +262,7 @@ async function startAutomaticLottery(serverId) {
   
   await sendLotteryDMsToAllPlayers();
   
-  lottery.autoSchedule.nextRunTime = getNextUTC12HourSlot();
+  lottery.autoSchedule.nextRunTime = getNextLotterySlot();
   
   if (USE_MONGODB) {
     await saveLotteryToMongo();

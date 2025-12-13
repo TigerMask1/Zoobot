@@ -103,26 +103,31 @@ async function loadGiveawayFromMongo() {
   }
 }
 
-function getNextUTCMidnight() {
+function getNextGiveawayTime() {
   const now = new Date();
-  const nextMidnight = new Date(Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate() + 1,
-    0, 0, 0, 0
-  ));
-  return nextMidnight.getTime();
+  const currentHour = now.getUTCHours();
+  
+  // Giveaway runs at 4:00 UTC (9:30 IST)
+  let nextRun;
+  if (currentHour < 4) {
+    // Today at 4:00 UTC
+    nextRun = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 4, 0, 0, 0));
+  } else {
+    // Tomorrow at 4:00 UTC
+    nextRun = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 4, 0, 0, 0));
+  }
+  return nextRun.getTime();
 }
 
-function isUTCMidnight() {
+function isGiveawayTime() {
   const now = new Date();
-  return now.getUTCHours() === 0 && now.getUTCMinutes() === 0;
+  return now.getUTCHours() === 4 && now.getUTCMinutes() === 0;
 }
 
 async function enableAutoGiveaway(channelId) {
   activeGiveaway.channelId = channelId || GIVEAWAY_CHANNEL_ID;
   activeGiveaway.autoSchedule.enabled = true;
-  activeGiveaway.autoSchedule.nextRunTime = getNextUTCMidnight();
+  activeGiveaway.autoSchedule.nextRunTime = getNextGiveawayTime();
   
   await saveGiveawayState();
   startUTCGiveawayScheduler();
@@ -130,7 +135,7 @@ async function enableAutoGiveaway(channelId) {
   const nextRunDate = new Date(activeGiveaway.autoSchedule.nextRunTime);
   return { 
     success: true, 
-    message: `✅ Auto giveaway enabled!\n\n📅 **Schedule:** Every 24 hours at 00:00 UTC\n⏰ **Next:** <t:${Math.floor(activeGiveaway.autoSchedule.nextRunTime / 1000)}:F>\n📍 **Channel:** <#${activeGiveaway.channelId}>` 
+    message: `✅ Auto giveaway enabled!\n\n📅 **Schedule:** Every 24 hours at 04:00 UTC (9:30 IST)\n⏰ **Next:** <t:${Math.floor(activeGiveaway.autoSchedule.nextRunTime / 1000)}:F>\n📍 **Channel:** <#${activeGiveaway.channelId}>` 
   };
 }
 
@@ -171,13 +176,13 @@ async function checkUTCGiveawaySchedule() {
   
   const now = new Date();
   
-  if (now.getUTCHours() === 0 && now.getUTCMinutes() === 0) {
+  if (now.getUTCHours() === 4 && now.getUTCMinutes() === 0) {
     if (activeGiveaway.active) {
       console.log('⚠️ Skipping automatic giveaway - one is already active');
       return;
     }
     
-    console.log('🎉 Starting scheduled giveaway at 00:00 UTC');
+    console.log('🎉 Starting scheduled giveaway at 04:00 UTC (9:30 IST)');
     await startAutomaticGiveaway(activeGiveaway.channelId || GIVEAWAY_CHANNEL_ID);
   }
 }
@@ -185,7 +190,7 @@ async function checkUTCGiveawaySchedule() {
 async function startAutomaticGiveaway(channelId) {
   if (activeGiveaway.active) {
     console.log('⚠️ Automatic giveaway skipped - already active');
-    activeGiveaway.autoSchedule.nextRunTime = getNextUTCMidnight();
+    activeGiveaway.autoSchedule.nextRunTime = getNextGiveawayTime();
     await saveGiveawayState();
     return;
   }
@@ -194,7 +199,7 @@ async function startAutomaticGiveaway(channelId) {
   
   await startGiveaway(targetChannel, GIVEAWAY_DURATION_HOURS * 60);
   
-  activeGiveaway.autoSchedule.nextRunTime = getNextUTCMidnight();
+  activeGiveaway.autoSchedule.nextRunTime = getNextGiveawayTime();
   await saveGiveawayState();
   
   console.log(`🎉 Auto giveaway started in channel ${targetChannel}, next at ${new Date(activeGiveaway.autoSchedule.nextRunTime).toISOString()}`);

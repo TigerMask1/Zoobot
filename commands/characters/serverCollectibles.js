@@ -318,6 +318,20 @@ async function handleAddCollectible(message, serverId, identifier, userId, membe
       return message.reply(`**${collectible.name}** is already added to this server!`);
     }
     
+    // Check collectible slot limits (with fallback for non-MongoDB environments)
+    try {
+      const { getServerSlotLimits } = require('../../serverAuraSystem.js');
+      const slotLimits = await getServerSlotLimits(serverId);
+      const currentCollectCount = await serverAddedCol.countDocuments({ serverId });
+      
+      if (currentCollectCount >= slotLimits.collectibleSlots) {
+        return message.reply(`❌ Collectible slot limit reached! You have **${currentCollectCount}/${slotLimits.collectibleSlots}** slots.\nUse \`!serveraura buy collectible\` to purchase more slots.`);
+      }
+    } catch (slotError) {
+      // If slot system unavailable, allow the operation
+      console.warn('Could not check collectible slot limits:', slotError.message);
+    }
+    
     await serverAddedCol.insertOne({
       serverId,
       collectibleId: collectible.uniqueId,

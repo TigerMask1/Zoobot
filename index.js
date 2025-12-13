@@ -1621,6 +1621,13 @@ client.on('messageCreate', async (message) => {
     data.users[userId].messageCount = (data.users[userId].messageCount || 0) + 1;
     data.users[userId].lastActivity = Date.now();
     
+    // Add server aura for messages
+    const serverId = message.guild?.id;
+    if (serverId) {
+      const { addAura } = require('./serverAuraSystem.js');
+      addAura(serverId, 1, 'message').catch(err => console.error('Error adding message aura:', err));
+    }
+    
     // Track season daily task progress for messages
     updateTaskProgress(data.users[userId], 'messagesSent', 1);
     

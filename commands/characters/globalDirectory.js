@@ -252,6 +252,20 @@ async function handleAddCharacter(message, serverId, name, userId, member) {
     return message.reply('This character was created by your server - it\'s already available!');
   }
   
+  // Check character slot limits (with fallback for non-MongoDB environments)
+  try {
+    const { getServerSlotLimits } = require('../../serverAuraSystem.js');
+    const slotLimits = await getServerSlotLimits(serverId);
+    const currentCharCount = await characterManager.getServerCharacterCount(serverId);
+    
+    if (currentCharCount >= slotLimits.characterSlots) {
+      return message.reply(`❌ Character slot limit reached! You have **${currentCharCount}/${slotLimits.characterSlots}** slots.\nUse \`!serveraura buy character\` to purchase more slots.`);
+    }
+  } catch (slotError) {
+    // If slot system unavailable, allow the operation
+    console.warn('Could not check character slot limits:', slotError.message);
+  }
+  
   try {
     const collection = await getCollection('serverAddedCharacters');
     
