@@ -5,6 +5,13 @@ const { saveDataImmediate } = require('./dataManager.js');
 const EVENT_START = new Date('2025-12-15T00:00:00Z').getTime();
 const EVENT_END = new Date('2025-12-25T23:59:59Z').getTime();
 
+const CHRISTMAS_PFP_REWARD = {
+  id: 'christmas_miracle_2024',
+  name: 'Christmas Miracle 2024',
+  url: null,
+  description: 'Exclusive profile picture for achieving the Christmas Miracle milestone!'
+};
+
 const CHRISTMAS_GIFT_DROP_CHANCE = 0.12;
 const CHRISTMAS_GIFT_CRATE_CHANCE = {
   bronze: 0.05,
@@ -68,7 +75,7 @@ const COMMUNITY_MILESTONES = [
     id: 7, 
     giftsRequired: 50000, 
     name: 'Christmas Miracle', 
-    rewards: { coins: 50000, gems: 200, tyrantCrates: 1, specialBadge: 'christmas_2024' },
+    rewards: { coins: 50000, gems: 200, tyrantCrates: 1, pfpReward: true },
     description: 'A true Christmas miracle achieved by the community!',
     imageKey: 'milestone_7'
   }
@@ -187,13 +194,13 @@ async function addChristmasGift(userId, serverId, source = 'drop') {
     const userGifts = eventData.users?.[userId]?.gifts || 1;
     const userMilestone = PERSONAL_MILESTONES.find(m => m.giftsRequired === userGifts);
     if (userMilestone) {
-      notifications.push({ type: 'personal', milestone: userMilestone });
+      notifications.push({ type: 'personal', milestone: userMilestone, rewardsPending: true });
     }
     
     const serverGifts = eventData.servers?.[serverId]?.gifts || 1;
     const serverMilestone = SERVER_MILESTONES.find(m => m.giftsRequired === serverGifts);
     if (serverMilestone) {
-      notifications.push({ type: 'server', milestone: serverMilestone });
+      notifications.push({ type: 'server', milestone: serverMilestone, serverId: serverId, rewardsPending: true });
     }
     
     const totalGifts = eventData.totalGifts || 1;
@@ -206,7 +213,7 @@ async function addChristmasGift(userId, serverId, source = 'drop') {
         { eventId: 'christmas_2024' },
         { $push: { communityMilestonesReached: communityMilestone.id } }
       );
-      notifications.push({ type: 'community', milestone: communityMilestone });
+      notifications.push({ type: 'community', milestone: communityMilestone, rewardsPending: true });
     }
     
     return { 
@@ -214,7 +221,9 @@ async function addChristmasGift(userId, serverId, source = 'drop') {
       totalGifts,
       userGifts,
       serverGifts,
-      notifications
+      notifications,
+      userId,
+      serverId
     };
   } catch (error) {
     console.error('Error adding Christmas gift:', error);
@@ -313,7 +322,7 @@ function formatRewards(rewards) {
   if (rewards.emeraldCrates) parts.push(`🟢 ${rewards.emeraldCrates} Emerald Crate(s)`);
   if (rewards.legendaryCrates) parts.push(`🟣 ${rewards.legendaryCrates} Legendary Crate(s)`);
   if (rewards.tyrantCrates) parts.push(`🔴 ${rewards.tyrantCrates} Tyrant Crate(s)`);
-  if (rewards.specialBadge) parts.push(`🏅 Special Badge: ${rewards.specialBadge}`);
+  if (rewards.pfpReward) parts.push(`🖼️ Exclusive Profile Picture: ${CHRISTMAS_PFP_REWARD.name}`);
   return parts.join('\n');
 }
 
@@ -416,43 +425,58 @@ async function createMilestonesEmbed(type = 'community') {
   return embed;
 }
 
-async function distributeMilestoneRewards(client, data, milestone, type, targetId = null) {
+function applyRewardsToUser(user, rewards) {
+  if (rewards.coins) user.coins = (user.coins || 0) + rewards.coins;
+  if (rewards.gems) user.gems = (user.gems || 0) + rewards.gems;
+  if (rewards.bronzeCrates) user.bronzeCrates = (user.bronzeCrates || 0) + rewards.bronzeCrates;
+  if (rewards.silverCrates) user.silverCrates = (user.silverCrates || 0) + rewards.silverCrates;
+  if (rewards.goldCrates) user.goldCrates = (user.goldCrates || 0) + rewards.goldCrates;
+  if (rewards.emeraldCrates) user.emeraldCrates = (user.emeraldCrates || 0) + rewards.emeraldCrates;
+  if (rewards.legendaryCrates) user.legendaryCrates = (user.legendaryCrates || 0) + rewards.legendaryCrates;
+  if (rewards.tyrantCrates) user.tyrantCrates = (user.tyrantCrates || 0) + rewards.tyrantCrates;
+  
+  if (rewards.pfpReward) {
+    if (!user.pfp) {
+      user.pfp = { ownedPfps: [], equippedPfp: null };
+    }
+    const existingPfp = user.pfp.ownedPfps.find(p => p.id === CHRISTMAS_PFP_REWARD.id);
+    if (!existingPfp) {
+      user.pfp.ownedPfps.push({
+        id: CHRISTMAS_PFP_REWARD.id,
+        name: CHRISTMAS_PFP_REWARD.name,
+        url: CHRISTMAS_PFP_REWARD.url,
+        addedAt: Date.now(),
+        source: 'christmas_event_2024'
+      });
+    }
+  }
+}
+
+async function distributeMilestoneRewards(client, data, milestone, type, targetId = null, serverMembers = null) {
   const rewards = milestone.rewards;
   
   if (type === 'community') {
     for (const userId in data.users) {
       const user = data.users[userId];
       if (user) {
-        if (rewards.coins) user.coins = (user.coins || 0) + rewards.coins;
-        if (rewards.gems) user.gems = (user.gems || 0) + rewards.gems;
-        if (rewards.bronzeCrates) user.bronzeCrates = (user.bronzeCrates || 0) + rewards.bronzeCrates;
-        if (rewards.silverCrates) user.silverCrates = (user.silverCrates || 0) + rewards.silverCrates;
-        if (rewards.goldCrates) user.goldCrates = (user.goldCrates || 0) + rewards.goldCrates;
-        if (rewards.emeraldCrates) user.emeraldCrates = (user.emeraldCrates || 0) + rewards.emeraldCrates;
-        if (rewards.legendaryCrates) user.legendaryCrates = (user.legendaryCrates || 0) + rewards.legendaryCrates;
-        if (rewards.tyrantCrates) user.tyrantCrates = (user.tyrantCrates || 0) + rewards.tyrantCrates;
-        if (rewards.specialBadge) {
-          if (!user.badges) user.badges = [];
-          if (!user.badges.includes(rewards.specialBadge)) {
-            user.badges.push(rewards.specialBadge);
-          }
-        }
+        applyRewardsToUser(user, rewards);
       }
     }
     await saveDataImmediate(data);
   } else if (type === 'personal' && targetId) {
     const user = data.users[targetId];
     if (user) {
-      if (rewards.coins) user.coins = (user.coins || 0) + rewards.coins;
-      if (rewards.gems) user.gems = (user.gems || 0) + rewards.gems;
-      if (rewards.bronzeCrates) user.bronzeCrates = (user.bronzeCrates || 0) + rewards.bronzeCrates;
-      if (rewards.silverCrates) user.silverCrates = (user.silverCrates || 0) + rewards.silverCrates;
-      if (rewards.goldCrates) user.goldCrates = (user.goldCrates || 0) + rewards.goldCrates;
-      if (rewards.emeraldCrates) user.emeraldCrates = (user.emeraldCrates || 0) + rewards.emeraldCrates;
-      if (rewards.legendaryCrates) user.legendaryCrates = (user.legendaryCrates || 0) + rewards.legendaryCrates;
-      if (rewards.tyrantCrates) user.tyrantCrates = (user.tyrantCrates || 0) + rewards.tyrantCrates;
+      applyRewardsToUser(user, rewards);
       await saveDataImmediate(data);
     }
+  } else if (type === 'server' && serverMembers) {
+    for (const userId of serverMembers) {
+      const user = data.users[userId];
+      if (user) {
+        applyRewardsToUser(user, rewards);
+      }
+    }
+    await saveDataImmediate(data);
   }
   
   return true;
@@ -482,13 +506,64 @@ async function getMilestoneImage(milestoneId) {
   }
 }
 
+async function setAnnouncementImage(imageUrl) {
+  try {
+    const collection = await getCollection('christmasEvent');
+    await collection.updateOne(
+      { eventId: 'christmas_2024' },
+      { $set: { announcementBannerUrl: imageUrl } },
+      { upsert: true }
+    );
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting announcement image:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+async function getAnnouncementImage() {
+  try {
+    const eventData = await getEventData();
+    return eventData?.announcementBannerUrl || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function setPfpRewardImage(imageUrl) {
+  try {
+    const collection = await getCollection('christmasEvent');
+    await collection.updateOne(
+      { eventId: 'christmas_2024' },
+      { $set: { pfpRewardUrl: imageUrl } },
+      { upsert: true }
+    );
+    CHRISTMAS_PFP_REWARD.url = imageUrl;
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting PFP reward image:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+async function getPfpRewardImage() {
+  try {
+    const eventData = await getEventData();
+    return eventData?.pfpRewardUrl || null;
+  } catch (error) {
+    return null;
+  }
+}
+
 async function sendEventAnnouncement(client, data) {
   const eventData = await getEventData();
   if (eventData?.announcementSent) return;
   
+  const bannerUrl = await getAnnouncementImage();
+  
   const embed = new EmbedBuilder()
     .setColor('#C41E3A')
-    .setTitle('🎄🎁 CHRISTMAS GIFT HUNT 2024 HAS BEGUN! 🎁🎄')
+    .setTitle('🎄🎁 CHRISTMAS GIFT HUNT 2025 HAS BEGUN! 🎁🎄')
     .setDescription(`**The most wonderful time of the year is here!**
 
 From **December 15th to December 25th**, collect special **Christmas Gifts** 🎁 from drops and crates!
@@ -510,9 +585,12 @@ Track your own gift collection with 5 personal milestones!
 Use \`!christmas\` or \`!xmas\` to check progress!
 
 **Happy Holidays! 🎅🎄**`)
-    .setImage('attachment://christmas_banner.png')
-    .setFooter({ text: 'Event: December 15-25, 2024' })
+    .setFooter({ text: 'Event: December 15-25, 2025' })
     .setTimestamp();
+  
+  if (bannerUrl) {
+    embed.setImage(bannerUrl);
+  }
   
   for (const guild of client.guilds.cache.values()) {
     try {
@@ -528,9 +606,9 @@ Use \`!christmas\` or \`!xmas\` to check progress!
     }
   }
   
-  for (const userId in data.users) {
+  for (const usrId in data.users) {
     try {
-      const user = await client.users.fetch(userId).catch(() => null);
+      const user = await client.users.fetch(usrId).catch(() => null);
       if (user) {
         await user.send({ embeds: [embed] }).catch(() => {});
       }
@@ -632,6 +710,7 @@ module.exports = {
   PERSONAL_MILESTONES,
   CHRISTMAS_GIFT_DROP_CHANCE,
   CHRISTMAS_GIFT_CRATE_CHANCE,
+  CHRISTMAS_PFP_REWARD,
   initializeChristmasEventIndexes,
   getEventData,
   isEventActive,
@@ -647,6 +726,10 @@ module.exports = {
   distributeMilestoneRewards,
   setMilestoneImage,
   getMilestoneImage,
+  setAnnouncementImage,
+  getAnnouncementImage,
+  setPfpRewardImage,
+  getPfpRewardImage,
   sendEventAnnouncement,
   checkAndTriggerAnnouncement,
   shouldDropChristmasGift,
