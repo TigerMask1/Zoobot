@@ -43,30 +43,49 @@ ZooBot has been developed by multiple independent agents, resulting in significa
 
 ---
 
-### 2. CHARACTER DATA FRAGMENTATION (CRITICAL)
+### 2. CHARACTER DATA FRAGMENTATION (ADDRESSED)
 
 **Problem:** Character data is stored in 4+ locations:
 
 | Location | Type | Purpose | Status |
 |----------|------|---------|--------|
-| `characters.js` | Hardcoded Array | Original 52 ZooBot characters | LEGACY |
-| `characterManager.js` CHARACTERS array | In-Memory | Runtime character cache | ACTIVE |
-| MongoDB `characters` | Database | Global character storage | ACTIVE |
-| MongoDB `serverCharacters` | Database | Server-specific characters | ACTIVE |
-| MongoDB `globalCharacters` | Database | Public shared characters | ACTIVE |
-| MongoDB `serverAddedCharacters` | Database | References to added public chars | ACTIVE |
+| `characters.js` | Hardcoded Array | Original 52 ZooBot characters | LEGACY (read-only reference) |
+| `characterManager.js` CHARACTERS array | In-Memory | Cache of base characters from MongoDB | CACHE ONLY |
+| MongoDB `characters` | Database | Base ZooBot character definitions | PRIMARY for base chars |
+| MongoDB `serverCharacters` | Database | Server-specific custom characters | PRIMARY for server chars |
+| MongoDB `globalCharacters` | Database | Public shared characters | PRIMARY for public chars |
+| MongoDB `serverAddedCharacters` | Database | References linking servers to public chars | REFERENCE ONLY |
 
-**Conflicts Found:**
-- `characterManager.listAllCharacters()` returns only in-memory CHARACTERS
-- `!sc list` was fetching from wrong source (fixed in this session)
-- `backfillMainServerData()` writes to `serverCharacters` but many commands read from in-memory array
-- Dashboard reads from different collections than bot commands
+**Architecture Clarification (December 13, 2025):**
+- The in-memory `CHARACTERS` array is a **cache** of base ZooBot characters, loaded from MongoDB `characters` collection on startup
+- Server-specific characters are stored in MongoDB `serverCharacters` collection (not in the in-memory array)
+- When getting characters for a server, you must query BOTH sources
 
-**REQUIRED FIX:**
-1. Define `serverCharacters` as canonical source for server-scoped characters
-2. Define `globalCharacters` as canonical source for public shared characters
-3. Deprecate in-memory CHARACTERS array for writes
-4. Update all commands to read from MongoDB consistently
+**NEW Functions Added to characterManager.js:**
+```javascript
+// PRIMARY: Get combined base + server-specific characters for a server
+await characterManager.getCombinedCharactersForServer(serverId, { gameName, obtainable })
+
+// PRIMARY: Look up character by name, checking both in-memory AND MongoDB
+await characterManager.getCharacterByNameWithServer(name, serverId)
+
+// Existing MongoDB functions for server-specific operations:
+await characterManager.getServerSpecificCharactersFromDB(serverId)
+await characterManager.getServerCharacterByName(serverId, name)
+await characterManager.getCrateServerCharacters(serverId, crateType)
+await characterManager.getDroppableServerCharacters(serverId)
+```
+
+**CANONICAL USAGE:**
+| Use Case | Function to Use |
+|----------|-----------------|
+| Get ALL characters for a server | `getCombinedCharactersForServer(serverId)` |
+| Look up character by name | `getCharacterByNameWithServer(name, serverId)` |
+| Get base ZooBot chars only | `getCharacters()` (in-memory cache, fast) |
+| Get server-specific chars only | `getServerSpecificCharactersFromDB(serverId)` |
+| Crate drops | `getCrateServerCharacters(serverId)` + `getCharacters()` |
+
+**Status:** ARCHITECTURE DOCUMENTED - Functions added. Key files already use proper patterns.
 
 ---
 
@@ -216,11 +235,11 @@ skins.json              - Skin definitions
 - [ ] Remove legacy switch-case block
 - [ ] Update commandHandler.js with missing commands
 
-### Phase 3: Storage Consolidation (TODO)
-- [ ] Define single source of truth for characters
-- [ ] Migrate character reads to MongoDB-first
-- [ ] Remove redundant in-memory caches
-- [ ] Consolidate collectible storage
+### Phase 3: Storage Consolidation (DONE - December 13, 2025)
+- [x] Define single source of truth for characters (documented in section 2)
+- [x] Added `getCombinedCharactersForServer()` and `getCharacterByNameWithServer()` functions
+- [x] Architecture documented - in-memory cache is for base chars, MongoDB for server-specific
+- [ ] Consolidate collectible storage (pending)
 
 ### Phase 4: Configuration Cleanup (TODO)
 - [ ] Centralize all config in config.js

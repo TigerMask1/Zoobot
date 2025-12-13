@@ -938,6 +938,106 @@ async function getServerCharacterCount(serverId) {
   return count;
 }
 
+/**
+ * Gets all usable characters for a server (base ZooBot characters + server-specific characters from MongoDB).
+ * This is the PRIMARY function for getting a complete character pool for a server.
+ * Use this instead of getCharacters() when you need all characters available to a server.
+ * 
+ * @param {string} serverId - The Discord server ID
+ * @param {Object} options - Optional filters
+ * @param {string} options.gameName - Filter by game name
+ * @param {string} options.obtainable - Filter by obtainable type ('crate', 'drop', etc.)
+ * @returns {Promise<Array>} Combined array of base + server-specific characters
+ */
+async function getCombinedCharactersForServer(serverId, options = {}) {
+  const { gameName, obtainable } = options;
+  
+  let baseCharacters = [...CHARACTERS];
+  
+  if (gameName) {
+    baseCharacters = baseCharacters.filter(c => c.game === gameName);
+  }
+  if (obtainable) {
+    baseCharacters = baseCharacters.filter(c => c.obtainable === obtainable);
+  }
+  
+  const formattedBaseChars = baseCharacters.map(c => {
+    const ability = CHARACTER_ABILITIES[c.name];
+    const move = SPECIAL_MOVES[c.name];
+    return {
+      ...c,
+      ability: ability || null,
+      specialMove: move || null,
+      isServerSpecific: false
+    };
+  });
+  
+  let serverCharacters = [];
+  if (serverId && USE_MONGODB && mongoManager) {
+    try {
+      const collection = await mongoManager.getCollection('serverCharacters');
+      let query = { serverId, status: 'active' };
+      
+      if (gameName) {
+        query.$or = [
+          { game: gameName },
+          { game: { $exists: false } },
+          { game: null }
+        ];
+      }
+      if (obtainable) {
+        query.obtainable = obtainable;
+      }
+      
+      const chars = await collection.find(query).toArray();
+      serverCharacters = chars.map(c => ({
+        ...c,
+        id: c._id?.toString(),
+        isServerSpecific: true
+      }));
+    } catch (error) {
+      console.error(`Error loading server characters for ${serverId}:`, error);
+    }
+  }
+  
+  const existingNames = new Set(formattedBaseChars.map(c => c.name.toLowerCase()));
+  const uniqueServerChars = serverCharacters.filter(c => !existingNames.has(c.name.toLowerCase()));
+  
+  return [...formattedBaseChars, ...uniqueServerChars];
+}
+
+/**
+ * Gets a character by name, checking BOTH in-memory cache AND MongoDB server characters.
+ * This is the PRIMARY function for looking up a character that may be server-specific.
+ * 
+ * @param {string} name - The character name to find
+ * @param {string} serverId - Optional server ID to also check server-specific characters
+ * @returns {Promise<Object|null>} The character object or null if not found
+ */
+async function getCharacterByNameWithServer(name, serverId = null) {
+  const baseChar = CHARACTERS.find(c => c.name.toLowerCase() === name.toLowerCase());
+  
+  if (baseChar) {
+    const ability = CHARACTER_ABILITIES[baseChar.name];
+    const move = SPECIAL_MOVES[baseChar.name];
+    return {
+      ...baseChar,
+      ability: ability || null,
+      specialMove: move || null,
+      isServerSpecific: false
+    };
+  }
+  
+  if (serverId) {
+    const serverChar = await getServerCharacterByName(serverId, name);
+    if (serverChar) {
+      return serverChar;
+    }
+  }
+  
+  return null;
+}
+
 async function cleanupDuplicateCharacters() {
   const seen = new Map();
   const duplicates = [];
@@ -1012,6 +1112,8 @@ module.exports = {
   getPublicCharacters,
   getServerCharacterCount,
   cleanupDuplicateCharacters,
+  getCombinedCharactersForServer,
+  getCharacterByNameWithServer,
   VALID_EFFECT_TYPES,
   OBTAINABLE_TYPES,
   DEFAULT_GAME,
