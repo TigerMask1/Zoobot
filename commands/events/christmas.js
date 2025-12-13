@@ -11,7 +11,7 @@ const {
 } = require('../../christmasEventSystem.js');
 const { isSuperAdmin } = require('../../serverConfigManager.js');
 
-async function handleChristmasCommand(message, args, data, client) {
+async function handleChristmasCommand({ message, args = [], data, client }) {
   const subcommand = args[0]?.toLowerCase();
   
   if (subcommand === 'setimage' || subcommand === 'setbanner') {
@@ -98,23 +98,24 @@ async function handleChristmasCommand(message, args, data, client) {
     for (let i = 0; i < leaderboard.length; i++) {
       const entry = leaderboard[i];
       const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `**${i + 1}.**`;
+      const giftCount = entry.gifts || 0;
       
       if (type === 'users') {
         try {
           const user = await client.users.fetch(entry.userId).catch(() => null);
           const displayName = user ? user.username : 'Unknown User';
-          description += `${medal} ${displayName} - 🎁 ${entry.gifts.toLocaleString()} gifts\n`;
+          description += `${medal} ${displayName} - 🎁 ${giftCount.toLocaleString()} gifts\n`;
         } catch {
-          description += `${medal} Unknown User - 🎁 ${entry.gifts.toLocaleString()} gifts\n`;
+          description += `${medal} Unknown User - 🎁 ${giftCount.toLocaleString()} gifts\n`;
         }
       } else {
         const guild = client.guilds.cache.get(entry.serverId);
         const displayName = guild ? guild.name : 'Unknown Server';
-        description += `${medal} ${displayName} - 🎁 ${entry.gifts.toLocaleString()} gifts\n`;
+        description += `${medal} ${displayName} - 🎁 ${giftCount.toLocaleString()} gifts\n`;
       }
     }
     
-    embed.setDescription(description);
+    embed.setDescription(description || 'No data available yet.');
     embed.setFooter({ text: 'Collect more gifts to climb the leaderboard!' });
     
     return message.reply({ embeds: [embed] });
