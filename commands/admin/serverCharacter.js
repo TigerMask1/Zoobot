@@ -637,17 +637,20 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
 
 async function handleList(message, serverId) {
   try {
-    const allCharacters = characterManager.listAllCharacters();
-    const serverCreatedChars = allCharacters.filter(c => c.serverId === serverId);
-    
-    let addedFromGlobal = [];
     const USE_MONGODB = process.env.USE_MONGODB === 'true';
+    let serverChars = [];
+    let addedFromGlobal = [];
     
     if (USE_MONGODB) {
       try {
-        const { getCollection } = require('../../mongoManager.js');
-        const collection = await getCollection('serverAddedCharacters');
-        const addedRecords = await collection.find({ serverId }).toArray();
+        const serverCharsCol = await getCollection('serverCharacters');
+        serverChars = await serverCharsCol.find({ 
+          serverId, 
+          status: 'active' 
+        }).toArray();
+        
+        const addedCharsCol = await getCollection('serverAddedCharacters');
+        const addedRecords = await addedCharsCol.find({ serverId }).toArray();
         
         for (const record of addedRecords) {
           const char = characterManager.getCharacterByName(record.characterName);
@@ -656,12 +659,16 @@ async function handleList(message, serverId) {
           }
         }
       } catch (e) {
-        console.warn('Could not fetch added characters from MongoDB:', e.message);
+        console.warn('Could not fetch server characters from MongoDB:', e.message);
       }
     }
     
+    const allCharacters = characterManager.listAllCharacters();
+    const inMemoryServerChars = allCharacters.filter(c => c.serverId === serverId);
+    
     const allServerChars = [
-      ...serverCreatedChars.map(c => ({ ...c, source: 'created' })),
+      ...serverChars.map(c => ({ ...c, source: 'server' })),
+      ...inMemoryServerChars.map(c => ({ ...c, source: 'created' })),
       ...addedFromGlobal.map(c => ({ ...c, source: 'added' }))
     ];
     
@@ -679,10 +686,16 @@ async function handleList(message, serverId) {
       return message.reply({ embeds: [embed] });
     }
     
-    const charList = allServerChars.map((c, i) => {
+    const ITEMS_PER_PAGE = 15;
+    const totalPages = Math.ceil(allServerChars.length / ITEMS_PER_PAGE);
+    const pageChars = allServerChars.slice(0, ITEMS_PER_PAGE);
+    
+    const charList = pageChars.map((c, i) => {
       let sourceIcon;
       if (c.source === 'added') {
         sourceIcon = '🌍';
+      } else if (c.source === 'server') {
+        sourceIcon = '🏠';
       } else if (c.pendingApproval) {
         sourceIcon = '⏳';
       } else if (c.isPublic) {
@@ -690,16 +703,16 @@ async function handleList(message, serverId) {
       } else {
         sourceIcon = '🔒';
       }
-      const sourceText = c.source === 'added' ? '(added)' : (c.pendingApproval ? '(pending)' : '');
-      return `${i + 1}. ${sourceIcon} ${c.emoji} **${c.name}** ${sourceText}`;
+      const idText = c.uniqueId ? ` \`${c.uniqueId}\`` : '';
+      return `${i + 1}. ${sourceIcon} ${c.emoji} **${c.name}**${idText}`;
     }).join('\n');
     
     const embed = new EmbedBuilder()
       .setColor(0x00D9FF)
       .setTitle(`Server Characters (${allServerChars.length})`)
       .setDescription(charList)
-      .addFields({ name: 'Legend', value: '🔒 Private | ⏳ Pending Approval | 🌐 Public | 🌍 Added from directory' })
-      .setFooter({ text: 'Use !sc view <name> to see details | !chars to browse more' })
+      .addFields({ name: 'Legend', value: '🏠 Server | 🔒 Private | ⏳ Pending | 🌐 Public | 🌍 Added' })
+      .setFooter({ text: `Page 1/${totalPages} | Use !sc view <name> for details` })
       .setTimestamp();
     
     return message.reply({ embeds: [embed] });
@@ -715,28 +728,65 @@ async function handleView(message, serverId, name) {
     return message.reply('Please specify a character name: `!sc view <name>`');
   }
   
-  const character = characterManager.getCharacterByName(name);
+  let character = null;
+  let ability = null;
+  let move = null;
+  
+  const USE_MONGODB = process.env.USE_MONGODB === 'true';
+  if (USE_MONGODB) {
+    try {
+      const serverCharsCol = await getCollection('serverCharacters');
+      character = await serverCharsCol.findOne({
+        serverId,
+        name: { $regex: new RegExp(`^${name}$`, 'i') },
+        status: 'active'
+      });
+      
+      if (character) {
+        ability = character.ability;
+        move = character.specialMove;
+      }
+    } catch (e) {
+      console.warn('Could not fetch from serverCharacters:', e.message);
+    }
+  }
+  
+  if (!character) {
+    character = characterManager.getCharacterByName(name);
+    if (character) {
+      ability = characterManager.getCharacterAbility(name);
+      move = characterManager.getSpecialMove(name);
+    }
+  }
   
   if (!character) {
     return message.reply(`No character found with name "${name}". Use \`!sc list\` to see all characters.`);
   }
   
-  const ability = characterManager.getCharacterAbility(name);
-  const move = characterManager.getSpecialMove(name);
-  
   const embed = new EmbedBuilder()
     .setColor(0x00D9FF)
     .setTitle(`${character.emoji} ${character.name}`)
-    .setDescription(character.description || 'No description')
-    .addFields(
-      { name: 'Obtainable', value: character.obtainable || 'crate', inline: true },
-      { name: 'Game', value: character.game || 'ZooBot', inline: true },
-      { name: 'Created By', value: `<@${character.createdBy}>`, inline: true },
-      { name: 'Visibility', value: character.isPublic ? '🌐 Public' : '🔒 Private', inline: true }
-    );
+    .setDescription(character.description || 'No description');
+  
+  embed.addFields(
+    { name: 'Obtainable', value: character.obtainable || 'crate', inline: true },
+    { name: 'Game', value: character.game || 'ZooBot', inline: true }
+  );
+  
+  if (character.createdBy && character.createdBy !== 'ZooBot') {
+    embed.addFields({ name: 'Created By', value: `<@${character.createdBy}>`, inline: true });
+  } else {
+    embed.addFields({ name: 'Created By', value: 'ZooBot', inline: true });
+  }
+  
+  embed.addFields({ name: 'Visibility', value: character.isPublic ? '🌐 Public' : '🔒 Private', inline: true });
+  
+  if (character.uniqueId) {
+    embed.addFields({ name: 'Unique ID', value: `\`${character.uniqueId}\``, inline: true });
+  }
   
   if (ability) {
-    let abilityText = `${ability.emoji} **${ability.name}**\n${ability.description}`;
+    let abilityText = `${ability.emoji || '⭐'} **${ability.name}**\n${ability.description}`;
     if (ability.effect) {
       const effectEntries = Object.entries(ability.effect);
       if (effectEntries.length > 0) {
