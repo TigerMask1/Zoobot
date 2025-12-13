@@ -641,34 +641,42 @@ async function handleList(message, serverId) {
     let serverChars = [];
     let addedFromGlobal = [];
     
-    if (USE_MONGODB) {
-      try {
-        const serverCharsCol = await getCollection('serverCharacters');
-        serverChars = await serverCharsCol.find({ 
-          serverId, 
-          status: 'active' 
-        }).toArray();
-        
-        const addedCharsCol = await getCollection('serverAddedCharacters');
-        const addedRecords = await addedCharsCol.find({ serverId }).toArray();
-        
-        for (const record of addedRecords) {
-          const char = characterManager.getCharacterByName(record.characterName);
-          if (char) {
-            addedFromGlobal.push({ ...char, addedFrom: 'global' });
-          }
-        }
-      } catch (e) {
-        console.warn('Could not fetch server characters from MongoDB:', e.message);
-      }
+    if (!USE_MONGODB) {
+      return message.reply('Server characters require MongoDB to be enabled. Please set USE_MONGODB=true.');
     }
     
-    const allCharacters = characterManager.listAllCharacters();
-    const inMemoryServerChars = allCharacters.filter(c => c.serverId === serverId);
+    try {
+      const serverCharsCol = await getCollection('serverCharacters');
+      serverChars = await serverCharsCol.find({ 
+        serverId, 
+        status: 'active' 
+      }).toArray();
+      
+      const addedCharsCol = await getCollection('serverAddedCharacters');
+      const globalCharsCol = await getCollection('globalCharacters');
+      const addedRecords = await addedCharsCol.find({ serverId }).toArray();
+      
+      if (addedRecords.length > 0) {
+        const charIds = addedRecords.map(r => r.characterId).filter(Boolean);
+        const charNames = addedRecords.map(r => r.characterName).filter(Boolean);
+        
+        const globalChars = await globalCharsCol.find({
+          $or: [
+            { uniqueId: { $in: charIds } },
+            { name: { $in: charNames.map(n => new RegExp(`^${n}$`, 'i')) } }
+          ],
+          status: 'active'
+        }).toArray();
+        
+        addedFromGlobal = globalChars.map(c => ({ ...c, addedFrom: 'global' }));
+      }
+    } catch (e) {
+      console.error('Could not fetch server characters from MongoDB:', e.message);
+      return message.reply('Database error while fetching characters. Please try again.');
+    }
     
     const allServerChars = [
       ...serverChars.map(c => ({ ...c, source: 'server' })),
-      ...inMemoryServerChars.map(c => ({ ...c, source: 'created' })),
       ...addedFromGlobal.map(c => ({ ...c, source: 'added' }))
     ];
     
@@ -728,35 +736,42 @@ async function handleView(message, serverId, name) {
     return message.reply('Please specify a character name: `!sc view <name>`');
   }
   
+  const USE_MONGODB = process.env.USE_MONGODB === 'true';
+  if (!USE_MONGODB) {
+    return message.reply('Server characters require MongoDB to be enabled. Please set USE_MONGODB=true.');
+  }
+  
   let character = null;
   let ability = null;
   let move = null;
   
-  const USE_MONGODB = process.env.USE_MONGODB === 'true';
-  if (USE_MONGODB) {
-    try {
-      const serverCharsCol = await getCollection('serverCharacters');
-      character = await serverCharsCol.findOne({
-        serverId,
+  try {
+    const serverCharsCol = await getCollection('serverCharacters');
+    character = await serverCharsCol.findOne({
+      serverId,
+      name: { $regex: new RegExp(`^${name}$`, 'i') },
+      status: 'active'
+    });
+    
+    if (character) {
+      ability = character.ability;
+      move = character.specialMove;
+    }
+    
+    if (!character) {
+      const globalCharsCol = await getCollection('globalCharacters');
+      character = await globalCharsCol.findOne({
         name: { $regex: new RegExp(`^${name}$`, 'i') },
         status: 'active'
       });
-      
       if (character) {
         ability = character.ability;
         move = character.specialMove;
       }
-    } catch (e) {
-      console.warn('Could not fetch from serverCharacters:', e.message);
     }
-  }
-  
-  if (!character) {
-    character = characterManager.getCharacterByName(name);
-    if (character) {
-      ability = characterManager.getCharacterAbility(name);
-      move = characterManager.getSpecialMove(name);
-    }
+  } catch (e) {
+    console.error('Could not fetch character from MongoDB:', e.message);
+    return message.reply('Database error while fetching character. Please try again.');
   }
   
   if (!character) {

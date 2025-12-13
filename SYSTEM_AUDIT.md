@@ -25,10 +25,14 @@ ZooBot has been developed by multiple independent agents, resulting in significa
 |---------|---------------|----------------|---------------|
 | `profile` | 2613 | `commands/social/profile.js` | DUPLICATE |
 | `battle` | 4698 | `commands/battle/battle.js` | DUPLICATE |
+| `leaderboard` | 5297 | `commands/social/leaderboard.js` | DUPLICATE |
+| `work` | 7216 | `commands/work/work.js` | DUPLICATE |
+| `daily` | 5341 | `commands/economy/daily.js` | DUPLICATE |
+| `crate` | 3182 | `commands/economy/crate.js` | DUPLICATE |
 | `shop` | NOT FOUND | `commands/economy/shop.js` | MODULAR ONLY |
-| `leaderboard` | NOT FOUND | `commands/social/leaderboard.js` | MODULAR ONLY |
-| `work` | NOT FOUND | `commands/work/work.js` | MODULAR ONLY |
 | `servercharacter/sc` | NOT FOUND | `commands/admin/serverCharacter.js` | MODULAR ONLY |
+
+**Note:** 375 total case statements in index.js with 28 modular command files. Most core commands exist in BOTH locations.
 
 **Risk:** When both systems are active, the same command could execute twice or produce inconsistent behavior depending on which handler catches it first.
 
@@ -200,9 +204,11 @@ skins.json              - Skin definitions
 
 ## REQUIRED ACTIONS
 
-### Phase 1: Immediate Fixes (DONE)
-- [x] Fix async/await errors in clanSystem
-- [x] Fix `!sc list` to read from MongoDB
+### Phase 1: Immediate Fixes (DONE - December 13, 2025)
+- [x] Fix async/await errors in index.js (lines 2490, 2497) for formatClanProfile/formatClanLeaderboard
+- [x] Fix `!sc list` to read from MongoDB serverCharacters collection (removed in-memory fallback)
+- [x] Fix `!sc view` to read from MongoDB serverCharacters and globalCharacters collections (removed in-memory fallback)
+- [x] Add serverId parameter to formatClanProfile call for proper server aura display
 
 ### Phase 2: Command Consolidation (TODO)
 - [ ] Audit all 375 index.js cases
