@@ -1,121 +1,80 @@
 const { EmbedBuilder } = require('discord.js');
 const { initializeUserData } = require('../../utils/shared.js');
+const { updateTaskProgress } = require('../../seasonSystem.js');
 
 module.exports = {
   name: 'character',
   aliases: ['char', 'charinfo'],
   category: 'characters',
   description: 'View detailed information about a character in your collection',
-  usage: '!character <name or number>',
+  usage: '!character <name>',
   
   async execute({ message, args, data }) {
     const userId = message.author.id;
     const userData = initializeUserData(userId, data);
     
-    if (!args.length) {
-      return message.reply('❌ Usage: `!character <name or number>`\n\nExample: `!character Bruce` or `!character 1`');
+    const charName = args.join(' ').toLowerCase();
+    
+    if (!charName) {
+      return message.reply('Usage: `!char <character name>`');
     }
     
-    const characters = userData.characters || [];
+    const userChar = (userData.characters || []).find(c => 
+      c.name.toLowerCase() === charName
+    );
     
-    if (characters.length === 0) {
-      return message.reply('❌ You don\'t have any characters yet! Use `!start` to begin your journey.');
+    if (!userChar) {
+      return message.reply('You don\'t own this character!');
     }
     
-    let character;
-    const searchTerm = args.join(' ');
-    
-    // Try to find by number first
-    const num = parseInt(searchTerm);
-    if (!isNaN(num) && num > 0 && num <= characters.length) {
-      character = characters[num - 1];
-    } else {
-      // Search by name
-      character = characters.find(c => 
-        c.name.toLowerCase() === searchTerm.toLowerCase() ||
-        c.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    // Track season daily task progress for viewing characters
+    if (userData.started) {
+      updateTaskProgress(userData, 'charsViewed', 1);
     }
     
-    if (!character) {
-      return message.reply(`❌ Could not find a character matching "${searchTerm}" in your collection!`);
+    // Get level requirements
+    const { getLevelRequirements, createLevelProgressBar, MAX_BOOSTS_PER_CHARACTER, getCharacterBoostCount } = require('../../battleSystem.js');
+    const { getSkinUrl } = require('../../skinSystem.js');
+    
+    const charReq = getLevelRequirements(userChar.level);
+    const charProgress = createLevelProgressBar(userChar.tokens, charReq.tokens);
+    
+    let charSkinUrl;
+    try {
+      charSkinUrl = await getSkinUrl(userChar.name, userChar.currentSkin || 'default');
+    } catch {
+      charSkinUrl = null;
     }
     
-    const rarityColors = {
-      common: 0x808080,
-      uncommon: 0x00FF00,
-      rare: 0x0000FF,
-      epic: 0x800080,
-      legendary: 0xFFD700,
-      'ultra rare': 0xFF69B4
-    };
+    const availableSkins = userChar.ownedSkins || ['default'];
     
-    const rarityEmojis = {
-      common: '⬜',
-      uncommon: '🟩',
-      rare: '🟦',
-      epic: '🟪',
-      legendary: '🟨',
-      'ultra rare': '💎'
-    };
+    let boostCount = 0;
+    let remainingBoosts = 5;
+    try {
+      boostCount = getCharacterBoostCount(userChar);
+      remainingBoosts = (MAX_BOOSTS_PER_CHARACTER || 5) - boostCount;
+    } catch {
+      // Functions may not exist
+    }
     
-    const rarity = (character.rarity || 'common').toLowerCase();
-    const color = rarityColors[rarity] || 0x808080;
-    const rarityEmoji = rarityEmojis[rarity] || '⬜';
-    
-    const embed = new EmbedBuilder()
-      .setColor(color)
-      .setTitle(`${character.emoji || '🦁'} ${character.name}`)
-      .setDescription(character.description || 'A collectible character.')
+    const charEmbed = new EmbedBuilder()
+      .setColor('#3498DB')
+      .setTitle(`${userChar.emoji || '🦁'} ${userChar.name}`)
       .addFields(
-        { name: 'Rarity', value: `${rarityEmoji} ${rarity.charAt(0).toUpperCase() + rarity.slice(1)}`, inline: true },
-        { name: 'Level', value: `${character.level || 1}`, inline: true },
-        { name: 'XP', value: `${character.xp || 0}`, inline: true }
+        { name: 'Level', value: `${userChar.level || 1}`, inline: true },
+        { name: 'ST', value: `${userChar.st || 0}%`, inline: true },
+        { name: 'Tokens', value: `${userChar.tokens || 0}/${charReq.tokens}`, inline: true },
+        { name: 'ST Boosts', value: `${boostCount}/${MAX_BOOSTS_PER_CHARACTER || 5} used\n${remainingBoosts > 0 ? `⚡ ${remainingBoosts} left` : '❌ Max reached'}`, inline: true },
+        { name: 'Next Level Cost', value: `🎫 ${charReq.tokens} tokens\n💰 ${charReq.coins} coins`, inline: true },
+        { name: 'Progress to Next Level', value: charProgress || '▱▱▱▱▱▱▱▱▱▱ 0%', inline: false },
+        { name: '🎨 Current Skin', value: userChar.currentSkin || 'default', inline: true },
+        { name: '🖼️ Owned Skins', value: availableSkins.join(', '), inline: true }
       );
     
-    // Stats
-    if (character.stats) {
-      embed.addFields({
-        name: '📊 Battle Stats',
-        value: 
-          `❤️ HP: ${character.stats.hp || 100}\n` +
-          `⚔️ Attack: ${character.stats.attack || 50}\n` +
-          `🛡️ Defense: ${character.stats.defense || 50}\n` +
-          `⚡ Speed: ${character.stats.speed || 50}`,
-        inline: true
-      });
+    if (charSkinUrl) {
+      charEmbed.setImage(charSkinUrl);
     }
     
-    // Ability
-    if (character.ability) {
-      embed.addFields({
-        name: `✨ Ability: ${character.ability.name || 'Unknown'}`,
-        value: character.ability.description || 'No description',
-        inline: false
-      });
-    }
-    
-    // Special Move
-    if (character.specialMove) {
-      embed.addFields({
-        name: `💥 Special Move: ${character.specialMove.name || 'Unknown'}`,
-        value: `Damage: ${character.specialMove.damage || 100}`,
-        inline: true
-      });
-    }
-    
-    // Skin if equipped
-    if (character.equippedSkin) {
-      embed.addFields({
-        name: '🎨 Skin',
-        value: character.equippedSkin,
-        inline: true
-      });
-    }
-    
-    embed.setFooter({ text: `Owned by ${message.author.username}` })
-      .setTimestamp();
-    
-    return message.reply({ embeds: [embed] });
+    return message.reply({ embeds: [charEmbed] });
   }
 };
