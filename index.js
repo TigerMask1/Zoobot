@@ -3793,6 +3793,25 @@ client.on('messageCreate', async (message) => {
             
             await eventSystem.recordProgress(userId, data.users[userId].username, 1, 'drop_catcher');
             
+            let christmasGiftText = '';
+            try {
+              const { shouldDropChristmasGift, addChristmasGift, createCommunityMilestoneAnnouncement } = require('./christmasEventSystem.js');
+              if (shouldDropChristmasGift('drop')) {
+                const giftResult = await addChristmasGift(userId, serverId, 'drop');
+                if (giftResult.success) {
+                  christmasGiftText = `\n\n🎁🎄 **CHRISTMAS GIFT!** You also found a festive gift!\n✨ Your gifts: ${giftResult.userGifts} | Global: ${giftResult.totalGifts}`;
+                  
+                  for (const notification of giftResult.notifications || []) {
+                    if (notification.type === 'community') {
+                      await createCommunityMilestoneAnnouncement(client, data, notification.milestone);
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error checking Christmas gift:', error);
+            }
+            
             saveData(data);
             
             let rewardText = '';
@@ -3807,7 +3826,7 @@ client.on('messageCreate', async (message) => {
             const dropEmbed = new EmbedBuilder()
               .setColor('#00FF00')
               .setTitle('🎉 DROP CAUGHT!')
-              .setDescription(`<@${userId}> caught the drop!\n\n**Reward:** ${rewardText}`);
+              .setDescription(`<@${userId}> caught the drop!\n\n**Reward:** ${rewardText}${christmasGiftText}`);
             
             await message.reply({ embeds: [dropEmbed] });
           }

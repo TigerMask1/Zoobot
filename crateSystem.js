@@ -12,6 +12,7 @@ const { generateST } = require('./utils/shared.js');
 const { tryDropCollectibleFromCrate, getCrateServerCollectibles, awardCollectibleItem, awardServerCollectible } = require('./collectibleItemsSystem.js');
 const { isMongoConnected } = require('./mongoManager.js');
 const { addAura } = require('./serverAuraSystem.js');
+const { shouldDropChristmasGift, addChristmasGift, isEventActive, createCommunityMilestoneAnnouncement } = require('./christmasEventSystem.js');
 
 async function safeDropCollectibleFromCrate(userId, serverGame, crateType, serverId) {
   if (!isMongoConnected()) {
@@ -320,6 +321,24 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
     rewards += `\n\n${collectibleDrop.message}`;
   }
   
+  if (shouldDropChristmasGift('crate', crateType)) {
+    try {
+      const giftResult = await addChristmasGift(userId, serverId, 'crate');
+      if (giftResult.success) {
+        rewards += `\n\n🎁🎄 **CHRISTMAS GIFT!** You found a festive gift!\n✨ Your gifts: ${giftResult.userGifts} | Server: ${giftResult.serverGifts} | Global: ${giftResult.totalGifts}`;
+        
+        for (const notification of giftResult.notifications || []) {
+          if (notification.type === 'community' && client) {
+            const { getData } = require('./dataManager.js');
+            await createCommunityMilestoneAnnouncement(client, getData(), notification.milestone);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error adding Christmas gift from crate:', error);
+    }
+  }
+  
   return {
     success: true,
     message: rewards
@@ -526,11 +545,39 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
     });
   }
   
+  let christmasGiftsFound = 0;
+  for (let i = 0; i < quantity; i++) {
+    if (shouldDropChristmasGift('crate', crateType)) {
+      christmasGiftsFound++;
+    }
+  }
+  
+  if (christmasGiftsFound > 0) {
+    try {
+      let lastGiftResult = null;
+      for (let i = 0; i < christmasGiftsFound; i++) {
+        lastGiftResult = await addChristmasGift(userId, serverId, 'crate');
+      }
+      if (lastGiftResult?.success) {
+        summary += `\n\n🎁🎄 **CHRISTMAS GIFTS!** Found ${christmasGiftsFound} festive gift(s)!\n✨ Your gifts: ${lastGiftResult.userGifts} | Server: ${lastGiftResult.serverGifts} | Global: ${lastGiftResult.totalGifts}`;
+        
+        for (const notification of lastGiftResult.notifications || []) {
+          if (notification.type === 'community' && client) {
+            await createCommunityMilestoneAnnouncement(client, data, notification.milestone);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error adding Christmas gifts from bulk crates:', error);
+    }
+  }
+  
   return {
     success: true,
     message: summary,
     charactersGained: charactersGained.length,
-    collectiblesGained: collectiblesGained.length
+    collectiblesGained: collectiblesGained.length,
+    christmasGiftsFound
   };
 }
 
