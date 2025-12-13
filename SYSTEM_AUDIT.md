@@ -89,21 +89,58 @@ await characterManager.getDroppableServerCharacters(serverId)
 
 ---
 
-### 3. COLLECTIBLE DATA FRAGMENTATION (HIGH)
+### 3. COLLECTIBLE DATA FRAGMENTATION (ADDRESSED)
 
-**Problem:** Same fragmentation pattern as characters:
+**Problem:** Collectible data is stored in 4+ locations:
 
-| Collection | Purpose |
-|------------|---------|
-| `serverCollectibles` | Server-created collectibles |
-| `globalCollectibles` | Public shared collectibles |
-| `serverAddedCollectibles` | References to added public collectibles |
-| `collectibleItems` | Another collectible system? |
+| Collection | Type | Purpose | Status |
+|------------|------|---------|--------|
+| `collectibleItems` | Database | Main ZooBot system collectibles (bundles, availability windows) | PRIMARY for system items |
+| `serverCollectibles` | Database | Server-created custom collectibles | PRIMARY for server customs |
+| `globalCollectibles` | Database | Public shared collectibles that servers can add | PRIMARY for public sharing |
+| `serverAddedCollectibles` | Database | References linking servers to added public collectibles | REFERENCE ONLY |
+| `userCollectibleItems` | Database | User inventory of collectible items | USER DATA |
 
-**REQUIRED FIX:**
-1. Audit all collectible-related code paths
-2. Define single source of truth
-3. Remove redundant collections
+**Architecture Clarification (December 13, 2025):**
+- `collectibleItemsSystem.js` is the **CENTRAL HUB** for ALL collectible operations
+- It handles BOTH system collectibles (`collectibleItems`) AND server-specific (`serverCollectibles`)
+- Server-created collectibles use `serverCollectibles` collection
+- Global/public collectibles use `globalCollectibles` collection
+- Servers can add public collectibles via `serverAddedCollectibles` references
+
+**Key Functions in `collectibleItemsSystem.js`:**
+```javascript
+// SYSTEM COLLECTIBLE ITEMS (collectibleItems collection)
+await createCollectibleItem(itemData)
+await getCollectibleItem(itemId)
+await getDroppableCollectibleItems(bundle)
+await getCrateCollectibleItems(bundle, crateType, serverId)
+await awardCollectibleItem(userId, itemId, quantity)
+
+// SERVER-SPECIFIC COLLECTIBLES (serverCollectibles collection)
+await getServerSpecificCollectiblesFromDB(serverId)
+await getServerCollectibleByName(serverId, name)
+await getDroppableServerCollectibles(serverId)
+await getCrateServerCollectibles(serverId, crateType)
+await awardServerCollectible(userId, serverId, collectibleId, quantity)
+
+// USER COLLECTIBLES
+await getUserCollectibleItems(userId, page)
+await getAllUserCollectibleItems(userId)
+```
+
+**CANONICAL USAGE:**
+| Use Case | Function to Use |
+|----------|-----------------|
+| Get system collectibles for crates | `getCrateCollectibleItems(bundle, crateType)` |
+| Get server collectibles for crates | `getCrateServerCollectibles(serverId, crateType)` |
+| Get droppable system items | `getDroppableCollectibleItems(bundle)` |
+| Get droppable server items | `getDroppableServerCollectibles(serverId)` |
+| Award system collectible | `awardCollectibleItem(userId, itemId, quantity)` |
+| Award server collectible | `awardServerCollectible(userId, serverId, collectibleId, quantity)` |
+| Get user's collectible inventory | `getUserCollectibleItems(userId, page)` |
+
+**Status:** ARCHITECTURE DOCUMENTED - `collectibleItemsSystem.js` is the central hub. No code changes needed.
 
 ---
 
@@ -239,7 +276,7 @@ skins.json              - Skin definitions
 - [x] Define single source of truth for characters (documented in section 2)
 - [x] Added `getCombinedCharactersForServer()` and `getCharacterByNameWithServer()` functions
 - [x] Architecture documented - in-memory cache is for base chars, MongoDB for server-specific
-- [ ] Consolidate collectible storage (pending)
+- [x] Collectible storage documented (section 3) - `collectibleItemsSystem.js` is the central hub
 
 ### Phase 4: Configuration Cleanup (TODO)
 - [ ] Centralize all config in config.js
