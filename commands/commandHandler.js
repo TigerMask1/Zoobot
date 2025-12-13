@@ -12,7 +12,9 @@ const CATEGORIES = {
   battle: { name: 'Battle', emoji: '⚔️', description: 'Battle and combat commands' },
   social: { name: 'Social', emoji: '🤝', description: 'Social and community commands' },
   moderation: { name: 'Moderation', emoji: '🛡️', description: 'Moderation commands' },
-  work: { name: 'Work', emoji: '⛏️', description: 'Work and resource commands' }
+  work: { name: 'Work', emoji: '⛏️', description: 'Work and resource commands' },
+  utility: { name: 'Utility', emoji: '🔧', description: 'Utility and info commands' },
+  events: { name: 'Events', emoji: '🎉', description: 'Event commands' }
 };
 
 function registerCommand(command) {
