@@ -2484,14 +2484,14 @@ client.on('messageCreate', async (message) => {
         }
         
         const clan = getClan(data, serverId);
-        const clanProfileEmbed = formatClanProfile(clan, message.guild.name, data);
+        const clanProfileEmbed = await formatClanProfile(clan, message.guild.name, data, serverId);
         await message.reply({ embeds: [clanProfileEmbed] });
         break;
         
       case 'clans':
       case 'clanleaderboard':
         const leaderboard = getClanLeaderboard(data);
-        const leaderboardEmbed = formatClanLeaderboard(leaderboard, client, data);
+        const leaderboardEmbed = await formatClanLeaderboard(leaderboard, client, data);
         await message.reply({ embeds: [leaderboardEmbed] });
         break;
         
