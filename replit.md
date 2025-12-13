@@ -42,6 +42,10 @@ The bot is built on Discord.js v14 and Node.js 20, utilizing a dual-mode data st
 - **Performance Optimization:** In-memory caching, MongoDB indexes, and optimized Discord API calls.
 - **Security:** Role-based access control for critical commands and server customization.
 
+**Aura System:** All commands automatically award 1 aura point to the server. Specific actions award bonus aura (drops: 5, battles: 3-8, crates: 4, daily: 10, work: 3, etc.).
+
+**Auto-Backfill:** On startup, the bot automatically seeds the main server (ID: 1430516117851340893) with all ZooBot original characters and default collectibles if they don't already exist.
+
 ## External Dependencies
 - **Discord.js v14**: For all Discord API interactions.
 - **Node.js 20**: The JavaScript runtime environment.
