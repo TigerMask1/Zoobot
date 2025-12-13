@@ -2,6 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 const { canSetupServer, isServerOwner } = require('../../serverConfigManager.js');
 const characterManager = require('../../characterManager.js');
 const { getCollection } = require('../../mongoManager.js');
+const { getServerSlotLimits } = require('../../serverAuraSystem.js');
 const crypto = require('crypto');
 
 function generateUniqueId() {
@@ -123,6 +124,27 @@ function showHelp(message) {
 }
 
 async function handleCreate(message, serverId, userId, client) {
+  const slotLimits = await getServerSlotLimits(serverId);
+  const currentCharCount = await characterManager.getServerCharacterCount(serverId);
+  
+  if (currentCharCount >= slotLimits.characterSlots) {
+    const embed = new EmbedBuilder()
+      .setColor(0xFF0000)
+      .setTitle('❌ Character Slot Limit Reached')
+      .setDescription(
+        `Your server has reached the maximum character slot limit!\n\n` +
+        `**Current Characters:** ${currentCharCount}/${slotLimits.characterSlots}\n` +
+        `**Server Level:** ${slotLimits.level}\n\n` +
+        `To create more characters, you need to:\n` +
+        `• Purchase more slots using \`!serveraura buy character\`\n` +
+        `• Level up your server by earning more aura through activity\n\n` +
+        `Use \`!serveraura\` to view your server's aura and slots.`
+      )
+      .setFooter({ text: 'Earn aura through drops, battles, and daily activities!' });
+    
+    return message.reply({ embeds: [embed] });
+  }
+  
   const creationId = `${serverId}-${userId}-${Date.now()}`;
   const uniqueId = generateUniqueId();
   

@@ -233,13 +233,18 @@ async function purchaseSlot(serverId, slotType, userId) {
   }
 }
 
+const BASE_FREE_CHARACTER_SLOTS = 5;
+const BASE_FREE_COLLECTIBLE_SLOTS = 10;
+
 async function getServerSlotLimits(serverId) {
   const serverAura = await getServerAura(serverId);
   if (!serverAura) {
     const defaultConfig = getServerLevelConfig(1);
     return {
-      characterSlots: defaultConfig.maxCharSlots,
-      collectibleSlots: defaultConfig.maxCollectSlots,
+      characterSlots: BASE_FREE_CHARACTER_SLOTS,
+      collectibleSlots: BASE_FREE_COLLECTIBLE_SLOTS,
+      maxCharSlots: defaultConfig.maxCharSlots,
+      maxCollectSlots: defaultConfig.maxCollectSlots,
       purchasedCharSlots: 0,
       purchasedCollectSlots: 0,
       level: 1
@@ -247,13 +252,19 @@ async function getServerSlotLimits(serverId) {
   }
   
   const levelConfig = getServerLevelConfig(serverAura.level);
+  const purchasedChar = serverAura.purchasedCharSlots || 0;
+  const purchasedCollect = serverAura.purchasedCollectSlots || 0;
+  
+  const totalCharSlots = Math.min(BASE_FREE_CHARACTER_SLOTS + purchasedChar, levelConfig.maxCharSlots);
+  const totalCollectSlots = Math.min(BASE_FREE_COLLECTIBLE_SLOTS + purchasedCollect, levelConfig.maxCollectSlots);
+  
   return {
-    characterSlots: Math.min(serverAura.purchasedCharSlots, levelConfig.maxCharSlots) || 5,
-    collectibleSlots: Math.min(serverAura.purchasedCollectSlots, levelConfig.maxCollectSlots) || 10,
+    characterSlots: totalCharSlots,
+    collectibleSlots: totalCollectSlots,
     maxCharSlots: levelConfig.maxCharSlots,
     maxCollectSlots: levelConfig.maxCollectSlots,
-    purchasedCharSlots: serverAura.purchasedCharSlots,
-    purchasedCollectSlots: serverAura.purchasedCollectSlots,
+    purchasedCharSlots: purchasedChar,
+    purchasedCollectSlots: purchasedCollect,
     level: serverAura.level
   };
 }
@@ -508,6 +519,8 @@ module.exports = {
   AURA_REWARDS,
   SLOT_BASE_COST,
   SLOT_COST_MULTIPLIER,
+  BASE_FREE_CHARACTER_SLOTS,
+  BASE_FREE_COLLECTIBLE_SLOTS,
   initializeServerAuraIndexes,
   getServerAura,
   addAura,

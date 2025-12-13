@@ -1,6 +1,7 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { canSetupServer, isServerOwner } = require('../../serverConfigManager.js');
 const { getCollection } = require('../../mongoManager.js');
+const { getServerSlotLimits } = require('../../serverAuraSystem.js');
 const crypto = require('crypto');
 
 function generateUniqueId() {
@@ -97,7 +98,39 @@ function showHelp(message) {
   return message.reply({ embeds: [embed] });
 }
 
+async function getServerCollectibleCount(serverId) {
+  try {
+    const collection = await getCollection('serverCollectibles');
+    const count = await collection.countDocuments({ serverId, status: 'active' });
+    return count;
+  } catch (error) {
+    console.error('Error counting server collectibles:', error);
+    return 0;
+  }
+}
+
 async function handleCreate(message, serverId, userId, client) {
+  const slotLimits = await getServerSlotLimits(serverId);
+  const currentColCount = await getServerCollectibleCount(serverId);
+  
+  if (currentColCount >= slotLimits.collectibleSlots) {
+    const embed = new EmbedBuilder()
+      .setColor(0xFF0000)
+      .setTitle('❌ Collectible Slot Limit Reached')
+      .setDescription(
+        `Your server has reached the maximum collectible slot limit!\n\n` +
+        `**Current Collectibles:** ${currentColCount}/${slotLimits.collectibleSlots}\n` +
+        `**Server Level:** ${slotLimits.level}\n\n` +
+        `To create more collectibles, you need to:\n` +
+        `• Purchase more slots using \`!serveraura buy collectible\`\n` +
+        `• Level up your server by earning more aura through activity\n\n` +
+        `Use \`!serveraura\` to view your server's aura and slots.`
+      )
+      .setFooter({ text: 'Earn aura through drops, battles, and daily activities!' });
+    
+    return message.reply({ embeds: [embed] });
+  }
+  
   const creationId = `${serverId}-${userId}-${Date.now()}`;
   
   const uniqueId = generateUniqueId();
