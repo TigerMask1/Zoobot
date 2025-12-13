@@ -2,6 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelect
 const { saveDataImmediate, saveData } = require('./dataManager.js');
 const characterManager = require('./characterManager.js');
 const { isMainServer, getServerConfig, getServerGame, hasSelectedGame, DEFAULT_GAME, isSuperAdmin, saveServerConfig } = require('./serverConfigManager.js');
+const { BOT_CONFIG } = require('./config.js');
 
 const USE_MONGODB = process.env.USE_MONGODB === 'true';
 let mongoManager = null;
@@ -12,8 +13,8 @@ if (USE_MONGODB) {
 const KEYS_TO_UNLOCK = 750;
 const KEY_RUSH_COST = 250;
 const KEY_RUSH_DURATION = 3600000;
-const MAIN_SERVER_ID = '1430516117851340893';
-const MAIN_DROP_CHANNEL = '1430525383635107850';
+const MAIN_SERVER_ID = BOT_CONFIG.MAIN_SERVER_ID;
+const MAIN_DROP_CHANNEL = BOT_CONFIG.MAIN_DROP_CHANNEL;
 const EVENT_ROLE_NAME = 'event';
 
 const KEY_RUSH_SCHEDULE = [

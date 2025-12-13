@@ -7,19 +7,20 @@ const { isKeyRushActive, getKeyRushTimeRemaining } = require('./characterKeySyst
 const { getDroppableCollectibleItems, awardCollectibleItem, awardServerCollectible, getRarityTier, getDroppableServerCollectibles } = require('./collectibleItemsSystem.js');
 const { addAura } = require('./serverAuraSystem.js');
 const { shouldDropChristmasGift, addChristmasGift, isEventActive, createCommunityMilestoneAnnouncement, distributeMilestoneRewards } = require('./christmasEventSystem.js');
+const { BOT_CONFIG } = require('./config.js');
 
 let dropIntervals = new Map();
 let activeClient = null;
 let activeData = null;
 let serverInactivityStatus = new Map();
 
-const MAIN_SERVER_ID = '1430516117851340893';
-const MAIN_DROP_CHANNEL = '1430525383635107850';
+const MAIN_SERVER_ID = BOT_CONFIG.MAIN_SERVER_ID;
+const MAIN_DROP_CHANNEL = BOT_CONFIG.MAIN_DROP_CHANNEL;
 
-const DROP_CODES = ['tyrant', 'zooba', 'zoo', 'catch', 'grab', 'quick', 'fast', 'win', 'get', 'take'];
-const DROP_DURATION = 3 * 3600000; // 3 hours in milliseconds
-const DROP_COST = 100; // gems
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes of inactivity before pause
+const DROP_CODES = BOT_CONFIG.DROPS.CODES;
+const DROP_DURATION = BOT_CONFIG.DROPS.DURATION;
+const DROP_COST = BOT_CONFIG.DROPS.COST;
+const INACTIVITY_TIMEOUT = BOT_CONFIG.DROPS.INACTIVITY_TIMEOUT;
 
 // ======================================================
 //  DROP PAYMENT & STATUS FUNCTIONS

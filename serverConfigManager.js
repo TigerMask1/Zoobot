@@ -1,7 +1,8 @@
 const { getCollection } = require('./mongoManager.js');
+const { BOT_CONFIG } = require('./config.js');
 
-const MAIN_SERVER_ID = '1430516117851340893';
-const SUPER_ADMINS = ['1296110901057032202', '1296109674361520146', '1178728978488504400'];
+const MAIN_SERVER_ID = BOT_CONFIG.MAIN_SERVER_ID;
+const SUPER_ADMINS = BOT_CONFIG.SUPER_ADMINS;
 const DEFAULT_GAME = 'ZooBot';
 
 let serverConfigs = {};
