@@ -6,9 +6,9 @@ const EVENT_START = new Date('2025-12-15T00:00:00Z').getTime();
 const EVENT_END = new Date('2025-12-25T23:59:59Z').getTime();
 
 const CHRISTMAS_PFP_REWARD = {
-  id: 'christmas_miracle_2024',
-  name: 'Christmas Miracle 2024',
-  url: null,
+  id: 'christmas_miracle_2025',
+  name: 'Christmas Miracle 2025',
+  url: 'https://i.imgur.com/placeholder_christmas.png',
   description: 'Exclusive profile picture for achieving the Christmas Miracle milestone!'
 };
 
@@ -435,7 +435,7 @@ function applyRewardsToUser(user, rewards) {
   if (rewards.legendaryCrates) user.legendaryCrates = (user.legendaryCrates || 0) + rewards.legendaryCrates;
   if (rewards.tyrantCrates) user.tyrantCrates = (user.tyrantCrates || 0) + rewards.tyrantCrates;
   
-  if (rewards.pfpReward) {
+  if (rewards.pfpReward && CHRISTMAS_PFP_REWARD.url) {
     if (!user.pfp) {
       user.pfp = { ownedPfps: [], equippedPfp: null };
     }
@@ -446,7 +446,7 @@ function applyRewardsToUser(user, rewards) {
         name: CHRISTMAS_PFP_REWARD.name,
         url: CHRISTMAS_PFP_REWARD.url,
         addedAt: Date.now(),
-        source: 'christmas_event_2024'
+        source: 'christmas_event_2025'
       });
     }
   }

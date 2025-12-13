@@ -12,7 +12,7 @@ const { generateST } = require('./utils/shared.js');
 const { tryDropCollectibleFromCrate, getCrateServerCollectibles, awardCollectibleItem, awardServerCollectible } = require('./collectibleItemsSystem.js');
 const { isMongoConnected } = require('./mongoManager.js');
 const { addAura } = require('./serverAuraSystem.js');
-const { shouldDropChristmasGift, addChristmasGift, isEventActive, createCommunityMilestoneAnnouncement } = require('./christmasEventSystem.js');
+const { shouldDropChristmasGift, addChristmasGift, isEventActive, createCommunityMilestoneAnnouncement, distributeMilestoneRewards } = require('./christmasEventSystem.js');
 
 async function safeDropCollectibleFromCrate(userId, serverGame, crateType, serverId) {
   if (!isMongoConnected()) {
@@ -327,10 +327,17 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
       if (giftResult.success) {
         rewards += `\n\n🎁🎄 **CHRISTMAS GIFT!** You found a festive gift!\n✨ Your gifts: ${giftResult.userGifts} | Server: ${giftResult.serverGifts} | Global: ${giftResult.totalGifts}`;
         
+        const { getData } = require('./dataManager.js');
         for (const notification of giftResult.notifications || []) {
           if (notification.type === 'community' && client) {
-            const { getData } = require('./dataManager.js');
             await createCommunityMilestoneAnnouncement(client, getData(), notification.milestone);
+          } else if (notification.type === 'personal') {
+            await distributeMilestoneRewards(client, getData(), notification.milestone, 'personal', userId);
+            rewards += `\n🎄 **PERSONAL MILESTONE!** ${notification.milestone.name} reached!`;
+          } else if (notification.type === 'server' && serverId) {
+            const serverUsers = Object.keys(getData().users).filter(uid => getData().users[uid]);
+            await distributeMilestoneRewards(client, getData(), notification.milestone, 'server', null, serverUsers.slice(0, 100));
+            rewards += `\n🎄 **SERVER MILESTONE!** ${notification.milestone.name} reached!`;
           }
         }
       }
@@ -564,6 +571,13 @@ async function openCratesInBulk(data, userId, crateType, quantity, client = null
         for (const notification of lastGiftResult.notifications || []) {
           if (notification.type === 'community' && client) {
             await createCommunityMilestoneAnnouncement(client, data, notification.milestone);
+          } else if (notification.type === 'personal') {
+            await distributeMilestoneRewards(client, data, notification.milestone, 'personal', userId);
+            summary += `\n🎄 **PERSONAL MILESTONE!** ${notification.milestone.name} reached!`;
+          } else if (notification.type === 'server' && serverId) {
+            const serverUsers = Object.keys(data.users).filter(uid => data.users[uid]);
+            await distributeMilestoneRewards(client, data, notification.milestone, 'server', null, serverUsers.slice(0, 100));
+            summary += `\n🎄 **SERVER MILESTONE!** ${notification.milestone.name} reached!`;
           }
         }
       }

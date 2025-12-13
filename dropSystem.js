@@ -6,7 +6,7 @@ const { updateTaskProgress } = require('./seasonSystem.js');
 const { isKeyRushActive, getKeyRushTimeRemaining } = require('./characterKeySystem.js');
 const { getDroppableCollectibleItems, awardCollectibleItem, awardServerCollectible, getRarityTier, getDroppableServerCollectibles } = require('./collectibleItemsSystem.js');
 const { addAura } = require('./serverAuraSystem.js');
-const { shouldDropChristmasGift, addChristmasGift, isEventActive, createCommunityMilestoneAnnouncement } = require('./christmasEventSystem.js');
+const { shouldDropChristmasGift, addChristmasGift, isEventActive, createCommunityMilestoneAnnouncement, distributeMilestoneRewards } = require('./christmasEventSystem.js');
 
 let dropIntervals = new Map();
 let activeClient = null;

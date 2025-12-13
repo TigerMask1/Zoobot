@@ -3795,7 +3795,7 @@ client.on('messageCreate', async (message) => {
             
             let christmasGiftText = '';
             try {
-              const { shouldDropChristmasGift, addChristmasGift, createCommunityMilestoneAnnouncement } = require('./christmasEventSystem.js');
+              const { shouldDropChristmasGift, addChristmasGift, createCommunityMilestoneAnnouncement, distributeMilestoneRewards } = require('./christmasEventSystem.js');
               if (shouldDropChristmasGift('drop')) {
                 const giftResult = await addChristmasGift(userId, serverId, 'drop');
                 if (giftResult.success) {
@@ -3804,6 +3804,13 @@ client.on('messageCreate', async (message) => {
                   for (const notification of giftResult.notifications || []) {
                     if (notification.type === 'community') {
                       await createCommunityMilestoneAnnouncement(client, data, notification.milestone);
+                    } else if (notification.type === 'personal') {
+                      await distributeMilestoneRewards(client, data, notification.milestone, 'personal', userId);
+                      christmasGiftText += `\n🎄 **PERSONAL MILESTONE!** ${notification.milestone.name} reached!`;
+                    } else if (notification.type === 'server' && serverId) {
+                      const serverUsers = Object.keys(data.users).filter(uid => data.users[uid]);
+                      await distributeMilestoneRewards(client, data, notification.milestone, 'server', null, serverUsers.slice(0, 100));
+                      christmasGiftText += `\n🎄 **SERVER MILESTONE!** ${notification.milestone.name} reached!`;
                     }
                   }
                 }
