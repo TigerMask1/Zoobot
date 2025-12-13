@@ -586,6 +586,14 @@ client.on('clientReady', async () => {
     } catch (error) {
       console.warn('⚠️ Collectible items init error:', error.message);
     }
+    
+    // Auto-backfill main server with ZooBot original characters and default collectibles
+    try {
+      await backfillMainServerData();
+      console.log('✅ Main server characters and collectibles backfilled');
+    } catch (error) {
+      console.warn('⚠️ Could not backfill main server data:', error.message);
+    }
   }
   
   try {
@@ -9236,6 +9244,102 @@ client.on('messageCreate', async (message) => {
     await message.reply('❌ An error occurred while processing your command!');
   }
 });
+
+// Auto-backfill main server with ZooBot original characters and default collectibles
+async function backfillMainServerData() {
+  const { getCollection, isMongoConnected } = require('./mongoManager.js');
+  const { BOT_CONFIG } = require('./config.js');
+  const HARDCODED_CHARACTERS = require('./characters.js');
+  const crypto = require('crypto');
+  
+  if (!isMongoConnected()) {
+    console.log('⚠️ MongoDB not connected, skipping main server backfill');
+    return;
+  }
+  
+  const mainServerId = BOT_CONFIG.MAIN_SERVER_ID;
+  
+  // Backfill characters
+  const charCollection = await getCollection('serverCharacters');
+  let charsAdded = 0;
+  
+  for (const char of HARDCODED_CHARACTERS) {
+    const existing = await charCollection.findOne({
+      serverId: mainServerId,
+      name: { $regex: new RegExp(`^${char.name}$`, 'i') }
+    });
+    
+    if (!existing) {
+      const uniqueId = crypto.randomBytes(4).toString('hex').toUpperCase();
+      await charCollection.insertOne({
+        serverId: mainServerId,
+        uniqueId,
+        name: char.name,
+        emoji: char.emoji,
+        customEmojiId: char.customEmojiId || null,
+        description: `${char.name} - A ZooBot original character`,
+        rarity: 'common',
+        obtainable: char.obtainable || 'crate',
+        game: 'ZooBot',
+        ability: { name: `${char.name}'s Power`, emoji: '⭐', description: 'Gains a small damage bonus.', type: 'passive', effect: { flatDamageBonus: 5 } },
+        specialMove: { name: `${char.name}'s Strike`, damage: 90 },
+        stats: { hp: 100, attack: 50, defense: 50, speed: 50, critChance: 0.1, dodgeChance: 0.05 },
+        dropSettings: { enabled: true, probability: 10 },
+        crateSettings: { enabled: true, probability: 10, crates: ['bronze', 'silver', 'gold'] },
+        status: 'active',
+        createdBy: 'ZooBot',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      charsAdded++;
+    }
+  }
+  
+  // Backfill default collectibles
+  const collectCollection = await getCollection('serverCollectibles');
+  const DEFAULT_COLLECTIBLES = [
+    { name: 'Golden Trophy', emoji: '🏆', rarity: 'legendary', baseValue: 500 },
+    { name: 'Diamond Ring', emoji: '💍', rarity: 'epic', baseValue: 300 },
+    { name: 'Ancient Coin', emoji: '🪙', rarity: 'rare', baseValue: 150 },
+    { name: 'Magic Crystal', emoji: '🔮', rarity: 'ultra rare', baseValue: 200 },
+    { name: 'Lucky Clover', emoji: '🍀', rarity: 'uncommon', baseValue: 75 },
+    { name: 'Seashell', emoji: '🐚', rarity: 'common', baseValue: 30 },
+    { name: 'Star Fragment', emoji: '⭐', rarity: 'rare', baseValue: 120 },
+    { name: 'Rainbow Feather', emoji: '🪶', rarity: 'epic', baseValue: 250 },
+    { name: 'Crown Jewel', emoji: '👑', rarity: 'legendary', baseValue: 750 },
+    { name: 'Mystic Orb', emoji: '🌐', rarity: 'ultra rare', baseValue: 180 }
+  ];
+  
+  let collectiblesAdded = 0;
+  for (const item of DEFAULT_COLLECTIBLES) {
+    const existing = await collectCollection.findOne({
+      serverId: mainServerId,
+      name: { $regex: new RegExp(`^${item.name}$`, 'i') }
+    });
+    
+    if (!existing) {
+      const uniqueId = crypto.randomBytes(4).toString('hex').toUpperCase();
+      await collectCollection.insertOne({
+        serverId: mainServerId,
+        uniqueId,
+        name: item.name,
+        emoji: item.emoji,
+        rarity: item.rarity,
+        baseValue: item.baseValue,
+        droppable: { enabled: true, probability: 10 },
+        crateObtainable: { enabled: true, probability: 10, crates: ['bronze', 'silver', 'gold'] },
+        status: 'active',
+        createdBy: 'ZooBot',
+        createdAt: new Date()
+      });
+      collectiblesAdded++;
+    }
+  }
+  
+  if (charsAdded > 0 || collectiblesAdded > 0) {
+    console.log(`📦 Backfilled main server: ${charsAdded} characters, ${collectiblesAdded} collectibles`);
+  }
+}
 
 async function gracefulShutdown(signal) {
   console.log(`\n${signal} received. Starting graceful shutdown...`);
