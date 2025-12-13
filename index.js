@@ -9221,6 +9221,16 @@ client.on('messageCreate', async (message) => {
       }
     }
     
+    // Add server aura for command execution
+    if (message.guild) {
+      try {
+        const { addAura } = require('./serverAuraSystem.js');
+        addAura(message.guild.id, 1, 'command').catch(e => console.error('Error adding command aura:', e));
+      } catch (auraError) {
+        // Silently fail aura tracking
+      }
+    }
+    
   } catch (error) {
     console.error('Command error:', error);
     await message.reply('❌ An error occurred while processing your command!');
