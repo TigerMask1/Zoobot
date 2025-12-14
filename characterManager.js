@@ -845,18 +845,23 @@ async function getDroppableServerCharacters(serverId) {
       status: 'active' 
     }).toArray();
     
-    // All active server characters are droppable by default
+    // Server characters are droppable by default unless explicitly disabled
     for (const char of serverChars) {
-      allDroppableChars.push({
-        name: char.name,
-        emoji: char.emoji,
-        rarity: char.rarity || 'common',
-        isServerSpecific: true,
-        source: 'server'
-      });
+      // Default to droppable if dropSettings is not set, or if it's explicitly enabled
+      const isDroppable = char.dropSettings?.enabled !== false;
+      if (isDroppable) {
+        allDroppableChars.push({
+          name: char.name,
+          emoji: char.emoji,
+          rarity: char.rarity || 'common',
+          isServerSpecific: true,
+          source: 'server'
+        });
+      }
     }
     
     // 2. Get added global characters (from serverAddedCharacters collection)
+    // These are always droppable since adding them implies intent to use them in drops
     const serverAddedCol = await mongoManager.getCollection('serverAddedCharacters');
     const addedCharRecords = await serverAddedCol.find({ serverId }).toArray();
     
