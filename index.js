@@ -520,6 +520,13 @@ client.on('clientReady', async () => {
   
   if (USE_MONGODB) {
     try {
+      const { setupDatabaseIndexes } = require('./mongoManager.js');
+      await setupDatabaseIndexes();
+    } catch (error) {
+      console.warn('⚠️ Could not setup database indexes:', error.message);
+    }
+    
+    try {
       await loadServerConfigs();
     } catch (error) {
       console.warn('⚠️ Could not load server configs from MongoDB');

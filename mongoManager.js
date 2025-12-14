@@ -670,6 +670,54 @@ async function loadLotteryData() {
   }
 }
 
+async function setupDatabaseIndexes() {
+  if (!connected) {
+    console.log('⚠️ MongoDB not connected, skipping index setup');
+    return false;
+  }
+
+  try {
+    console.log('🔧 Setting up MongoDB indexes...');
+
+    const usersCollection = await getCollection('users');
+    await usersCollection.createIndex({ userId: 1 }, { unique: true, background: true });
+    await usersCollection.createIndex({ trophies: -1 }, { background: true });
+    await usersCollection.createIndex({ coins: -1 }, { background: true });
+    await usersCollection.createIndex({ gems: -1 }, { background: true });
+
+    const eventsCollection = await getCollection('events');
+    await eventsCollection.createIndex({ status: 1, startAt: -1 }, { background: true });
+    await eventsCollection.createIndex({ eventType: 1 }, { background: true });
+    await eventsCollection.createIndex({ endAt: 1 }, { background: true });
+
+    const participantsCollection = await getCollection('event_participants');
+    await participantsCollection.createIndex({ eventId: 1, userId: 1 }, { unique: true, background: true });
+    await participantsCollection.createIndex({ eventId: 1, score: -1 }, { background: true });
+    await participantsCollection.createIndex({ userId: 1 }, { background: true });
+
+    const serverConfigsCollection = await getCollection('serverConfigs');
+    await serverConfigsCollection.createIndex({ serverId: 1 }, { unique: true, background: true });
+
+    const serverCharactersCollection = await getCollection('serverCharacters');
+    await serverCharactersCollection.createIndex({ serverId: 1 }, { background: true });
+    await serverCharactersCollection.createIndex({ serverId: 1, name: 1 }, { background: true });
+    await serverCharactersCollection.createIndex({ serverId: 1, uniqueId: 1 }, { unique: true, background: true });
+
+    const serverCollectiblesCollection = await getCollection('serverCollectibles');
+    await serverCollectiblesCollection.createIndex({ serverId: 1 }, { background: true });
+    await serverCollectiblesCollection.createIndex({ serverId: 1, name: 1 }, { background: true });
+
+    const clansCollection = await getCollection('clans');
+    await clansCollection.createIndex({ serverId: 1 }, { unique: true, background: true });
+
+    console.log('✅ MongoDB indexes created successfully');
+    return true;
+  } catch (error) {
+    console.error('⚠️ Error setting up indexes (non-fatal):', error.message);
+    return false;
+  }
+}
+
 module.exports = {
   connect,
   disconnect,
@@ -698,5 +746,6 @@ module.exports = {
   saveGiveawayData,
   loadGiveawayData,
   saveLotteryData,
-  loadLotteryData
+  loadLotteryData,
+  setupDatabaseIndexes
 };
