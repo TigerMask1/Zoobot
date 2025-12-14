@@ -831,8 +831,59 @@ async function getServerSpecialMove(serverId, characterName) {
 }
 
 async function getDroppableServerCharacters(serverId) {
-  const characters = await getServerSpecificCharactersFromDB(serverId);
-  return characters.filter(c => c.dropSettings?.enabled === true);
+  if (!USE_MONGODB || !mongoManager) {
+    return [];
+  }
+  
+  try {
+    const allDroppableChars = [];
+    
+    // 1. Get server-created characters (from serverCharacters collection)
+    const serverCharsCollection = await mongoManager.getCollection('serverCharacters');
+    const serverChars = await serverCharsCollection.find({ 
+      serverId, 
+      status: 'active' 
+    }).toArray();
+    
+    // All active server characters are droppable by default
+    for (const char of serverChars) {
+      allDroppableChars.push({
+        name: char.name,
+        emoji: char.emoji,
+        rarity: char.rarity || 'common',
+        isServerSpecific: true,
+        source: 'server'
+      });
+    }
+    
+    // 2. Get added global characters (from serverAddedCharacters collection)
+    const serverAddedCol = await mongoManager.getCollection('serverAddedCharacters');
+    const addedCharRecords = await serverAddedCol.find({ serverId }).toArray();
+    
+    if (addedCharRecords.length > 0) {
+      const globalCharsCol = await mongoManager.getCollection('globalCharacters');
+      const globalIds = addedCharRecords.map(a => a.characterId);
+      const globalChars = await globalCharsCol.find({ 
+        uniqueId: { $in: globalIds },
+        status: 'active'
+      }).toArray();
+      
+      for (const char of globalChars) {
+        allDroppableChars.push({
+          name: char.name,
+          emoji: char.emoji,
+          rarity: char.rarity || 'common',
+          isServerSpecific: false,
+          source: 'global'
+        });
+      }
+    }
+    
+    return allDroppableChars;
+  } catch (error) {
+    console.error(`Error getting droppable characters for server ${serverId}:`, error);
+    return [];
+  }
 }
 
 async function getCrateServerCharacters(serverId, crateType = null) {

@@ -1,10 +1,10 @@
 const { EmbedBuilder } = require('discord.js');
 const { saveData, saveDataImmediate } = require('./dataManager.js');
 const characterManager = require('./characterManager.js');
-const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerGame, hasSelectedGame, DEFAULT_GAME, getServerSelectedCharacters, hasServerSelectedCharacters } = require('./serverConfigManager.js');
+const { isMainServer, getServerConfig, getDropInterval, isServerSetup, saveServerConfig, getServerSelectedCharacters, hasServerSelectedCharacters } = require('./serverConfigManager.js');
 const { updateTaskProgress } = require('./seasonSystem.js');
 const { isKeyRushActive, getKeyRushTimeRemaining } = require('./characterKeySystem.js');
-const { getDroppableCollectibleItems, awardCollectibleItem, awardServerCollectible, getRarityTier, getDroppableServerCollectibles } = require('./collectibleItemsSystem.js');
+const { awardCollectibleItem, awardServerCollectible, getRarityTier, getDroppableServerCollectibles } = require('./collectibleItemsSystem.js');
 const { addAura } = require('./serverAuraSystem.js');
 const { shouldDropChristmasGift, addChristmasGift, isEventActive, createCommunityMilestoneAnnouncement, distributeMilestoneRewards } = require('./christmasEventSystem.js');
 const { BOT_CONFIG } = require('./config.js');
@@ -50,10 +50,6 @@ async function payForDrops(serverId, userId, data) {
   const characterCount = await characterManager.getServerCharacterCount(serverId);
   if (characterCount < MINIMUM_CHARACTERS_REQUIRED) {
     return { success: false, message: `❌ Not enough characters! You need at least ${MINIMUM_CHARACTERS_REQUIRED} characters to activate drops.\n\n📊 Current count: ${characterCount}/${MINIMUM_CHARACTERS_REQUIRED}\n\nAdd characters using:\n• \`!sc create\` - Create a custom character\n• \`!chars add <id>\` - Add a public character` };
-  }
-  
-  if (!hasSelectedGame(serverId)) {
-    return { success: false, message: '❌ No game selected! Use `!setgame <game>` to select a game/bundle before activating drops.' };
   }
   
   const config = getServerConfig(serverId);
@@ -141,11 +137,6 @@ async function startDropsForServer(serverId, sendResumeNotification = false) {
       console.log(`⚠️ Server ${serverId}: Not enough characters (${charCount}/${MINIMUM_CHARACTERS_REQUIRED}), skipping drops`);
       return;
     }
-  }
-
-  if (!isMainServer(serverId) && !hasSelectedGame(serverId)) {
-    console.log(`⚠️ Server ${serverId}: No game selected, skipping drops`);
-    return;
   }
 
   if (!isMainServer(serverId) && !areDropsActive(serverId)) {
@@ -296,33 +287,24 @@ async function executeDrop(serverId) {
     
     const keyRushActive = isKeyRushActive(serverId);
     
-    // Get server-configured characters
+    // Get server-configured characters from !sc list (works for ALL servers including main)
     let availableChars = [];
     
-    if (isMainServer(serverId)) {
-      // Main server uses game-based characters from the default game
-      const serverGame = getServerGame(serverId) || DEFAULT_GAME;
-      const gameChars = characterManager.getCharactersByGame(serverGame);
-      availableChars = gameChars
-        .filter(c => c.obtainable === 'drop')
-        .map(c => ({ name: c.name, emoji: c.emoji, rarity: c.rarity }));
-    } else {
-      // Non-main servers ONLY use their own server-specific characters
-      const serverDropChars = await characterManager.getDroppableServerCharacters(serverId);
-      if (serverDropChars && serverDropChars.length > 0) {
-        availableChars = serverDropChars.map(c => ({ 
-          name: c.name, 
-          emoji: c.emoji, 
-          rarity: c.rarity,
-          isServerSpecific: true 
-        }));
-      }
-      
-      // If no characters, notify once and skip this drop
-      if (availableChars.length === 0) {
-        console.log(`⚠️ Server ${serverId} has no characters configured for drops`);
-        return;
-      }
+    const serverDropChars = await characterManager.getDroppableServerCharacters(serverId);
+    if (serverDropChars && serverDropChars.length > 0) {
+      availableChars = serverDropChars.map(c => ({ 
+        name: c.name, 
+        emoji: c.emoji, 
+        rarity: c.rarity,
+        isServerSpecific: c.isServerSpecific !== false,
+        source: c.source || 'server'
+      }));
+    }
+    
+    // If no characters, notify once and skip this drop
+    if (availableChars.length === 0) {
+      console.log(`⚠️ Server ${serverId} has no characters configured for drops. Use !sc create or !chars add to add characters.`);
+      return;
     }
     
     if (keyRushActive) {
@@ -376,16 +358,8 @@ async function executeDrop(serverId) {
     
     // Check for collectible item drop (separate roll with item-specific probability)
     try {
-      let droppableItems = [];
-      
-      if (isMainServer(serverId)) {
-        // Main server uses global collectibles
-        const serverGame = getServerGame(serverId) || DEFAULT_GAME;
-        droppableItems = await getDroppableCollectibleItems(serverGame);
-      } else {
-        // Non-main servers ONLY use their own server-specific collectibles
-        droppableItems = await getDroppableServerCollectibles(serverId);
-      }
+      // All servers use their own server-specific collectibles from !scoll list
+      const droppableItems = await getDroppableServerCollectibles(serverId);
       
       if (droppableItems.length > 0 && !keyRushActive) {
         for (const item of droppableItems) {
