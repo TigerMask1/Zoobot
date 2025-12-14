@@ -75,7 +75,9 @@ async function payForDrops(serverId, userId, data) {
   await saveDataImmediate(data);
   
   // Restart drops for this server to begin immediately
-  startDropsForServer(serverId);
+  await startDropsForServer(serverId);
+  
+  console.log(`✅ payForDrops: Drops started for server ${serverId}, expires at ${new Date(expiryTime).toISOString()}`);
   
   const expiryDate = new Date(expiryTime);
   return {
