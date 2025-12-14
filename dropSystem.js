@@ -358,7 +358,7 @@ async function executeDrop(serverId) {
     
     // Check for collectible item drop (separate roll with item-specific probability)
     try {
-      // All servers use their own server-specific collectibles from !scoll list
+      // All servers use their own server-specific collectibles from !scol list
       const droppableItems = await getDroppableServerCollectibles(serverId);
       
       if (droppableItems.length > 0 && !keyRushActive) {
