@@ -669,28 +669,63 @@ async function handleList(message, serverId) {
     
     try {
       const serverCharsCol = await getCollection('serverCharacters');
+      // Include characters without status field or with status 'active'
       serverChars = await serverCharsCol.find({ 
-        serverId, 
-        status: 'active' 
+        serverId,
+        $or: [
+          { status: 'active' },
+          { status: { $exists: false } }
+        ]
       }).toArray();
       
       const addedCharsCol = await getCollection('serverAddedCharacters');
-      const globalCharsCol = await getCollection('globalCharacters');
       const addedRecords = await addedCharsCol.find({ serverId }).toArray();
       
       if (addedRecords.length > 0) {
         const charIds = addedRecords.map(r => r.characterId).filter(Boolean);
         const charNames = addedRecords.map(r => r.characterName).filter(Boolean);
         
-        const globalChars = await globalCharsCol.find({
-          $or: [
-            { uniqueId: { $in: charIds } },
-            { name: { $in: charNames.map(n => new RegExp(`^${n}$`, 'i')) } }
-          ],
-          status: 'active'
-        }).toArray();
+        // Query globalCharacters if we have IDs or names
+        if (charIds.length > 0 || charNames.length > 0) {
+          const globalCharsCol = await getCollection('globalCharacters');
+          const queryConditions = [];
+          
+          if (charIds.length > 0) {
+            queryConditions.push({ uniqueId: { $in: charIds } });
+          }
+          if (charNames.length > 0) {
+            queryConditions.push({ name: { $in: charNames.map(n => new RegExp(`^${n}$`, 'i')) } });
+          }
+          
+          const globalChars = await globalCharsCol.find({
+            $and: [
+              { $or: queryConditions },
+              { $or: [{ status: 'active' }, { status: { $exists: false } }] }
+            ]
+          }).toArray();
+          
+          addedFromGlobal = globalChars.map(c => ({ ...c, addedFrom: 'global' }));
+        }
         
-        addedFromGlobal = globalChars.map(c => ({ ...c, addedFrom: 'global' }));
+        // Also check if added characters are in serverCharacters of OTHER servers (public chars)
+        if (charIds.length > 0 && addedFromGlobal.length < charIds.length) {
+          const publicServerChars = await serverCharsCol.find({
+            uniqueId: { $in: charIds },
+            isPublic: true,
+            $or: [
+              { status: 'active' },
+              { status: { $exists: false } }
+            ]
+          }).toArray();
+          
+          // Add any that weren't found in globalCharacters
+          const foundIds = new Set(addedFromGlobal.map(c => c.uniqueId));
+          for (const char of publicServerChars) {
+            if (!foundIds.has(char.uniqueId)) {
+              addedFromGlobal.push({ ...char, addedFrom: 'public' });
+            }
+          }
+        }
       }
     } catch (e) {
       console.error('Could not fetch server characters from MongoDB:', e.message);
