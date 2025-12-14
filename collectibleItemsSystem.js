@@ -1720,7 +1720,8 @@ async function getAllCollectiblesForServer(serverId) {
 
 async function getDroppableServerCollectibles(serverId) {
   const collectibles = await getServerSpecificCollectiblesFromDB(serverId);
-  return collectibles.filter(c => c.droppable?.enabled === true);
+  // Server collectibles use 'dropSettings' field (from !scol create command)
+  return collectibles.filter(c => c.dropSettings?.enabled === true);
 }
 
 async function getCrateServerCollectibles(serverId, crateType = null) {

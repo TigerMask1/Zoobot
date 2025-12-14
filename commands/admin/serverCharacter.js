@@ -541,6 +541,16 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
       isPublic: false,
       uniqueId: charData.uniqueId,
       pendingApproval: wantsPublic,
+      rarity: 'rare',
+      dropSettings: {
+        enabled: true,
+        probability: 10
+      },
+      crateSettings: {
+        enabled: true,
+        probability: 15,
+        crates: ['bronze', 'silver', 'gold', 'emerald', 'legendary']
+      },
       ability: {
         name: charData.ability.name,
         emoji: charData.ability.emoji,
@@ -561,7 +571,9 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
       return;
     }
     
-    if (wantsPublic) {
+    // Save ALL server characters to MongoDB (not just public ones) so drops work
+    const USE_MONGODB = process.env.USE_MONGODB === 'true';
+    if (USE_MONGODB) {
       try {
         const serverCharsCol = await getCollection('serverCharacters');
         
@@ -573,10 +585,20 @@ async function finalizeCharacter(m, serverId, charData, creationId) {
           serverId: serverId,
           createdBy: charData.createdBy,
           imageUrl: charData.imageUrl,
-          isPublic: false,
-          pendingApproval: true,
+          isPublic: wantsPublic,
+          pendingApproval: wantsPublic,
           status: 'active',
           rarity: 'rare',
+          obtainable: 'crate',
+          dropSettings: {
+            enabled: true,
+            probability: 10
+          },
+          crateSettings: {
+            enabled: true,
+            probability: 15,
+            crates: ['bronze', 'silver', 'gold', 'emerald', 'legendary']
+          },
           ability: {
             name: charData.ability.name,
             emoji: charData.ability.emoji,
