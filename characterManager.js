@@ -1068,6 +1068,92 @@ async function cleanupDuplicateCharacters() {
   };
 }
 
+async function seedDefaultServerCharacters(mainServerId) {
+  if (!USE_MONGODB || !mongoManager) {
+    console.log('[CharacterManager] MongoDB not connected, skipping default server characters seed');
+    return { success: false, message: 'MongoDB not connected' };
+  }
+  
+  try {
+    const hardcodedChars = require('./characters.js');
+    const hardcodedAbilities = require('./characterAbilities.js').CHARACTER_ABILITIES;
+    const hardcodedMoves = require('./moves.js').SPECIAL_MOVES;
+    
+    const collection = await mongoManager.getCollection('serverCharacters');
+    
+    let created = 0;
+    let skipped = 0;
+    
+    for (const char of hardcodedChars) {
+      const existing = await collection.findOne({
+        serverId: mainServerId,
+        name: char.name
+      });
+      
+      if (existing) {
+        skipped++;
+        continue;
+      }
+      
+      const ability = hardcodedAbilities[char.name] || {
+        name: `${char.name}'s Power`,
+        emoji: '⭐',
+        description: `${char.name} gains a small damage bonus on all attacks.`,
+        type: 'passive',
+        effect: { flatDamageBonus: 5 }
+      };
+      
+      const specialMove = hardcodedMoves[char.name] || {
+        name: `${char.name}'s Strike`,
+        damage: 90
+      };
+      
+      const isDroppable = char.obtainable === 'drop';
+      const isCrateObtainable = char.obtainable === 'crate';
+      
+      const serverChar = {
+        serverId: mainServerId,
+        name: char.name,
+        emoji: char.emoji,
+        customEmojiId: char.customEmojiId || null,
+        obtainable: char.obtainable || 'crate',
+        rarity: char.rarity || 'common',
+        description: char.description || `${char.name} - a ZooBot character`,
+        imageUrl: char.imageUrl || null,
+        game: DEFAULT_GAME,
+        createdBy: DEFAULT_CREATOR,
+        ability: ability,
+        specialMove: specialMove,
+        dropSettings: {
+          enabled: isDroppable,
+          probability: isDroppable ? 10 : 0
+        },
+        crateSettings: {
+          enabled: isCrateObtainable,
+          probability: isCrateObtainable ? 10 : 0,
+          crates: isCrateObtainable ? ['bronze', 'silver', 'gold', 'emerald', 'legendary', 'tyrant'] : []
+        },
+        status: 'active',
+        isPublic: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      await collection.insertOne(serverChar);
+      created++;
+    }
+    
+    if (created > 0) {
+      console.log(`[CharacterManager] Seeded ${created} default ZooBot characters to server ${mainServerId} (${skipped} already existed)`);
+    }
+    
+    return { success: true, created, skipped };
+  } catch (error) {
+    console.error('[CharacterManager] Error seeding default server characters:', error);
+    return { success: false, message: error.message };
+  }
+}
+
 module.exports = {
   initializeCharacterSystem,
   getCharacters,
@@ -1114,6 +1200,7 @@ module.exports = {
   cleanupDuplicateCharacters,
   getCombinedCharactersForServer,
   getCharacterByNameWithServer,
+  seedDefaultServerCharacters,
   VALID_EFFECT_TYPES,
   OBTAINABLE_TYPES,
   DEFAULT_GAME,

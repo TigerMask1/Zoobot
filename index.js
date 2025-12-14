@@ -9270,6 +9270,9 @@ async function backfillMainServerData() {
   const charCollection = await getCollection('serverCharacters');
   let charsAdded = 0;
   
+  const hardcodedAbilities = require('./characterAbilities.js').CHARACTER_ABILITIES;
+  const hardcodedMoves = require('./moves.js').SPECIAL_MOVES;
+  
   for (const char of HARDCODED_CHARACTERS) {
     const existing = await charCollection.findOne({
       serverId: mainServerId,
@@ -9278,6 +9281,20 @@ async function backfillMainServerData() {
     
     if (!existing) {
       const uniqueId = crypto.randomBytes(4).toString('hex').toUpperCase();
+      
+      const ability = hardcodedAbilities[char.name] || { 
+        name: `${char.name}'s Power`, 
+        emoji: '⭐', 
+        description: 'Gains a small damage bonus.', 
+        type: 'passive', 
+        effect: { flatDamageBonus: 5 } 
+      };
+      
+      const specialMove = hardcodedMoves[char.name] || { 
+        name: `${char.name}'s Strike`, 
+        damage: 90 
+      };
+      
       await charCollection.insertOne({
         serverId: mainServerId,
         uniqueId,
@@ -9288,11 +9305,11 @@ async function backfillMainServerData() {
         rarity: 'common',
         obtainable: char.obtainable || 'crate',
         game: 'ZooBot',
-        ability: { name: `${char.name}'s Power`, emoji: '⭐', description: 'Gains a small damage bonus.', type: 'passive', effect: { flatDamageBonus: 5 } },
-        specialMove: { name: `${char.name}'s Strike`, damage: 90 },
+        ability: ability,
+        specialMove: specialMove,
         stats: { hp: 100, attack: 50, defense: 50, speed: 50, critChance: 0.1, dodgeChance: 0.05 },
         dropSettings: { enabled: true, probability: 10 },
-        crateSettings: { enabled: true, probability: 10, crates: ['bronze', 'silver', 'gold'] },
+        crateSettings: { enabled: true, probability: 10, crates: ['bronze', 'silver', 'gold', 'emerald', 'legendary', 'tyrant'] },
         status: 'active',
         createdBy: 'ZooBot',
         createdAt: new Date(),
@@ -9333,8 +9350,9 @@ async function backfillMainServerData() {
         emoji: item.emoji,
         rarity: item.rarity,
         baseValue: item.baseValue,
-        droppable: { enabled: true, probability: 10 },
-        crateObtainable: { enabled: true, probability: 10, crates: ['bronze', 'silver', 'gold'] },
+        dropSettings: { enabled: true, probability: 10 },
+        crateSettings: { enabled: true, probability: 10, crates: ['bronze', 'silver', 'gold', 'emerald', 'legendary', 'tyrant'] },
+        crateObtainable: { enabled: true, probability: 10, crates: ['bronze', 'silver', 'gold', 'emerald', 'legendary', 'tyrant'] },
         status: 'active',
         createdBy: 'ZooBot',
         createdAt: new Date()
