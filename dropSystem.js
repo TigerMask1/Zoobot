@@ -489,7 +489,15 @@ async function executeDrop(serverId) {
       characterEmoji: selectedDrop.characterEmoji || '',
       messageId: dropMessage.id,
       serverId,
-      spawnedAt: Date.now()
+      spawnedAt: Date.now(),
+      // Collectible-specific fields
+      itemId: selectedDrop.itemId || null,
+      itemName: selectedDrop.itemName || null,
+      itemImage: selectedDrop.itemImage || null,
+      itemValue: selectedDrop.itemValue || null,
+      rarity: selectedDrop.rarity || null,
+      emoji: selectedDrop.emoji || null,
+      isServerSpecific: selectedDrop.isServerSpecific || false
     };
 
     saveData(activeData);
