@@ -289,6 +289,21 @@ async function executeDrop(serverId) {
     
     const keyRushActive = isKeyRushActive(serverId);
     
+    // ===== CHRISTMAS EVENT: 15% chance to drop Christmas gifts during event =====
+    if (isEventActive() && !keyRushActive) {
+      const christmasGiftChance = 0.15; // 15% chance for Christmas gift drop
+      if (Math.random() < christmasGiftChance) {
+        const giftAmount = Math.floor(Math.random() * 3) + 1; // 1-3 gifts
+        selectedDrop = { 
+          type: 'christmasGift', 
+          min: giftAmount, 
+          max: giftAmount, 
+          emoji: '🎁',
+          amount: giftAmount
+        };
+      }
+    }
+    
     // Get server-configured characters from !sc list (works for ALL servers including main)
     let availableChars = [];
     
@@ -303,13 +318,16 @@ async function executeDrop(serverId) {
       }));
     }
     
-    // If no characters, notify once and skip this drop
-    if (availableChars.length === 0) {
+    // If no characters, notify once and skip this drop (unless Christmas gift already selected)
+    if (availableChars.length === 0 && !selectedDrop) {
       console.log(`⚠️ Server ${serverId} has no characters configured for drops. Use !sc create or !chars add to add characters.`);
       return;
     }
     
-    if (keyRushActive) {
+    // Skip regular drop selection if Christmas gift was already selected
+    if (selectedDrop && selectedDrop.type === 'christmasGift') {
+      // Christmas gift drop - skip to drop creation
+    } else if (keyRushActive) {
       // During Key Rush, ONLY character keys drop
       if (availableChars.length > 0) {
         const randomChar = availableChars[Math.floor(Math.random() * availableChars.length)];
@@ -427,7 +445,10 @@ async function executeDrop(serverId) {
     const code = DROP_CODES[Math.floor(Math.random() * DROP_CODES.length)];
 
     let rewardText;
-    if (selectedDrop.type === 'collectibleItem') {
+    if (selectedDrop.type === 'christmasGift') {
+      const giftText = selectedDrop.amount === 1 ? '1 Christmas Gift' : `${selectedDrop.amount} Christmas Gifts`;
+      rewardText = `**Reward:** 🎁🎄 **${giftText}** 🎄🎁\n✨ Festive holiday gifts!`;
+    } else if (selectedDrop.type === 'collectibleItem') {
       rewardText = `**Reward:** ${selectedDrop.emoji} **${selectedDrop.itemName}** (${selectedDrop.rarity.name})\n💰 Value: ${selectedDrop.itemValue} coins`;
     } else if (selectedDrop.type === 'characterKey') {
       const charEmoji = selectedDrop.characterEmoji || '🔑';

@@ -55,6 +55,62 @@ module.exports = {
     
     const drop = data.serverDrops[serverId];
     
+    // Handle Christmas Gift drops
+    if (drop.type === 'christmasGift') {
+      const { addChristmasGift, isEventActive } = require('../../christmasEventSystem.js');
+      
+      if (!isEventActive()) {
+        delete data.serverDrops[serverId];
+        saveData(data);
+        await message.reply('❌ The Christmas event has ended! Drop cleared.');
+        return;
+      }
+      
+      try {
+        const giftResult = await addChristmasGift(userId, serverId, 'drop', drop.amount);
+        
+        if (giftResult.success) {
+          delete data.serverDrops[serverId];
+          
+          if (!data.users[userId].questProgress) data.users[userId].questProgress = {};
+          data.users[userId].questProgress.dropsCaught = (data.users[userId].questProgress.dropsCaught || 0) + 1;
+          data.users[userId].lastActivity = Date.now();
+          
+          trackChallengeProgress(data.users[userId], 'dropsCaught', 1);
+          checkAchievements(data.users[userId]);
+          updateTaskProgress(data.users[userId], 'dropsCaught', 1);
+          
+          if (message.guild) {
+            recordEvent(data, message.guild.id, 'dropsClaimed', 1, userId);
+            const { addAura } = require('../../serverAuraSystem.js');
+            addAura(message.guild.id, 8, 'christmas_gift').catch(e => console.error('Error adding Christmas aura:', e));
+          }
+          
+          saveData(data);
+          
+          const giftText = drop.amount === 1 ? '1 Christmas Gift' : `${drop.amount} Christmas Gifts`;
+          const christmasEmbed = new EmbedBuilder()
+            .setColor('#FF0000')
+            .setTitle('🎄 CHRISTMAS GIFT CAUGHT! 🎄')
+            .setDescription(`<@${userId}> caught the festive drop!\n\n**Reward:** 🎁 **${giftText}**\n\n✨ Your gifts: ${giftResult.userGifts} | 🌍 Global: ${giftResult.totalGifts}`)
+            .setFooter({ text: 'Use !christmas to view event progress!' });
+          
+          await message.reply({ embeds: [christmasEmbed] });
+        } else {
+          console.error('[Catch] Failed to add Christmas gift:', giftResult.message);
+          delete data.serverDrops[serverId];
+          saveData(data);
+          await message.reply('❌ Failed to award Christmas gift. Drop cleared.');
+        }
+      } catch (error) {
+        console.error('[Catch] Error awarding Christmas gift:', error);
+        delete data.serverDrops[serverId];
+        saveData(data);
+        await message.reply('❌ Error awarding Christmas gift. Drop cleared.');
+      }
+      return;
+    }
+    
     if (drop.type === 'characterKey') {
       const keyResult = await catchKeyDrop(userId, serverId, data);
       
