@@ -14,6 +14,36 @@ const { isSuperAdmin } = require('../../serverConfigManager.js');
 async function handleChristmasCommand({ message, args = [], data, client }) {
   const subcommand = args[0]?.toLowerCase();
   
+  // Help subcommand
+  if (subcommand === 'help' || subcommand === 'info' || subcommand === 'guide') {
+    const helpEmbed = new EmbedBuilder()
+      .setColor('#C41E3A')
+      .setTitle('🎄 Christmas Gift Hunt 2025 - Help Guide 🎁')
+      .setDescription(`**Welcome to the Christmas Gift Hunt Event!**\n\nFrom December 15th to December 25th, collect special Christmas Gifts from drops and crates to unlock amazing rewards!\n\n` +
+        `**🎁 How to Get Gifts:**\n` +
+        `• **Drops** - Catch regular drops with \`!c <code>\` - Christmas gifts have a high chance to appear!\n` +
+        `• **Crates** - Open any crate for bonus gifts!\n` +
+        `• You can get 1-3 gifts per drop, and even more from higher tier crates!\n\n` +
+        `**🏆 Milestones & Rewards:**\n` +
+        `• **Personal Milestones** - Track YOUR gift collection (5 tiers)\n` +
+        `• **Server Milestones** - Your server's combined gifts (5 tiers)\n` +
+        `• **Community Milestones** - GLOBAL community progress (7 tiers)\n\n` +
+        `**📊 Commands:**\n` +
+        `• \`!xmas\` or \`!christmas\` - View event progress\n` +
+        `• \`!xmas milestones community\` - View community rewards\n` +
+        `• \`!xmas milestones server\` - View server rewards\n` +
+        `• \`!xmas milestones personal\` - View your rewards\n` +
+        `• \`!xmas leaderboard\` - Top gift collectors\n\n` +
+        `**🎅 Tips:**\n` +
+        `• Catch drops quickly - gifts are awarded on every catch!\n` +
+        `• Open higher tier crates for more gifts per crate\n` +
+        `• Work together as a community to unlock global rewards for EVERYONE!`)
+      .setFooter({ text: 'Happy Holidays! Event runs Dec 15-25, 2025' })
+      .setTimestamp();
+    
+    return message.reply({ embeds: [helpEmbed] });
+  }
+  
   if (subcommand === 'setimage' || subcommand === 'setbanner') {
     if (!isSuperAdmin(message.author.id)) {
       return message.reply('❌ Only super admins can set event images!');
@@ -128,7 +158,7 @@ async function handleChristmasCommand({ message, args = [], data, client }) {
 module.exports = {
   name: 'christmas',
   aliases: ['xmas', 'gifthunt', 'gifts'],
-  description: 'View Christmas Gift Hunt 2024 event progress',
-  usage: '!christmas [milestones|leaderboard|setimage]',
+  description: 'View Christmas Gift Hunt 2025 event progress and help',
+  usage: '!christmas [help|milestones|leaderboard|setimage]',
   execute: handleChristmasCommand
 };

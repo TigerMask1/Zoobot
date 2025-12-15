@@ -213,7 +213,8 @@ module.exports = {
         if (shouldDropChristmasGift('drop')) {
           const giftResult = await addChristmasGift(userId, serverId, 'drop');
           if (giftResult.success) {
-            christmasGiftText = `\n\n🎁🎄 **CHRISTMAS GIFT!** You also found a festive gift!\n✨ Your gifts: ${giftResult.userGifts} | Global: ${giftResult.totalGifts}`;
+            const giftText = giftResult.giftAmount > 1 ? `${giftResult.giftAmount} festive gifts` : 'a festive gift';
+            christmasGiftText = `\n\n🎁🎄 **CHRISTMAS GIFT!** You also found ${giftText}!\n✨ Your gifts: ${giftResult.userGifts} | Global: ${giftResult.totalGifts}`;
             
             for (const notification of giftResult.notifications || []) {
               if (notification.type === 'community') {

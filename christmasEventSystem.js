@@ -12,14 +12,25 @@ const CHRISTMAS_PFP_REWARD = {
   description: 'Exclusive profile picture for achieving the Christmas Miracle milestone!'
 };
 
-const CHRISTMAS_GIFT_DROP_CHANCE = 0.12;
+const CHRISTMAS_GIFT_DROP_CHANCE = 0.35; // 35% chance for drops
 const CHRISTMAS_GIFT_CRATE_CHANCE = {
-  bronze: 0.05,
-  silver: 0.08,
-  gold: 0.12,
-  emerald: 0.18,
-  legendary: 0.25,
-  tyrant: 0.35
+  bronze: 0.15,
+  silver: 0.25,
+  gold: 0.35,
+  emerald: 0.45,
+  legendary: 0.55,
+  tyrant: 0.70
+};
+
+// Amount of gifts per drop (min-max range)
+const CHRISTMAS_GIFT_AMOUNT = {
+  drop: { min: 1, max: 3 },
+  bronze: { min: 1, max: 2 },
+  silver: { min: 1, max: 3 },
+  gold: { min: 2, max: 4 },
+  emerald: { min: 2, max: 5 },
+  legendary: { min: 3, max: 6 },
+  tyrant: { min: 4, max: 8 }
 };
 
 const COMMUNITY_MILESTONES = [
@@ -155,10 +166,23 @@ function getEventTimeRemaining() {
   return { started: true, ended: false, timeRemaining };
 }
 
-async function addChristmasGift(userId, serverId, source = 'drop') {
+function getChristmasGiftAmount(source = 'drop', crateType = null) {
+  let range;
+  if (source === 'crate' && crateType) {
+    range = CHRISTMAS_GIFT_AMOUNT[crateType] || CHRISTMAS_GIFT_AMOUNT.bronze;
+  } else {
+    range = CHRISTMAS_GIFT_AMOUNT.drop;
+  }
+  return Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
+}
+
+async function addChristmasGift(userId, serverId, source = 'drop', amount = null) {
   if (!isEventActive()) {
     return { success: false, message: 'Event not active' };
   }
+  
+  // Calculate gift amount if not provided
+  const giftAmount = amount || getChristmasGiftAmount(source);
   
   try {
     const collection = await getCollection('christmasEvent');
@@ -167,9 +191,9 @@ async function addChristmasGift(userId, serverId, source = 'drop') {
       { eventId: 'christmas_2024' },
       {
         $inc: { 
-          totalGifts: 1,
-          [`servers.${serverId}.gifts`]: 1,
-          [`users.${userId}.gifts`]: 1
+          totalGifts: giftAmount,
+          [`servers.${serverId}.gifts`]: giftAmount,
+          [`users.${userId}.gifts`]: giftAmount
         },
         $set: { 
           lastUpdated: new Date(),
@@ -188,7 +212,12 @@ async function addChristmasGift(userId, serverId, source = 'drop') {
       { upsert: true, returnDocument: 'after' }
     );
     
-    const eventData = result;
+    // MongoDB findOneAndUpdate returns { value, ok, lastErrorObject } - unwrap it
+    const eventData = result?.value || result;
+    if (!eventData) {
+      console.error('Error: No event data returned from MongoDB');
+      return { success: true, totalGifts: giftAmount, userGifts: giftAmount, serverGifts: giftAmount, giftAmount, notifications: [], userId, serverId };
+    }
     const notifications = [];
     
     const userGifts = eventData.users?.[userId]?.gifts || 1;
@@ -221,6 +250,7 @@ async function addChristmasGift(userId, serverId, source = 'drop') {
       totalGifts,
       userGifts,
       serverGifts,
+      giftAmount,
       notifications,
       userId,
       serverId
@@ -710,11 +740,13 @@ module.exports = {
   PERSONAL_MILESTONES,
   CHRISTMAS_GIFT_DROP_CHANCE,
   CHRISTMAS_GIFT_CRATE_CHANCE,
+  CHRISTMAS_GIFT_AMOUNT,
   CHRISTMAS_PFP_REWARD,
   initializeChristmasEventIndexes,
   getEventData,
   isEventActive,
   getEventTimeRemaining,
+  getChristmasGiftAmount,
   addChristmasGift,
   getUserProgress,
   getServerProgress,
