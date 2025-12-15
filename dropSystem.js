@@ -358,40 +358,64 @@ async function executeDrop(serverId) {
       selectedDrop = { type: 'gems', min: 1, max: 2, emoji: '💎' };
     }
     
-    // Check for collectible item drop (separate roll with item-specific probability)
+    // Check for collectible item drop - TWO STAGE SYSTEM:
+    // Stage 1: Roll to see if ANY collectible drops (small base chance)
+    // Stage 2: If yes, weighted selection among all collectibles based on their rarity/probability
     try {
-      // All servers use their own server-specific collectibles from !scol list
       const droppableItems = await getDroppableServerCollectibles(serverId);
       
       if (droppableItems.length > 0 && !keyRushActive) {
-        // Shuffle the items to prevent the same item from always being checked first
-        const shuffledItems = [...droppableItems].sort(() => Math.random() - 0.5);
+        // STAGE 1: Base chance for ANY collectible to drop (3% chance)
+        const collectibleBaseChance = 0.03;
+        const shouldDropCollectible = Math.random() < collectibleBaseChance;
         
-        for (const item of shuffledItems) {
-          const itemRoll = Math.random();
-          // Check both droppable and dropSettings for probability (dropSettings takes priority)
-          const dropProbability = item.dropSettings?.probability || item.droppable?.probability || 0.02;
-          if (itemRoll < dropProbability) {
-            const rarity = getRarityTier(item.ownerCount || 0);
-            // Use item.id (string) which is set by getServerSpecificCollectiblesFromDB
-            const collectibleId = item.id || (item._id ? item._id.toString() : null);
-            if (!collectibleId) {
-              console.error('Collectible item missing ID:', item.name);
-              continue;
+        if (shouldDropCollectible) {
+          // STAGE 2: Weighted selection - collectibles compete based on their probability/rarity
+          // Higher probability = higher weight = more likely to be selected
+          const itemsWithWeights = droppableItems.map(item => {
+            const weight = item.dropSettings?.probability || item.droppable?.probability || 0.5;
+            return { item, weight };
+          });
+          
+          // Calculate total weight
+          const totalWeight = itemsWithWeights.reduce((sum, iw) => sum + iw.weight, 0);
+          
+          // Pick a random value between 0 and totalWeight
+          let randomValue = Math.random() * totalWeight;
+          let selectedItem = null;
+          
+          // Find which item this random value falls into
+          for (const { item, weight } of itemsWithWeights) {
+            randomValue -= weight;
+            if (randomValue <= 0) {
+              selectedItem = item;
+              break;
             }
-            selectedDrop = { 
-              type: 'collectibleItem', 
-              itemId: collectibleId,
-              itemName: item.name,
-              itemImage: item.imageUrl,
-              itemValue: item.computedValue || item.baseValue || 100,
-              rarity: rarity,
-              emoji: rarity.emoji,
-              min: 1, 
-              max: 1,
-              isServerSpecific: item.isServerSpecific === true
-            };
-            break;
+          }
+          
+          // Fallback to first item if something went wrong
+          if (!selectedItem && droppableItems.length > 0) {
+            selectedItem = droppableItems[0];
+          }
+          
+          if (selectedItem) {
+            const rarity = getRarityTier(selectedItem.ownerCount || 0);
+            const collectibleId = selectedItem.id || (selectedItem._id ? selectedItem._id.toString() : null);
+            
+            if (collectibleId) {
+              selectedDrop = { 
+                type: 'collectibleItem', 
+                itemId: collectibleId,
+                itemName: selectedItem.name,
+                itemImage: selectedItem.imageUrl,
+                itemValue: selectedItem.computedValue || selectedItem.baseValue || 100,
+                rarity: rarity,
+                emoji: rarity.emoji,
+                min: 1, 
+                max: 1,
+                isServerSpecific: selectedItem.isServerSpecific === true
+              };
+            }
           }
         }
       }
