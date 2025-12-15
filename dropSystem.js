@@ -364,14 +364,24 @@ async function executeDrop(serverId) {
       const droppableItems = await getDroppableServerCollectibles(serverId);
       
       if (droppableItems.length > 0 && !keyRushActive) {
-        for (const item of droppableItems) {
+        // Shuffle the items to prevent the same item from always being checked first
+        const shuffledItems = [...droppableItems].sort(() => Math.random() - 0.5);
+        
+        for (const item of shuffledItems) {
           const itemRoll = Math.random();
-          const dropProbability = item.droppable?.probability || 0.05;
+          // Check both droppable and dropSettings for probability (dropSettings takes priority)
+          const dropProbability = item.dropSettings?.probability || item.droppable?.probability || 0.02;
           if (itemRoll < dropProbability) {
             const rarity = getRarityTier(item.ownerCount || 0);
+            // Use item.id (string) which is set by getServerSpecificCollectiblesFromDB
+            const collectibleId = item.id || (item._id ? item._id.toString() : null);
+            if (!collectibleId) {
+              console.error('Collectible item missing ID:', item.name);
+              continue;
+            }
             selectedDrop = { 
               type: 'collectibleItem', 
-              itemId: item._id?.toString() || item.id,
+              itemId: collectibleId,
               itemName: item.name,
               itemImage: item.imageUrl,
               itemValue: item.computedValue || item.baseValue || 100,
@@ -379,7 +389,7 @@ async function executeDrop(serverId) {
               emoji: rarity.emoji,
               min: 1, 
               max: 1,
-              isServerSpecific: item.isServerSpecific || false
+              isServerSpecific: item.isServerSpecific === true
             };
             break;
           }

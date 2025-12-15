@@ -129,10 +129,17 @@ module.exports = {
       
     } else if (drop.type === 'collectibleItem') {
       let awardResult;
-      if (drop.isServerSpecific) {
-        awardResult = await awardServerCollectible(userId, serverId, drop.itemId);
-      } else {
-        awardResult = await awardCollectibleItem(userId, drop.itemId);
+      try {
+        if (drop.isServerSpecific) {
+          console.log(`[Catch] Awarding server collectible: itemId=${drop.itemId}, serverId=${serverId}, userId=${userId}`);
+          awardResult = await awardServerCollectible(userId, serverId, drop.itemId);
+        } else {
+          console.log(`[Catch] Awarding global collectible: itemId=${drop.itemId}, userId=${userId}`);
+          awardResult = await awardCollectibleItem(userId, drop.itemId);
+        }
+      } catch (awardError) {
+        console.error('[Catch] Error awarding collectible:', awardError);
+        awardResult = { success: false, message: awardError.message };
       }
       
       if (awardResult && awardResult.success) {
@@ -170,7 +177,11 @@ module.exports = {
       } else if (awardResult && awardResult.alreadyOwned) {
         await message.reply(`❌ You already own **${drop.itemName}** and it's not stackable! Drop remains active.`);
       } else {
-        await message.reply(`❌ Failed to award collectible. Drop remains active.`);
+        console.error(`[Catch] Failed to award collectible: ${awardResult?.message || 'Unknown error'}`, { itemId: drop.itemId, serverId, userId, isServerSpecific: drop.isServerSpecific });
+        // Clear the broken drop to prevent it from staying forever
+        delete data.serverDrops[serverId];
+        saveData(data);
+        await message.reply(`❌ Failed to award collectible (item may no longer exist). Drop cleared.`);
       }
       
     } else {
