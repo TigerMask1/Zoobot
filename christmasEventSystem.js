@@ -377,7 +377,7 @@ async function createEventEmbed(userId, serverId, client) {
   
   const embed = new EmbedBuilder()
     .setColor('#C41E3A')
-    .setTitle('🎄 Christmas Gift Hunt 2024 🎁')
+    .setTitle('🎄 Christmas Gift Hunt 2025 🎁')
     .setDescription(`**Collect Christmas Gifts from drops and crates!**\n\n${timeText}\n\n*Gifts can be found in drops and crates with a special chance!*`);
   
   if (communityProgress) {
