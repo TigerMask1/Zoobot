@@ -699,7 +699,8 @@ client.on('clientReady', async () => {
   
   // Promotion system disabled by default - simplified bot mode
   // startPromotionSystem(client);
-  startPersonalizedTaskSystem(client, data);
+  // Personalized tasks disabled by default - focus on core gameplay
+  // startPersonalizedTaskSystem(client, data);
   startDailyActivityReminders(client, data);
   startWeeklyClanWars(client, data);
   
@@ -2732,28 +2733,36 @@ client.on('messageCreate', async (message) => {
         try {
           const dmChannel = await message.author.createDM();
           const welcomeGuide = new EmbedBuilder()
-            .setColor('#00BFFF')
-            .setTitle('📖 Welcome to the Zoo!')
-            .setDescription('**Your adventure starts now! Here\'s what to do:**\n\n' +
-              '**💰 Earn Money:**\n' +
-              '`!work` - Work every 15 min for coins, gems, and resources. Start with caretaker!\n' +
-              '`!drop` - Hunt for random drops in chat (tokens, coins, gems every 20 sec)\n' +
-              '`!msg` - Earn coins by chatting with friends\n\n' +
-              '**🎫 Collect Characters:**\n' +
-              '`!c <name>` - See any character\'s stats & moves\n' +
-              '`!crate` - Open crates to unlock new characters (use coins or gems)\n' +
-              '`!inventory` - Check what you own\n\n' +
-              '**⚔️ Battle & Compete:**\n' +
-              '`!b @user` - Challenge someone to turn-based combat\n' +
-              '`!b ai` - Fight the AI (try easy/normal/hard mode)\n' +
-              '`!event` - Join daily events for extra rewards\n\n' +
-              '**💳 Trade & Shop:**\n' +
-              '`!market` - Buy/sell items from other players\n' +
-              '`!ustshop` - Spend UST earned from clan wars on skins\n' +
-              '`!setskin <char> <name>` - Customize your character\n\n' +
-              '**Pro Tips:** Grind work → collect strong characters → dominate battles → flex cosmetics! 🔥\n\n' +
-              'Questions? Use `!help` for full command list!')
-            .setFooter({ text: 'Check your DMs anytime for this guide!' });
+            .setColor('#FF1493')
+            .setTitle('🎮 WELCOME TO ZOOBOT - LET\'S GET HYPED!')
+            .setDescription('**You\'ve unlocked an INSANE gaming experience!** Here\'s the dopamine rush awaiting you:\n\n' +
+              '⚡ **INSTANT THRILLS:**\n' +
+              '`!b @user` - BATTLE other players in epic turn-based combat! CRUSH rivals!\n' +
+              '`!crate` - GAMBLE on crates! 🎰 Open chests for rare characters (coins/gems risk = reward!)\n' +
+              '`!giveaway` - FREE STUFF! Join to win creatures, coins, gems!\n' +
+              '`!lottery` - LOTTERY TICKETS! Could be RICH in one roll! 🍀\n' +
+              '`!event` - Daily events with INSANE rewards and hype!\n\n' +
+              '🏆 **CLAN WAR GLORY:**\n' +
+              '`!clan create/join` - Build your EMPIRE or JOIN a war squad!\n' +
+              '`!clanwar` - FIGHT rival clans for DOMINANCE, UST, and LEGEND STATUS! 🔥\n' +
+              '`!clans` - Watch your clan CLIMB the leaderboards!\n\n' +
+              '💎 **COLLECTION & FLEX:**\n' +
+              '`!crate` - Open crates → collect 51+ unique creatures\n' +
+              '`!c <name>` - View any creature\'s stats & moveset\n' +
+              '`!inventory` - Show off your collection\n' +
+              '`!setskin <char> <name>` - Customize skins to FLEX on rivals\n\n' +
+              '💰 **QUICK CASH:**\n' +
+              '`!work` - Earn coins every 15 min (get rich quick!)\n' +
+              '`!drop` - HUNT drops in chat for FREE rewards!\n' +
+              '`!market` - Buy/sell creatures like WALL STREET\n\n' +
+              '📍 **YOUR HUB:**\n' +
+              '`!hub` - See EVERYTHING: leaderboards, events, clans, top players, upcoming wars!\n\n' +
+              '**💥 THE RUSH:** Battle → Win → Clan Wars → Gamble on crates → Climb leaderboards → BECOME A LEGEND!\n\n' +
+              'LET\'S GOOOOO! 🚀')
+            .addFields(
+              { name: '🎯 Start Here', value: '1. Battle someone with `!b @user`\n2. Join/create a clan with `!clan`\n3. Check `!hub` for live action\n4. Crush it! 💪' }
+            )
+            .setFooter({ text: '💎 The more you play, the more you WIN. This is just the beginning!' });
           
           await dmChannel.send({ embeds: [welcomeGuide] });
         } catch (err) {
