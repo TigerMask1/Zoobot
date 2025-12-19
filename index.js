@@ -615,7 +615,8 @@ client.on('clientReady', async () => {
     console.warn('⚠️ Key Rush scheduler init error:', error.message);
   }
   
-  startPromotionSystem(client);
+  // Promotion system disabled by default - simplified bot mode
+  // startPromotionSystem(client);
   startPersonalizedTaskSystem(client, data);
   startWeeklyClanWars(client, data);
   
@@ -1814,9 +1815,7 @@ client.on('messageCreate', async (message) => {
           if (!setupStatusInfo.hasEventsChannel) {
             todoList += `\n• \`!seteventschannel #channel\` - Set events channel`;
           }
-          if (!setupStatusInfo.hasUpdatesChannel) {
-            todoList += `\n• \`!ss updates #channel\` - Set updates channel`;
-          }
+          // Updates channel removed - only drop and events channels required
           setupEmbed.addFields({ name: 'To Complete Setup:', value: todoList, inline: false });
         }
         

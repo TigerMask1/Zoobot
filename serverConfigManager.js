@@ -540,7 +540,8 @@ async function setDropChannel(serverId, channelId, setBy, member) {
   config.dropChannelId = channelId;
   config.dropInterval = 30000;
   
-  if (config.dropChannelId && config.eventsChannelId && config.updatesChannelId && !config.setupComplete) {
+  // Setup complete when drop and events channels are set (updates channel no longer required)
+  if (config.dropChannelId && config.eventsChannelId && !config.setupComplete) {
     config.setupComplete = true;
     config.setupDate = new Date().toISOString();
   }
@@ -574,7 +575,8 @@ async function setEventsChannel(serverId, channelId, setBy, member) {
   const config = getServerConfig(serverId) || { serverId, serverAdmins: [] };
   config.eventsChannelId = channelId;
   
-  if (config.dropChannelId && config.eventsChannelId && config.updatesChannelId && !config.setupComplete) {
+  // Setup complete when drop and events channels are set (updates channel no longer required)
+  if (config.dropChannelId && config.eventsChannelId && !config.setupComplete) {
     config.setupComplete = true;
     config.setupDate = new Date().toISOString();
   }
@@ -604,7 +606,8 @@ async function setUpdatesChannel(serverId, channelId, setBy, member) {
   const config = getServerConfig(serverId) || { serverId, serverAdmins: [] };
   config.updatesChannelId = channelId;
   
-  if (config.dropChannelId && config.eventsChannelId && config.updatesChannelId && !config.setupComplete) {
+  // Setup complete when drop and events channels are set (updates channel no longer required)
+  if (config.dropChannelId && config.eventsChannelId && !config.setupComplete) {
     config.setupComplete = true;
     config.setupDate = new Date().toISOString();
   }
