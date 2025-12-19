@@ -504,26 +504,31 @@ function startDailyActivityReminders(client, data) {
   console.log('🎉 Starting Daily Activity Reminders...');
   
   const funnyMessages = [
-    "🦗 **crickets** ... Is anyone even here? Come catch drops, do commands, and EARN AURA! 🏆",
-    "📭 SERVER DEAD ALERT 💀 Aura grows from talking & commands. Stop lurking and START PLAYING! ⚔️",
-    "YOOO! 😴 Earn AURA by: catching drops, battling, trading, winning clan wars! Let's GOOOO! 🚀",
-    "🌙 Aura is gained through activity! Catch drops, complete commands, battle, and WIN CLAN WARS! 🎯",
-    "📈 Server AURA grows when you: message, use commands, catch drops, battle, and participate! 🎊",
-    "⏰ BREAKING NEWS: Rise up and BATTLE for AURA! Drop catches, command usage, and clan wars = POINTS! 📢",
-    "🤐 Earn AURA together: Talk → Commands → Drops → Battles → Victories! Let's SHINE! ✨",
-    "Question: Want more AURA? Catch drops, use commands, and WIN CLAN WARS! 💪",
-    "The AURA is BEGGING to be earned! Activity = Points! Join a CLAN WAR! 🔥",
-    "🎪 EMERGENCY: Everyone PARTICIPATE! Earn AURA through commands, drops, battles, and clan wars! 🙋",
-    "Alexa: How to earn server AURA? 🤖 Chat, commands, drops, battles, clan wars! Come back! 😂",
-    "📊 AURA Status: Grows from YOUR activity!\nChat → +1 | Commands → +5 | Drops → +5 | Battles → Clan Wars!\n🎮",
-    "No AURA? No party? NO EXCUSES! Participate and earn points! 🦁",
-    "Your server is WAITING! Earn AURA: message, use !commands, catch drops, WIN CLAN WARS! 🏅",
-    "Plot twist: More ACTIVITY = More AURA = More FUN! Come participate! 🌟",
-    "Is this server a mime? Speak up! Use commands, catch drops, battle for AURA! 📣",
-    "🏚️ Make this server ALIVE! Earn AURA through talking, commands, drops, and clan wars! 🏜️",
-    "🏆 HEROES EARN AURA! Chat → Commands → Drops → Battles → Clan Wars → LEGEND! 👑",
-    "Reality check: You could be EARNING AURA right now but you're... inactive? Change that! ⚡",
-    "PSST! Earn server AURA: Chat, commands, drops, battles, clan wars! Make it ALIVE! 🎉",
+    "🦗 **crickets** ... Dead server energy. Get active and CRUSH A CLAN WAR! 🏆",
+    "📭 SERVER DEAD ALERT 💀 Gather your troops and WIN a CLAN WAR! Let's GO! ⚔️",
+    "YOOO! 😴 Everyone up! Time to BATTLE rival clans and DOMINATE! Let's GOOOO! 🚀",
+    "🌙 Clan wars are CALLING! Catch drops, do commands, THEN DESTROY YOUR RIVALS! 🎯",
+    "📈 WHO'S READY?! Let's catch some drops, complete missions, and CRUSH A CLAN WAR! 🎊",
+    "⏰ BREAKING NEWS: Local server wakes up to WIN CLAN WARS! Rise up and BATTLE! 📢",
+    "🤐 Activity = STRENGTH! Come catch drops, use commands, THEN LEAD YOUR CLAN TO VICTORY! ✨",
+    "Question: Want glory? CLAN WARS! Bring the ENERGY! 💪",
+    "The CLAN WAR is CALLING! Get active and DOMINATE your rivals! 🔥",
+    "🎪 EMERGENCY: This server needs a CLAN WAR WIN! Everyone PARTICIPATE and FIGHT! 🙋",
+    "Alexa: What's happening today? 🤖 CLAN WAR HYPE! Come catch drops and BATTLE! 😂",
+    "📊 CLAN WAR STATUS: READY FOR ACTION!\nCatch Drops → Do Commands → WIN WARS!\n🎮",
+    "No activity? No wins? NO EXCUSES! CLAN WARS await! 🦁",
+    "Your server is CALLING! Join the CLAN WAR and become a LEGEND! 🏅",
+    "Plot twist: CLAN WARS are what make this FUN! Get active and FIGHT! 🌟",
+    "Is this server SILENT?! Time for ACTION! Catch drops and WIN CLAN WARS! 📣",
+    "🏚️ Dead server? NOT ANYMORE! CLAN WARS incoming! Get READY! 🏜️",
+    "🏆 HEROES go to WAR! Come be ACTIVE, catch drops, and WIN GLORY! 👑",
+    "Reality check: Your clan needs YOU in CLAN WARS! Rise up NOW! ⚡",
+    "PSST! CLAN WAR TIME! Be active, catch drops, DESTROY YOUR RIVALS! Make it LEGENDARY! 🎉",
+    "☀️ New day = New CLAN WARS! Get active and show rivals who's BOSS! 🔥",
+    "⚡ Server too quiet? UNACCEPTABLE! CLAN WARS will fix that! Come PARTICIPATE! 💥",
+    "🎪 Bored? NOPE! We've got CLAN WARS to WIN! Catch drops, complete tasks, THEN BATTLE! 🎯",
+    "🏰 Your rivals are WAITING! Be active today and CRUSH them in CLAN WARS! 🗡️",
+    "🌅 Rise and SHINE! Today's the day to WIN A CLAN WAR! Get active NOW! ✨",
   ];
   
   const firstDelay = (Math.random() * 3600000) + 1800000;
@@ -567,76 +572,6 @@ function startDailyActivityReminders(client, data) {
   }, firstDelay);
   
   console.log('✅ Daily Activity Reminders scheduled!');
-}
-
-async function startWeeklyAuraReports(client, data) {
-  console.log('📊 Starting Weekly Aura Reports...');
-  
-  const firstDelay = (Math.random() * 3600000) + 1800000;
-  
-  setTimeout(() => {
-    const sendWeeklyReports = async () => {
-      try {
-        for (const guild of client.guilds.cache.values()) {
-          if (!guild) continue;
-          try {
-            const serverConfig = getServerConfig(guild.id);
-            if (!serverConfig || !serverConfig.eventsChannelId) continue;
-            
-            // Only send if server is older than 3 days
-            const serverCreatedTime = guild.createdTimestamp || Date.now();
-            const ageInMs = Date.now() - serverCreatedTime;
-            const ageInDays = ageInMs / (1000 * 60 * 60 * 24);
-            if (ageInDays < 3) continue;
-            
-            const eventsChannel = await guild.channels.fetch(serverConfig.eventsChannelId).catch(() => null);
-            if (!eventsChannel || !eventsChannel.isTextBased()) continue;
-            
-            // Get server aura and clan info
-            let auraInfo = '📊 Unable to load aura data';
-            let clanInfo = '🏆 No clans yet';
-            
-            if (USE_MONGODB) {
-              try {
-                const serverAuraCol = await mongoManager.getCollection('serverAura');
-                const serverAuraData = await serverAuraCol.findOne({ serverId: guild.id });
-                if (serverAuraData) {
-                  const totalAura = serverAuraData.aura || 0;
-                  auraInfo = `📊 **Weekly Aura Report**\n🎯 Total Aura: **${totalAura}** pts\n⏱️ Gained from: Messages, Commands, Drops, Battles, & Clan Wars!`;
-                }
-              } catch (e) {
-                console.warn(`Could not fetch aura for ${guild.name}`);
-              }
-            }
-            
-            // Get clans in this server
-            const clan = getClan(data, guild.id);
-            if (clan && clan.name) {
-              clanInfo = `🏆 **Clan:** ${clan.name} (${clan.members ? clan.members.length : 0} members)\n🎪 **Level:** ${clan.level || 1}`;
-            }
-            
-            const report = `${auraInfo}\n\n${clanInfo}\n\n**💡 Boost AURA:** Participate in clan wars, catch drops, use commands, and keep chatting!`;
-            
-            await eventsChannel.send(report).catch(e => {
-              console.warn(`⚠️ Could not send aura report to ${guild.name}:`, e.message);
-            });
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          } catch (error) {
-            console.warn(`⚠️ Error sending aura report to guild ${guild.id}:`, error.message);
-          }
-        }
-        console.log(`✅ Weekly aura reports sent at ${new Date().toLocaleString()}`);
-      } catch (error) {
-        console.error('❌ Error in weekly aura report system:', error.message);
-      }
-    };
-    
-    sendWeeklyReports();
-    setInterval(sendWeeklyReports, 604800000); // 7 days = 604800000 ms
-  }, firstDelay + 3600000); // Offset weekly from daily by 1 hour
-  
-  console.log('✅ Weekly Aura Reports scheduled!');
 }
 
 client.on('clientReady', async () => {
@@ -766,7 +701,6 @@ client.on('clientReady', async () => {
   // startPromotionSystem(client);
   startPersonalizedTaskSystem(client, data);
   startDailyActivityReminders(client, data);
-  startWeeklyAuraReports(client, data);
   startWeeklyClanWars(client, data);
   
   const superAdminIds = require('./serverConfigManager.js').getSuperAdminIds ? require('./serverConfigManager.js').getSuperAdminIds() : [];
