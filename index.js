@@ -802,14 +802,58 @@ client.on('clientReady', async () => {
 client.on('guildCreate', async (guild) => {
   console.log(`✅ Bot added to new server: ${guild.name} (${guild.id})`);
   
+  if (!isMainServer(guild.id)) {
+    // Auto-seed ZooBot characters to this server's collection
+    if (USE_MONGODB) {
+      try {
+        const serverCharsCol = await mongoManager.getCollection('serverCharacters');
+        const hardcodedChars = require('./characters.js');
+        
+        let seeded = 0;
+        for (const char of hardcodedChars) {
+          const existing = await serverCharsCol.findOne({ serverId: guild.id, name: char.name });
+          if (existing) continue;
+          
+          const serverChar = {
+            serverId: guild.id,
+            name: char.name,
+            emoji: char.emoji,
+            customEmojiId: char.customEmojiId || null,
+            game: 'ZooBot',
+            createdBy: 'ZooBot',
+            rarity: 'common',
+            dropSettings: { enabled: true, probability: 5 },
+            crateSettings: { enabled: true, probability: 5, crates: ['bronze', 'silver', 'gold', 'emerald'] },
+            status: 'active',
+            isPublic: true,
+            createdAt: new Date()
+          };
+          await serverCharsCol.insertOne(serverChar);
+          seeded++;
+        }
+        if (seeded > 0) console.log(`✅ Auto-seeded ${seeded} ZooBot characters to ${guild.name}`);
+      } catch (error) {
+        console.warn(`⚠️ Could not seed characters to new server:`, error.message);
+      }
+      
+      // Auto-seed default collectibles
+      try {
+        await seedDefaultCollectibles(guild.id);
+        console.log(`✅ Auto-seeded collectibles to ${guild.name}`);
+      } catch (error) {
+        console.warn(`⚠️ Could not seed collectibles to new server:`, error.message);
+      }
+    }
+  }
+  
   if (!isMainServer(guild.id) && !isServerSetup(guild.id)) {
     try {
       const owner = await guild.fetchOwner();
       const setupEmbed = new EmbedBuilder()
         .setColor('#00D9FF')
         .setTitle('👋 Thanks for adding ZooBot!')
-        .setDescription(`Hi! Before I can start working in this server, I need some setup:\n\n**Important:** Create a role called **"ZooAdmin"** (case insensitive) and assign it to users who should manage the bot.\n\n**Setup Commands (ZooAdmin only):**\n\`!setup\` - Start the setup process\n\`!setdropchannel #channel\` - Set where drops appear\n\`!seteventschannel #channel\` - Set where events are announced\n\`!setupdateschannel #channel\` - Set where bot updates are posted\n\`!paydrops\` - Activate drops (costs 100 gems for 3 hours)\n\n**Customization Commands (ZooAdmin only):**\n\`!setemoji <character> <emoji>\` - Set custom character emojis\n\`!setchestgif <type> <url>\` - Set custom chest opening GIFs\n\n**Note:** Only users with the **ZooAdmin** role can manage server settings and activate drops.`)
-        .setFooter({ text: 'Looking for more features? Check out our main server!' });
+        .setDescription(`Hi! I've automatically loaded all **51 ZooBot characters** and **default collectibles** - you can start using them right away!\n\n**To activate gameplay, just set these channels:**\n\`!setdropchannel #channel\` - Where creature drops appear\n\`!seteventschannel #channel\` - Where events are announced\n\n**That's it!** Your server is ready to go. Users can:\n• Catch drops with \`!catch\`\n• Collect creatures and earn rewards\n• Battle and trade with others\n\n**Optional Setup:**\n• Create a **"ZooAdmin"** role to restrict bot management\n• Customize with \`!setemoji\` and \`!setchestgif\` commands`)
+        .setFooter({ text: '✅ Default configuration loaded - just add channels and play!' });
       
       await owner.send({ embeds: [setupEmbed] }).catch(() => {
         console.log(`Could not DM owner of ${guild.name}`);
@@ -5917,6 +5961,7 @@ client.on('messageCreate', async (message) => {
         
       case 'removeserver':
       case 'leaveserver':
+      case 'deleteserver':
         if (!isSuperAdmin(userId)) {
           await message.reply('❌ This command is restricted to Super Admins only!');
           return;
@@ -5942,10 +5987,43 @@ client.on('messageCreate', async (message) => {
         const guildName = targetGuild.name;
         
         try {
+          // Delete all MongoDB data for this server
+          if (USE_MONGODB) {
+            const mongoCollections = [
+              'serverConfigs',
+              'serverCharacters',
+              'serverAddedCharacters',
+              'serverCollectibles',
+              'serverAddedCollectibles',
+              'drops',
+              'giveaways',
+              'lotteries',
+              'userAchievements',
+              'seasonData',
+              'clanData',
+              'auctions',
+              'marketListings',
+              'events',
+              'moderationData'
+            ];
+            
+            for (const collectionName of mongoCollections) {
+              try {
+                const collection = await mongoManager.getCollection(collectionName);
+                const deleteResult = await collection.deleteMany({ serverId: targetServerId });
+                if (deleteResult.deletedCount > 0) {
+                  console.log(`[ServerDeletion] Deleted ${deleteResult.deletedCount} documents from ${collectionName}`);
+                }
+              } catch (e) {
+                console.warn(`[ServerDeletion] Could not clean ${collectionName}:`, e.message);
+              }
+            }
+          }
+          
           await targetGuild.leave();
-          await message.reply(`✅ Successfully left server: **${guildName}** (${targetServerId})`);
+          await message.reply(`✅ **Server Deleted:** ${guildName}\n\n📊 **Data Cleanup:**\n• Server configuration removed\n• All characters removed\n• All collectibles removed\n• Events, auctions, and market listings cleared\n• User progress for that server archived`);
         } catch (error) {
-          await message.reply(`❌ Failed to leave server: ${error.message}`);
+          await message.reply(`❌ Failed to delete server: ${error.message}`);
         }
         break;
         
