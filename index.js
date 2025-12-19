@@ -594,6 +594,14 @@ client.on('clientReady', async () => {
       console.warn('⚠️ Collectible items init error:', error.message);
     }
     
+    // Auto-seed ZooBot characters to global directory so they show in !characters list
+    try {
+      await characterManager.seedDefaultGlobalCharacters();
+      console.log('✅ ZooBot characters seeded to global directory');
+    } catch (error) {
+      console.warn('⚠️ Could not seed global characters:', error.message);
+    }
+    
     // Auto-backfill main server with ZooBot original characters and default collectibles
     try {
       await backfillMainServerData();

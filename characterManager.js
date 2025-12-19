@@ -1124,6 +1124,55 @@ async function cleanupDuplicateCharacters() {
   };
 }
 
+async function seedDefaultGlobalCharacters() {
+  if (!USE_MONGODB || !mongoManager) {
+    return { success: false, message: 'MongoDB not connected' };
+  }
+  
+  try {
+    const hardcodedChars = require('./characters.js');
+    const collection = await mongoManager.getCollection('globalCharacters');
+    
+    let added = 0;
+    let skipped = 0;
+    
+    for (const char of hardcodedChars) {
+      const existing = await collection.findOne({ name: char.name });
+      if (existing) {
+        skipped++;
+        continue;
+      }
+      
+      const globalChar = {
+        name: char.name,
+        emoji: char.emoji,
+        customEmojiId: char.customEmojiId || null,
+        game: DEFAULT_GAME,
+        createdBy: DEFAULT_CREATOR,
+        rarity: char.rarity || 'common',
+        description: `${char.name} - ZooBot original character`,
+        imageUrl: char.imageUrl || null,
+        status: 'active',
+        isPublic: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      await collection.insertOne(globalChar);
+      added++;
+    }
+    
+    if (added > 0) {
+      console.log(`✅ Seeded ${added} ZooBot characters to global directory (${skipped} already existed)`);
+    }
+    
+    return { success: true, added, skipped };
+  } catch (error) {
+    console.error('[CharacterManager] Error seeding global characters:', error);
+    return { success: false, message: error.message };
+  }
+}
+
 async function seedDefaultServerCharacters(mainServerId) {
   if (!USE_MONGODB || !mongoManager) {
     console.log('[CharacterManager] MongoDB not connected, skipping default server characters seed');
@@ -1257,6 +1306,7 @@ module.exports = {
   getCombinedCharactersForServer,
   getCharacterByNameWithServer,
   seedDefaultServerCharacters,
+  seedDefaultGlobalCharacters,
   VALID_EFFECT_TYPES,
   OBTAINABLE_TYPES,
   DEFAULT_GAME,

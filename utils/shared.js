@@ -17,30 +17,15 @@ function generateCode(length = 6) {
 
 function initializeUserData(userId, data) {
   if (!data.users[userId]) {
-    // Load all ZooBot original characters by default
-    const CHARACTERS = require('../characters.js');
-    const defaultCharacters = CHARACTERS.map(char => ({
-      name: char.name,
-      level: 1,
-      xp: 0,
-      maxLevel: 100,
-      emoji: char.emoji,
-      customEmojiId: char.customEmojiId || null,
-      special_trait: null,
-      createdAt: Date.now(),
-      moves: []
-    }));
-    
     data.users[userId] = {
       coins: 0,
       gems: 0,
       trophies: 0,
-      characters: defaultCharacters,
+      characters: [],
       battleStats: { wins: 0, losses: 0 },
       crates: { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 },
       ust: 0,
-      createdAt: Date.now(),
-      collectibleItems: []
+      createdAt: Date.now()
     };
   }
   return data.users[userId];
