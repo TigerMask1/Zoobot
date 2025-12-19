@@ -500,6 +500,77 @@ function startPersonalizedTaskSystem(client, data) {
   console.log('✅ Personalized Task System started!');
 }
 
+function startDailyActivityReminders(client, data) {
+  console.log('🎉 Starting Daily Activity Reminders...');
+  
+  const funnyMessages = [
+    "🦗 **crickets** ... Is anyone even here? It's giving \"abandoned server\" vibes. Come back and WIN A CLAN WAR! 🏆",
+    "📭 SERVER DEAD ALERT 💀 Your events channel has more tumbleweeds than players. Rise up and BATTLE for glory! ⚔️",
+    "YOOO! 😴 Everyone's asleep? We've got clan wars to WIN, creatures to catch, and AURA to earn! Let's GOOOO! 🚀",
+    "🌙 It's midnight in the aura world... and nobody's playing? WAKE UP! Clan wars don't win themselves! 🎯",
+    "Why is your server quieter than a ninja on a Tuesday? Come join the CLAN WAR PARTY! 🎊 Let's get that AURA flowing!",
+    "⏰ BREAKING NEWS: Local server found COMPLETELY EMPTY. Devoid of players, devoid of aura, devoid of hope... until NOW! Join a CLAN WAR! 📢",
+    "🤐 We need to talk. Your server is giving \"ghost town\" energy. Time for a CLAN WAR REVIVAL! Let's SHINE! ✨",
+    "Question: What's worse than no drops? NO PLAYERS! Come back and DOMINATE the clan wars! 💪",
+    "The aura is BEGGING to be earned. Your clan is BEGGING for members. CLAN WAR NOW? 🔥",
+    "🎪 EMERGENCY: This server needs EXCITEMENT! Bring the ENERGY! Win the CLAN WAR! Earn that AURA! Who's ready?! 🙋",
+    "Alexa: Why is the server so dead? 🤖 Maybe because everyone's NOT PLAYING? Come back and win a CLAN WAR! 😂",
+    "Server Status: 💤 SLEEPING\nAura Status: 📉 DECLINING\nClans Needed: ⚔️ YES\nAction Required: CLAN WARS NOW! 🎮",
+    "No aura? No party? No clan wars? UNACCEPTABLE! Come catch creatures and DOMINATE! 🦁",
+    "Your server called. It said 'I miss you.' Come back and WIN A CLAN WAR! Let's make it legendary! 🏅",
+    "Plot twist: The server gets MORE fun when YOU show up! Come BATTLE and earn AURA! 🌟",
+    "Is this server a mime? Because it's SILENT! Time to bring the noise - LET'S CLAN WAR! 📣",
+    "🏚️ This server looking like a desert and I'm here to tell you THE OASIS is clan wars! Come PLAY! 🏜️",
+    "Calling all HEROES! Your clan needs you! Join us for CLAN WARS and become a LEGEND! 👑",
+    "Reality check: You could be WINNING AURA right now in a CLAN WAR but instead you're... not? Let's change that! ⚡",
+    "PSST! Hey you! Yeah, YOU! Tired of your server being dead? Then JUMP in a CLAN WAR and MAKE IT ALIVE! 🎉",
+  ];
+  
+  // Send reminder every 24 hours at a random time (between 30-90 minutes from now on first load)
+  const firstDelay = (Math.random() * 3600000) + 1800000; // 30-90 min random delay on first load
+  
+  setTimeout(() => {
+    const sendReminders = async () => {
+      try {
+        for (const guild of client.guilds.cache.values()) {
+          if (!guild) continue;
+          
+          try {
+            const serverConfig = getServerConfig(guild.id);
+            if (!serverConfig || !serverConfig.eventsChannelId) continue;
+            
+            const eventsChannel = await guild.channels.fetch(serverConfig.eventsChannelId).catch(() => null);
+            if (!eventsChannel || !eventsChannel.isTextBased()) continue;
+            
+            // Random message from the array
+            const randomMsg = funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
+            
+            // Send with slight delay between servers
+            await eventsChannel.send(randomMsg).catch(e => {
+              console.warn(`⚠️ Could not send activity reminder to ${guild.name}:`, e.message);
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } catch (error) {
+            console.warn(`⚠️ Error sending activity reminder to guild ${guild.id}:`, error.message);
+          }
+        }
+        console.log(`✅ Daily activity reminders sent to all servers at ${new Date().toLocaleString()}`);
+      } catch (error) {
+        console.error('❌ Error in daily activity reminder system:', error.message);
+      }
+    };
+    
+    // Send immediately on first interval
+    sendReminders();
+    
+    // Then set to repeat every 24 hours
+    setInterval(sendReminders, 86400000); // 24 hours = 86400000 ms
+  }, firstDelay);
+  
+  console.log('✅ Daily Activity Reminders scheduled!');
+}
+
 client.on('clientReady', async () => {
   console.log(`✅ Logged in as ${client.user.tag}!`);
   console.log(`🎮 Bot is ready to serve ${client.guilds.cache.size} servers!`);
@@ -626,6 +697,7 @@ client.on('clientReady', async () => {
   // Promotion system disabled by default - simplified bot mode
   // startPromotionSystem(client);
   startPersonalizedTaskSystem(client, data);
+  startDailyActivityReminders(client, data);
   startWeeklyClanWars(client, data);
   
   const superAdminIds = require('./serverConfigManager.js').getSuperAdminIds ? require('./serverConfigManager.js').getSuperAdminIds() : [];
