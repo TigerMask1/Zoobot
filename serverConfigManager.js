@@ -37,7 +37,13 @@ const DEFAULT_FEATURE_SETTINGS = {
   autoModEnabled: false,
   maxWarningsBeforeBan: 5,
   welcomeNewPlayers: true,
-  showTutorialHints: true
+  showTutorialHints: true,
+  levelUpSystemEnabled: false,
+  levelUpAuraThreshold: null,
+  levelUpPointsPerLevel: null,
+  levelUpRankName: null,
+  levelUpMessage: null,
+  eventPingRole: null
 };
 
 async function loadServerConfigs() {
@@ -886,6 +892,45 @@ async function reloadServerConfigFromMongo(serverId) {
   }
 }
 
+async function setLevelUpConfig(serverId, config) {
+  try {
+    const levelUpData = {
+      levelUpSystemEnabled: config.enabled !== undefined ? config.enabled : false,
+      levelUpAuraThreshold: config.auraThreshold || null,
+      levelUpPointsPerLevel: config.pointsPerLevel || null,
+      levelUpRankName: config.rankName || null,
+      levelUpMessage: config.levelUpMessage || null
+    };
+    await saveServerConfig(serverId, levelUpData);
+    return true;
+  } catch (error) {
+    console.error('Error setting level-up config:', error);
+    return false;
+  }
+}
+
+function getLevelUpConfig(serverId) {
+  const config = getServerConfig(serverId);
+  if (!config) return null;
+  return {
+    enabled: config.levelUpSystemEnabled || false,
+    auraThreshold: config.levelUpAuraThreshold || null,
+    pointsPerLevel: config.levelUpPointsPerLevel || null,
+    rankName: config.levelUpRankName || null,
+    levelUpMessage: config.levelUpMessage || null
+  };
+}
+
+async function setEventPingRole(serverId, roleId) {
+  try {
+    await saveServerConfig(serverId, { eventPingRole: roleId });
+    return true;
+  } catch (error) {
+    console.error('Error setting event ping role:', error);
+    return false;
+  }
+}
+
 module.exports = {
   loadServerConfigs,
   saveServerConfig,
@@ -949,6 +994,9 @@ module.exports = {
   isDashboardSetupComplete,
   getDashboardServerConfig,
   reloadServerConfigFromMongo,
+  setLevelUpConfig,
+  getLevelUpConfig,
+  setEventPingRole,
   DEFAULT_FEATURE_SETTINGS,
   MAIN_SERVER_ID,
   SUPER_ADMINS,

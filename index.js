@@ -274,7 +274,10 @@ const {
   DEFAULT_GAME,
   getServerConfig,
   saveServerConfig,
-  reloadServerConfigFromMongo
+  reloadServerConfigFromMongo,
+  setLevelUpConfig,
+  getLevelUpConfig,
+  setEventPingRole
 } = require('./serverConfigManager.js');
 const gameSystem = require('./gameSystem.js');
 const charSubmissionSystem = require('./characterSubmissionSystem.js');
@@ -2032,6 +2035,98 @@ client.on('messageCreate', async (message) => {
         
         const removeResult = await removeBotAdmin(serverId, userToRemove.id, userId);
         await message.reply(removeResult.message);
+        break;
+        
+      case 'setlevelup':
+        if (!serverId || isMainServer(serverId)) {
+          await message.reply('❌ This command is only for non-main servers!');
+          return;
+        }
+        if (!isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmin can configure level-up system!');
+          return;
+        }
+        
+        const subCmd = args[0]?.toLowerCase();
+        if (subCmd === 'enable') {
+          await setLevelUpConfig(serverId, { enabled: true });
+          await message.reply('✅ Level-up system **enabled**! Use `!levelupconfig` to set thresholds.');
+        } else if (subCmd === 'disable') {
+          await setLevelUpConfig(serverId, { enabled: false });
+          await message.reply('✅ Level-up system **disabled**.');
+        } else {
+          const config = getLevelUpConfig(serverId);
+          const statusText = config.enabled ? '🟢 **Enabled**' : '🔴 **Disabled**';
+          const msg = `Level-Up System Status: ${statusText}\n\nCommands:\n\`!setlevelup enable\` - Turn on\n\`!setlevelup disable\` - Turn off\n\`!levelupconfig <aura> <points> <rank>\` - Set thresholds\n\`!levelupmsg <message>\` - Set level-up announcement`;
+          await message.reply(msg);
+        }
+        break;
+        
+      case 'levelupconfig':
+        if (!serverId || isMainServer(serverId)) {
+          await message.reply('❌ This command is only for non-main servers!');
+          return;
+        }
+        if (!isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmin can configure level-up system!');
+          return;
+        }
+        
+        const auraNeeded = parseInt(args[0]);
+        const pointsReward = parseInt(args[1]);
+        const rankName = args.slice(2).join(' ');
+        
+        if (isNaN(auraNeeded) || isNaN(pointsReward) || !rankName) {
+          await message.reply('Usage: `!levelupconfig <aura_needed> <points> <rank_name>`\nExample: `!levelupconfig 100 10 Bronze`');
+          return;
+        }
+        
+        await setLevelUpConfig(serverId, {
+          auraThreshold: auraNeeded,
+          pointsPerLevel: pointsReward,
+          rankName: rankName
+        });
+        await message.reply(`✅ Level-up config set:\n• **${auraNeeded}** aura → **${pointsReward}** points + **${rankName}** rank`);
+        break;
+        
+      case 'levelupmsg':
+        if (!serverId || isMainServer(serverId)) {
+          await message.reply('❌ This command is only for non-main servers!');
+          return;
+        }
+        if (!isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmin can configure level-up system!');
+          return;
+        }
+        
+        const customMsg = args.join(' ');
+        if (!customMsg) {
+          await message.reply('Usage: `!levelupmsg <your announcement message>`\nExample: `!levelupmsg 🎉 {player} just leveled up to {rank}! Amazing!`');
+          return;
+        }
+        
+        await setLevelUpConfig(serverId, { levelUpMessage: customMsg });
+        await message.reply(`✅ Level-up message set!\nPreview: ${customMsg}`);
+        break;
+        
+      case 'setroleevents':
+        if (!serverId || isMainServer(serverId)) {
+          await message.reply('❌ This command is only for non-main servers!');
+          return;
+        }
+        if (!isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmin can set event roles!');
+          return;
+        }
+        
+        const eventRole = message.mentions.roles.first();
+        if (!eventRole) {
+          await message.reply('Usage: `!setroleevents @role`\nThis role will be pinged for event announcements!');
+          return;
+        }
+        
+        await setEventPingRole(serverId, eventRole.id);
+        await message.reply(`✅ Event ping role set to ${eventRole}`);
         break;
       
       case 'admins':
