@@ -2128,6 +2128,60 @@ client.on('messageCreate', async (message) => {
         await setEventPingRole(serverId, eventRole.id);
         await message.reply(`✅ Event ping role set to ${eventRole}`);
         break;
+        
+      case 'toggletasks':
+      case 'togglepersonalizedtasks':
+        if (!data.users[userId]) {
+          await message.reply('❌ You haven\'t started the game yet!');
+          return;
+        }
+        
+        const COOLDOWN_1HR = 3600000; // 1 hour in ms
+        const lastTaskToggle = data.users[userId].lastTaskToggleTime || 0;
+        const timeSinceLastToggle = Date.now() - lastTaskToggle;
+        
+        if (timeSinceLastToggle < COOLDOWN_1HR && data.users[userId].lastTaskToggleTime) {
+          const minutesLeft = Math.ceil((COOLDOWN_1HR - timeSinceLastToggle) / 60000);
+          await message.reply(`⏳ You can toggle personalized tasks again in **${minutesLeft} minutes**!`);
+          return;
+        }
+        
+        const ptData = initializePersonalizedTaskData(data.users[userId]);
+        ptData.isActive = !ptData.isActive;
+        data.users[userId].lastTaskToggleTime = Date.now();
+        
+        const taskStatus = ptData.isActive ? '✅ **ENABLED**' : '❌ **DISABLED**';
+        await message.reply(`🎯 Personalized Tasks: ${taskStatus}\n\nYou can toggle again in 1 hour.`);
+        await saveDataImmediate(data);
+        break;
+        
+      case 'toggleeventpings':
+      case 'toggleeventping':
+        if (!data.users[userId]) {
+          await message.reply('❌ You haven\'t started the game yet!');
+          return;
+        }
+        
+        const lastEventToggle = data.users[userId].lastEventToggleTime || 0;
+        const timeSinceEventToggle = Date.now() - lastEventToggle;
+        
+        if (timeSinceEventToggle < COOLDOWN_1HR && data.users[userId].lastEventToggleTime) {
+          const minutesLeft = Math.ceil((COOLDOWN_1HR - timeSinceEventToggle) / 60000);
+          await message.reply(`⏳ You can toggle event pings again in **${minutesLeft} minutes**!`);
+          return;
+        }
+        
+        if (!data.users[userId].eventPingsEnabled) {
+          data.users[userId].eventPingsEnabled = true;
+        } else {
+          data.users[userId].eventPingsEnabled = false;
+        }
+        data.users[userId].lastEventToggleTime = Date.now();
+        
+        const eventStatus = data.users[userId].eventPingsEnabled ? '🔔 **ENABLED**' : '🔕 **DISABLED**';
+        await message.reply(`📢 Event Pings: ${eventStatus}\n\nYou will ${data.users[userId].eventPingsEnabled ? 'receive' : 'NOT receive'} pings for events, giveaways, and lotteries.\nYou can toggle again in 1 hour.`);
+        await saveDataImmediate(data);
+        break;
       
       case 'admins':
       case 'botadmins':
