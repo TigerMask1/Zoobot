@@ -852,8 +852,26 @@ client.on('guildCreate', async (guild) => {
       const setupEmbed = new EmbedBuilder()
         .setColor('#00D9FF')
         .setTitle('👋 Thanks for adding ZooBot!')
-        .setDescription(`Hi! I've automatically loaded all **51 ZooBot characters** and **default collectibles** - you can start using them right away!\n\n**To activate gameplay, just set these channels:**\n\`!setdropchannel #channel\` - Where creature drops appear\n\`!seteventschannel #channel\` - Where events are announced\n\n**That's it!** Your server is ready to go. Users can:\n• Catch drops with \`!catch\`\n• Collect creatures and earn rewards\n• Battle and trade with others\n\n**Optional Setup:**\n• Create a **"ZooAdmin"** role to restrict bot management\n• Customize with \`!setemoji\` and \`!setchestgif\` commands`)
-        .setFooter({ text: '✅ Default configuration loaded - just add channels and play!' });
+        .setDescription('✅ **Default Setup Ready!** All 51 ZooBot characters and collectibles are loaded and ready to go!\n\n**QUICK START (2 steps):**\n1. `!setdropchannel #channel` - Where drops appear\n2. `!seteventschannel #channel` - Where events announced\n\n✨ **Done!** Users can catch creatures and play immediately.')
+        .addFields(
+          {
+            name: '🎮 What Users Can Do',
+            value: '• `!catch` - Catch drops\n• `!collection` - View creatures\n• `!battle @user` - Battle other players\n• `!trade @user` - Trade creatures\n• Earn rewards and climb leaderboards'
+          },
+          {
+            name: '🎨 Want to Customize? (Server Owner/Admin)',
+            value: '**Replace Characters:**\n• `!characters remove <name>` - Remove unwanted creatures\n• `!characters add <id>` - Add from global directory\n• `!sc create` - Design completely custom characters\n\n**Customize Collectibles:**\n• `!collectibles` - View all collectibles\n• `!collectibles remove <name>` - Remove unwanted items\n• `!collectibles add` - Add custom items\n\n**Visual Customization:**\n• `!setemoji <character> <emoji>` - Change character emojis\n• `!setchestgif <bronze/silver/gold/emerald/legendary/tyrant> <URL>` - Custom crate animations'
+          },
+          {
+            name: '🔐 Admin Access (Optional)',
+            value: 'Create a role called **"ZooAdmin"** in Discord and assign to trusted users who should manage the bot. They can use all customization commands without having to be owner.'
+          },
+          {
+            name: '❓ Need Help?',
+            value: '• `!help` - View all commands\n• `!guide` - Full gameplay guide\n• `!commands` - Detailed command list'
+          }
+        )
+        .setFooter({ text: '✅ Play now with defaults or customize to make it yours!' });
       
       await owner.send({ embeds: [setupEmbed] }).catch(() => {
         console.log(`Could not DM owner of ${guild.name}`);
