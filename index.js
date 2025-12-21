@@ -277,6 +277,7 @@ const {
   reloadServerConfigFromMongo,
   setLevelUpConfig,
   getLevelUpConfig,
+  setLevelUpRole,
   setEventPingRole
 } = require('./serverConfigManager.js');
 const gameSystem = require('./gameSystem.js');
@@ -2086,7 +2087,9 @@ client.on('messageCreate', async (message) => {
           pointsPerLevel: pointsReward,
           rankName: rankName
         });
-        await message.reply(`✅ Level-up config set:\n• **${auraNeeded}** aura → **${pointsReward}** points + **${rankName}** rank`);
+        const currentRole = getLevelUpConfig(serverId).role;
+        const roleText = currentRole ? `\n• 🎖️ Role: <@&${currentRole}>` : '\n• 🎖️ Role: **Not set** (use `!setleveluprole @role`)';
+        await message.reply(`✅ Level-up config set:\n• **${auraNeeded}** aura → **${pointsReward}** points + **${rankName}** rank${roleText}`);
         break;
         
       case 'levelupmsg':
@@ -2107,6 +2110,26 @@ client.on('messageCreate', async (message) => {
         
         await setLevelUpConfig(serverId, { levelUpMessage: customMsg });
         await message.reply(`✅ Level-up message set!\nPreview: ${customMsg}`);
+        break;
+        
+      case 'setleveluprole':
+        if (!serverId || isMainServer(serverId)) {
+          await message.reply('❌ This command is only for non-main servers!');
+          return;
+        }
+        if (!isZooAdmin(message.member)) {
+          await message.reply('❌ Only ZooAdmin can set level-up roles!');
+          return;
+        }
+        
+        const levelupRole = message.mentions.roles.first();
+        if (!levelupRole) {
+          await message.reply('Usage: `!setleveluprole @role`\nThis role will be automatically assigned when players level up!');
+          return;
+        }
+        
+        await setLevelUpRole(serverId, levelupRole.id);
+        await message.reply(`✅ Level-up role set to ${levelupRole}!\n\n🎖️ Players will receive this role when they reach the aura threshold.`);
         break;
         
       case 'setroleevents':

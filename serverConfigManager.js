@@ -899,7 +899,8 @@ async function setLevelUpConfig(serverId, config) {
       levelUpAuraThreshold: config.auraThreshold || null,
       levelUpPointsPerLevel: config.pointsPerLevel || null,
       levelUpRankName: config.rankName || null,
-      levelUpMessage: config.levelUpMessage || null
+      levelUpMessage: config.levelUpMessage || null,
+      levelUpRole: config.role || null
     };
     await saveServerConfig(serverId, levelUpData);
     return true;
@@ -917,8 +918,19 @@ function getLevelUpConfig(serverId) {
     auraThreshold: config.levelUpAuraThreshold || null,
     pointsPerLevel: config.levelUpPointsPerLevel || null,
     rankName: config.levelUpRankName || null,
-    levelUpMessage: config.levelUpMessage || null
+    levelUpMessage: config.levelUpMessage || null,
+    role: config.levelUpRole || null
   };
+}
+
+async function setLevelUpRole(serverId, roleId) {
+  try {
+    await saveServerConfig(serverId, { levelUpRole: roleId });
+    return true;
+  } catch (error) {
+    console.error('Error setting level-up role:', error);
+    return false;
+  }
 }
 
 async function setEventPingRole(serverId, roleId) {
@@ -996,6 +1008,7 @@ module.exports = {
   reloadServerConfigFromMongo,
   setLevelUpConfig,
   getLevelUpConfig,
+  setLevelUpRole,
   setEventPingRole,
   DEFAULT_FEATURE_SETTINGS,
   MAIN_SERVER_ID,
