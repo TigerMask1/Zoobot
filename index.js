@@ -2146,11 +2146,11 @@ client.on('messageCreate', async (message) => {
           return;
         }
         
-        const ptData = initializePersonalizedTaskData(data.users[userId]);
-        ptData.isActive = !ptData.isActive;
+        const userTaskData = initializePersonalizedTaskData(data.users[userId]);
+        userTaskData.isActive = !userTaskData.isActive;
         data.users[userId].lastTaskToggleTime = Date.now();
         
-        const taskStatus = ptData.isActive ? '✅ **ENABLED**' : '❌ **DISABLED**';
+        const taskStatus = userTaskData.isActive ? '✅ **ENABLED**' : '❌ **DISABLED**';
         await message.reply(`🎯 Personalized Tasks: ${taskStatus}\n\nYou can toggle again in 1 hour.`);
         await saveDataImmediate(data);
         break;
