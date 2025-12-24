@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ZooBot Discord Bot Status - Live activity and presence">
+  <title>ZooBot Status</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .status-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 600px;
+      padding: 40px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 2em;
+    }
+    .bot-profile {
+      background: #2c2f33;
+      border-radius: 12px;
+      padding: 30px;
+      margin: 30px 0;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .bot-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+    }
+    .bot-info {
+      text-align: left;
+      color: white;
+      flex: 1;
+    }
+    .bot-info h2 {
+      font-size: 1.3em;
+      margin-bottom: 8px;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95em;
+      color: #a0a0a0;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #43b581;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .activity {
+      background: #fff;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      text-align: left;
+    }
+    .activity-label {
+      font-size: 0.85em;
+      color: #999;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+    }
+    .activity-text {
+      font-size: 1.1em;
+      color: #333;
+      font-weight: 500;
+    }
+    .feature-list {
+      text-align: left;
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+    }
+    .feature-list h3 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 1.1em;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      color: #555;
+    }
+    .feature-item::before {
+      content: "✓";
+      color: #43b581;
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 30px;
+      border-radius: 25px;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 20px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+    .nav-back {
+      display: inline-block;
+      color: #667eea;
+      text-decoration: none;
+      margin-bottom: 20px;
+      font-size: 0.95em;
+    }
+    .nav-back:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="status-container">
+    <a href="/" class="nav-back">← Back to Home</a>
+    
+    <h1>🎮 ZooBot Live Status</h1>
+    
+    <div class="bot-profile">
+      <div class="bot-avatar">🦁</div>
+      <div class="bot-info">
+        <h2>ZooBot</h2>
+        <div class="status">
+          <span class="status-dot"></span>
+          <span>Online • Ready to play</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="activity">
+      <div class="activity-label">🎮 Playing</div>
+      <div class="activity-text">catching drops 🎯</div>
+    </div>
+
+    <p style="color: #666; font-size: 0.95em; margin: 20px 0;">
+      ZooBot is live and ready in Discord! When the bot is active in your server, players will see this status in their member list.
+    </p>
+
+    <div class="feature-list">
+      <h3>What's Happening Right Now</h3>
+      <div class="feature-item">Characters dropping every 30 seconds</div>
+      <div class="feature-item">Players catching characters and battling</div>
+      <div class="feature-item">Clan wars and events running</div>
+      <div class="feature-item">Trading and leaderboards active</div>
+      <div class="feature-item">24/7 bot support</div>
+    </div>
+
+    <a href="https://discord.com/api/oauth2/authorize?client_id=YOUR_BOT_ID&permissions=8&scope=bot%20applications.commands" class="cta-button" target="_blank">
+      ➕ Add ZooBot to Your Server
+    </a>
+
+    <p style="color: #999; font-size: 0.85em; margin-top: 20px;">
+      The bot displays "Playing catching drops 🎯" when connected to Discord. Add it now to see it live in your community!
+    </p>
+  </div>
+</body>
+</html>
