@@ -405,6 +405,7 @@ const {
   initializeUserHubData
 } = require('./hubInteractionHandler.js');
 const { initializeCommands, executeCommand } = require('./commands/commandHandler.js');
+const { startClickerGame } = require('./clickerGameSystem.js');
 
 const PREFIX = '!';
 let data;
@@ -5832,6 +5833,16 @@ client.on('messageCreate', async (message) => {
           return;
         }
         await coinDuel(message, args, data);
+        break;
+        
+      case 'clicker':
+      case 'clickergame':
+      case 'click':
+        if (!data.users[userId].started) {
+          await message.reply('❌ Start your journey with `!start` first!');
+          return;
+        }
+        await startClickerGame(message, data);
         break;
         
       case 'diceclash':
