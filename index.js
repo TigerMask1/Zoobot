@@ -582,6 +582,14 @@ client.on('clientReady', async () => {
   console.log(`✅ Logged in as ${client.user.tag}!`);
   console.log(`🎮 Bot is ready to serve ${client.guilds.cache.size} servers!`);
   
+  // Set bot activity status
+  try {
+    await client.user.setActivity('catching drops 🎯', { type: 'PLAYING' });
+    console.log('✅ Bot activity set to "catching drops"');
+  } catch (error) {
+    console.warn('⚠️ Could not set bot activity:', error.message);
+  }
+  
   try {
     await initializeBot();
   } catch (error) {
