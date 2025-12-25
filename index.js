@@ -584,10 +584,18 @@ client.on('clientReady', async () => {
   
   // Set bot activity status
   try {
-    await client.user.setActivity('catching drops 🎯', { type: 'PLAYING' });
-    console.log('✅ Bot activity set to "catching drops"');
-  } catch (error) {
-    console.warn('⚠️ Could not set bot activity:', error.message);
+    await client.user.setPresence({
+      activities: [
+        {
+          name: 'Catching drops!🎁',
+          type: 0 // PLAYING
+        }
+      ],
+      status: 'online'
+    });
+    console.log('✅ ZooBot activity visible');
+  } catch (e) {
+    console.error(e);
   }
   
   try {
