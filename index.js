@@ -6729,6 +6729,33 @@ client.on('messageCreate', async (message) => {
         await message.reply({ embeds: [discEmbed], components: [discRow] });
         break;
       
+      case 'talk':
+        if (!isSuperAdmin(userId)) {
+          return;
+        }
+        
+        const channel = message.mentions.channels.first();
+        const messageContent = args.slice(1).join(' ');
+        
+        if (!channel) {
+          await message.reply('❌ Please specify a channel! Usage: `!talk #channel message`');
+          return;
+        }
+        
+        if (!messageContent) {
+          await message.reply('❌ Please provide a message to send!');
+          return;
+        }
+        
+        try {
+          await channel.send(messageContent);
+          await message.reply(`✅ Message sent to ${channel}`);
+        } catch (error) {
+          console.error('Error sending message:', error);
+          await message.reply('❌ Failed to send message. Make sure the bot has permission to send messages in that channel.');
+        }
+        break;
+      
       case 'help':
         const helpEmbed = new EmbedBuilder()
           .setColor('#3498DB')
