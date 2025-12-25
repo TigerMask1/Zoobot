@@ -327,16 +327,15 @@ async function openCrate(data, userId, crateType, client = null, serverId = null
       if (giftResult.success) {
         rewards += `\n\n🎁🎄 **CHRISTMAS GIFT!** You found a festive gift!\n✨ Your gifts: ${giftResult.userGifts} | Server: ${giftResult.serverGifts} | Global: ${giftResult.totalGifts}`;
         
-        const { getData } = require('./dataManager.js');
         for (const notification of giftResult.notifications || []) {
           if (notification.type === 'community' && client) {
-            await createCommunityMilestoneAnnouncement(client, getData(), notification.milestone);
+            await createCommunityMilestoneAnnouncement(client, data, notification.milestone);
           } else if (notification.type === 'personal') {
-            await distributeMilestoneRewards(client, getData(), notification.milestone, 'personal', userId);
+            await distributeMilestoneRewards(client, data, notification.milestone, 'personal', userId);
             rewards += `\n🎄 **PERSONAL MILESTONE!** ${notification.milestone.name} reached!`;
           } else if (notification.type === 'server' && serverId) {
-            const serverUsers = Object.keys(getData().users).filter(uid => getData().users[uid]);
-            await distributeMilestoneRewards(client, getData(), notification.milestone, 'server', null, serverUsers.slice(0, 100));
+            const serverUsers = Object.keys(data.users).filter(uid => data.users[uid]);
+            await distributeMilestoneRewards(client, data, notification.milestone, 'server', null, serverUsers.slice(0, 100));
             rewards += `\n🎄 **SERVER MILESTONE!** ${notification.milestone.name} reached!`;
           }
         }
