@@ -369,13 +369,6 @@ async function grantBadgeToUser(serverId, targetUserId, grantedBy) {
     
     const { addPfp } = require('./pfpSystem.js');
     const { saveDataImmediate } = require('./dataManager.js');
-    const data = require('./dataManager.js').getData ? require('./dataManager.js').getData() : null;
-    
-    if (data && data.users && data.users[targetUserId]) {
-      const guildName = 'Server Badge';
-      await addPfp(targetUserId, serverAura.badgeImage, `${guildName} Badge`, data);
-      await saveDataImmediate(data);
-    }
     
     return { 
       success: true, 
