@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initScrollAnimations();
   initMobileMenu();
   initScrollIndicator();
+  replaceDiscordInviteLinks();
 });
 
 function initTheme() {
@@ -219,6 +220,16 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     }
   });
 });
+function replaceDiscordInviteLinks() {
+  const OLD_PART = 'https://discord.com/api/oauth2/authorize?client_id=YOUR_BOT_ID&permissions=8&scope=bot%20applications.commands';
+  const NEW_LINK = 'https://discord.com/oauth2/authorize?client_id=1430549442842460170';
+
+  document.querySelectorAll('a[href]').forEach(link => {
+    if (link.href.includes(OLD_PART)) {
+      link.href = NEW_LINK;
+    }
+  });
+}
 
 window.loadChangelog = loadChangelog;
 window.showToast = showToast;
