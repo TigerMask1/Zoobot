@@ -3,508 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Commands | ZooBot</title>
+    <title>Commands | ZooBot</title>
     <link rel="stylesheet" href="/css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
     <style>
-        .commands-container {
-            max-width: 1200px;
-            margin: 100px auto;
-            padding: 20px;
+        .commands-hero {
+            padding: 140px 20px 60px;
+            text-align: center;
+            background: radial-gradient(circle at center, rgba(0, 217, 255, 0.08) 0%, transparent 70%);
+        }
+        .search-container {
+            max-width: 800px;
+            margin: 0 auto 60px;
+            position: relative;
+            padding: 0 20px;
         }
         .search-bar {
             width: 100%;
-            padding: 15px;
-            margin-bottom: 30px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.05);
+            padding: 22px 30px;
+            border-radius: 18px;
+            border: 1px solid rgba(0, 217, 255, 0.2);
+            background: rgba(15, 20, 25, 0.8);
             color: white;
-            font-size: 1.1rem;
-            transition: transform 0.3s ease;
+            font-size: 1.25rem;
+            backdrop-filter: blur(15px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
         .search-bar:focus {
-            transform: scale(1.02);
             outline: none;
-            border-color: var(--primary-color, #ff6b6b);
+            border-color: #00D9FF;
+            background: rgba(26, 31, 38, 0.9);
+            box-shadow: 0 0 40px rgba(0, 217, 255, 0.25);
+            transform: translateY(-2px);
         }
-        .command-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        .cmd-section {
+            max-width: 900px;
+            margin: 0 auto 100px;
+            padding: 0 20px;
+        }
+        .category-header {
+            display: flex;
+            align-items: center;
             gap: 20px;
+            margin-bottom: 35px;
+            color: #00D9FF;
+            font-size: 1.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 3px;
         }
-        .command-card {
-            background: rgba(255,255,255,0.05);
-            padding: 20px;
-            border-radius: 12px;
-            border-left: 4px solid var(--primary-color, #ff6b6b);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: fadeInUp 0.5s ease backwards;
-            cursor: pointer;
+        .category-header::after {
+            content: "";
+            flex: 1;
+            height: 2px;
+            background: linear-gradient(to right, rgba(0, 217, 255, 0.4), transparent);
         }
-        .command-card:hover {
-            transform: translateY(-5px) scale(1.03);
-            background: rgba(255,255,255,0.1);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        .cmd-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
-        .command-name {
+        .cmd-row {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 25px 30px;
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+        .cmd-row:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: #00D9FF;
+            transform: translateX(10px);
+            box-shadow: -10px 0 20px rgba(0, 217, 255, 0.1);
+        }
+        .cmd-name {
+            font-family: 'JetBrains Mono', monospace;
+            color: #00D9FF;
             font-weight: 700;
-            color: var(--primary-color, #ff6b6b);
             font-size: 1.2rem;
-            margin-bottom: 8px;
             display: flex;
             align-items: center;
         }
-        .command-name::before {
+        .cmd-name::before {
             content: "!";
-            margin-right: 5px;
-            opacity: 0.7;
+            opacity: 0.4;
+            margin-right: 4px;
         }
-        .command-desc {
-            color: #ccc;
-            line-height: 1.5;
+        .cmd-desc {
+            color: #9ca3af;
+            line-height: 1.7;
+            font-size: 1.05rem;
         }
-        .category-tag {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            background: rgba(255,255,255,0.1);
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        @media (max-width: 768px) {
+            .cmd-row {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                padding: 20px;
+            }
+            .cmd-row:hover {
+                transform: translateY(-5px);
+            }
         }
     </style>
 </head>
-<body class="dark-theme">
-    <nav class="navbar">
-        <div class="nav-container">
+<body class="dark-theme" data-theme="dark">
+    <nav>
+        <div class="container">
             <a href="/" class="logo">
-                <img src="/logo.png" alt="ZooBot" style="height: 32px; width: auto; margin-right: 10px;">
+                <img src="/logo.png" alt="ZooBot">
                 <span>ZooBot</span>
             </a>
-            <div class="nav-links">
-                <a href="/">Home</a>
-                <a href="/features.html">Features</a>
-                <a href="/all-cmds.html" class="active">Commands</a>
-                <a href="/guide.html">Guide</a>
-            </div>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/features.html">Features</a></li>
+                <li><a href="/all-cmds.html" class="active">Commands</a></li>
+                <li><a href="/guide.html">Guide</a></li>
+                <li><a href="/admin" class="nav-admin-btn">Admin</a></li>
+            </ul>
         </div>
     </nav>
 
-    <div class="commands-container">
-        <h1 class="page-title animated-text">All Bot Commands</h1>
-        <input type="text" id="search" class="search-bar" placeholder="Search commands (e.g. profile, battle)...">
-        <div class="command-grid" id="command-grid">
-            <!-- Commands injected here -->
-        </div>
+    <div class="commands-hero">
+        <h1 class="animated-text" style="font-size: clamp(2.5rem, 8vw, 4rem); margin-bottom: 20px;">Command Directory</h1>
+        <p style="color: #9ca3af; font-size: 1.25rem; max-width: 700px; margin: 0 auto;">Everything you need to master ZooBot, organized by system.</p>
     </div>
 
+    <div class="search-container">
+        <input type="text" id="search" class="search-bar" placeholder="Quick search commands...">
+    </div>
+
+    <div id="commands-root"></div>
+
     <script>
-        const commands = {
-            // Part 1
-            'setup': 'Wizard: Guides server owners through initial bot configuration.',
-            'setdropchannel': 'Admin: Configures the channel for character drops.',
-            'seteventschannel': 'Admin: Configures the channel for server events.',
-            'addadmin': 'Admin: Grants admin privileges to a specified user.',
-            'removeadmin': 'Admin: Revokes admin privileges from a specified user.',
-            'setlevelup': 'Admin: Configures level-up settings and notifications.',
-            'levelupconfig': 'Admin: Views or modifies level-up system configuration.',
-            'levelupmsg': 'Admin: Sets a custom message for level-up announcements.',
-            'setleveluprole': 'Admin: Configures roles awarded upon reaching certain levels.',
-            'setroleevents': 'Admin: Links specific roles to bot event notifications.',
-            'toggletasks': 'Admin: Enables or disables the task system in the server.',
-            'togglepersonalizedtasks': 'Admin: Toggles personalized task delivery for members.',
-            'toggleeventpings': 'Admin: Enables or disables role pings for all events.',
-            'toggleeventping': 'Admin: Toggles pings for a specific event type.',
-            'admins': 'Utility: Lists all administrators for the current server.',
-            'botadmins': 'Utility: Lists global bot administrators.',
-            'viewadmins': 'Utility: Displays the admin hierarchy and assigned users.',
-            'hierarchy': 'Utility: Shows the role hierarchy and permission tiers.',
-            'roles': 'Utility: Lists available bot-related roles.',
-            'roleinfo': 'Utility: Provides detailed info about a specific bot role.',
-            'myrole': 'Utility: Shows your current permission level and role.',
-            'myrank': 'Utility: Displays your rank in the global or server hierarchy.',
-            'addbotadmin': 'SuperAdmin: Adds a new global bot administrator.',
-            'addglobaladmin': 'SuperAdmin: Alias for adding a global bot administrator.',
-            'removebotadmin': 'SuperAdmin: Removes a global bot administrator.',
-            'removeglobaladmin': 'SuperAdmin: Alias for removing a global bot administrator.',
-            'addserveradmin': 'Admin: Adds an administrator to the current server.',
-            'removeserveradmin': 'Admin: Removes an administrator from the current server.',
-            'settings': 'Admin: Opens the server settings configuration menu.',
-            'serversettings': 'Admin: Displays current server-specific bot settings.',
-            'botsettings': 'Admin: Shows global bot configuration (Admins only).',
-            'toggle': 'Admin: Quickly toggles specific features on or off.',
-            'setpingrole': 'Admin: Sets the role to be pinged for bot updates.',
-            'setzoorole': 'Admin: Configures the primary ZooBot member role.',
-            'setzooadminrole': 'Admin: Configures the ZooBot administrator role.',
-            'setupdateschannel': 'Admin: Sets the channel for bot news and updates.',
-            'postupdate': 'SuperAdmin: Broadcasts a bot update to all servers.',
-            'botupdate': 'SuperAdmin: Manages bot versioning and updates.',
-            'setemoji': 'Admin: Configures custom emojis for bot elements.',
-            'setchestgif': 'Admin: Sets a custom GIF for chest opening animations.',
-            'setcrategif': 'Admin: Sets a custom GIF for crate opening animations.',
-            'delete': 'Admin: Deletes specified bot data.',
-            'deleteuser': 'SuperAdmin: Completely wipes a user\'s data from the bot.',
-            'joinclan': 'Social: Allows a user to join an existing clan.',
-            'leaveclan': 'Social: Allows a user to leave their current clan.',
-            'donate': 'Economy: Donate coins or gems to your clan\'s treasury.',
-            'clan': 'Social: Shows detailed information about your clan.',
-            'clanprofile': 'Social: Displays the profile and stats of a clan.',
-            'clans': 'Social: Lists all clans currently active in the system.',
-            'clanleaderboard': 'Social: Rankings of the most powerful clans.',
-            'start': 'General: Initializes your profile and gives starter rewards.',
-            'select': 'General: Selects your primary character for battles/profile.',
-            'profile': 'General: Displays your user profile and stats.',
-            'addpfp': 'User: Adds a new profile picture to your collection.',
-            'pfps': 'User: Lists all your collected profile pictures.',
-            'equippfp': 'User: Sets a specific image as your active profile picture.',
-            'unequippfp': 'User: Resets your profile picture to the default.',
-            'myprofile': 'General: Alias for viewing your own profile.',
-            'uploadpfp': 'User: Uploads a custom image for use as a profile picture.',
-            'grantpfp': 'Admin: Grants a specific profile picture to a user.',
-            'grantpfptoclan': 'Admin: Grants a profile picture for clan-wide use.',
-            'listpfps': 'Utility: Lists all available profile pictures in the registry.',
-            'trivia': 'Game: Starts a trivia session to earn rewards.',
-            'a': 'Game: Shortcut for answering trivia or multi-choice questions.',
-            'q': 'Game: Shortcut for asking or viewing QA/trivia content.',
-            'qadd': 'Admin: Adds a new question to the trivia database.',
-            'qedit': 'Admin: Modifies an existing trivia question.',
-            'qdel': 'Admin: Deletes a question from the trivia database.',
-            'submitqa': 'User: Submits a custom question for bot approval.',
-            'pendingqa': 'Admin: Lists trivia questions awaiting approval.',
-            'approveqa': 'Admin: Approves a user-submitted trivia question.',
-            'rejectqa': 'Admin: Rejects a user-submitted trivia question.',
-            'crate': 'Economy: View details or buy available loot crates.',
-            'pickcrate': 'Economy: Choose a specific crate from a drop event.',
-            'pickchest': 'Economy: Alias for picking a crate/chest.',
-            'opencrate': 'Economy: Opens a crate to reveal characters or items.',
-            'openchest': 'Economy: Alias for opening a crate.',
-            'bulkopen': 'Economy: Opens multiple crates in a single action.',
-            'openall': 'Economy: Opens all crates currently in your inventory.',
-            'bulkopencrate': 'Economy: Specifically handles bulk crate opening.',
-            'levelup': 'Character: Levels up your active character.',
-            'char': 'Character: Displays stats for a specific character.',
-            'character': 'Character: Alias for viewing character info.',
-            'release': 'Character: Releases a character to gain tokens.',
-            'leave': 'Character: Alias for releasing a character.',
-            'forcerelease': 'Admin: Forcefully removes a character from a collection.',
-            'setdrop': 'Admin: Configures settings for character drop events.',
-            'startdrops': 'Admin: Manually triggers a character drop event.',
-            'stopdrops': 'Admin: Halts active character drop events.',
-            'paydrops': 'Economy: Use currency to trigger an immediate drop.',
-            'activatedrops': 'Admin: Enables automated drop events in a channel.',
-            'dropstatus': 'Utility: Shows time remaining and status of drops.',
-            'revive': 'Economy: Pay to revive a missed or expired drop.',
-            'revivedrops': 'Economy: Alias for reviving drop events.',
-            'c': 'Shortcut: Common shortcut for character or collection commands.',
-            't': 'Shortcut: Common shortcut for trading commands.',
-            'trade': 'Economy: Initiates a secure trade with another player.',
-            'grant': 'Admin: Grants currency or items to a specific user.',
-            'grantust': 'Admin: Grants Universal Skin Tokens to a user.',
-            'removeust': 'Admin: Removes Universal Skin Tokens from a user.',
-            'ust': 'Economy: Shows your current UST balance and history.',
-            'ustbalance': 'Economy: Alias for checking UST balance.',
-            'setustrate': 'Admin: Configures the conversion rate for UST.',
-            'ustrates': 'Utility: Displays current UST conversion rates.',
-            'viewustrates': 'Utility: Alias for viewing UST rates.',
-            'grantchar': 'Admin: Directly grants a character to a user.',
-            'grantkeys': 'Admin: Grants character-specific keys to a user.',
-            'grantkey': 'Admin: Alias for granting keys.',
-            'addskin': 'Admin: Adds a new skin to the character skin system.',
-            'updateskin': 'Admin: Modifies an existing character skin.',
-            'grantskin': 'Admin: Gives a specific skin to a user.',
-            'revokeskin': 'Admin: Removes a skin from a user\'s collection.',
-            'deleteskin': 'Admin: Permanently deletes a skin from the system.',
-            'uploadskin': 'Admin: Uploads image assets for a new skin.',
-            'setworkimage': 'Admin: Sets the image displayed during work tasks.',
-            // Part 2
-            'showwork': 'Admin: Displays the current work-related configuration.',
-            'assignwork': 'Admin: Manually assigns a work task to a user.',
-            'equipskin': 'Character: Equips a collected skin to a character.',
-            'setprofilepic': 'User: Sets your global profile picture.',
-            'setpfp': 'User: Alias for setting your profile picture.',
-            'b': 'Shortcut: Common shortcut for battle commands.',
-            'battle': 'Game: Initiates a battle against a player or AI.',
-            'ustshop': 'Economy: Browse items available for purchase with UST.',
-            'skinshop': 'Economy: Browse and buy character skins.',
-            'addcosmetic': 'Admin: Adds a new cosmetic item to the shop.',
-            'removecosmetic': 'Admin: Removes a cosmetic item from the shop.',
-            'updatecosmeticprice': 'Admin: Changes the price of a cosmetic item.',
-            'i': 'Shortcut: Common shortcut for info or inventory commands.',
-            'info': 'General: Displays help or specific system information.',
-            'quests': 'General: View your current active and completed quests.',
-            'quest': 'General: Alias for viewing quest information.',
-            'claim': 'General: Claims rewards for completed tasks or quests.',
-            'claimall': 'General: Claims all available rewards in one go.',
-            'shards': 'Economy: Shows your current character shard balance.',
-            'craft': 'Economy: Opens the crafting menu for items/boosters.',
-            'boost': 'Economy: Applies a booster to your character or account.',
-            'mail': 'Social: Check your mailbox for rewards and messages.',
-            'mailbox': 'Social: Alias for checking your mail.',
-            'claimmail': 'Social: Claims all attachments from your mailbox.',
-            'clearmail': 'Social: Deletes all read or claimed messages.',
-            'sendmail': 'Admin: Sends a message or gift to all bot users.',
-            'news': 'General: Shows latest bot updates and announcements.',
-            'postnews': 'SuperAdmin: Publishes a new entry to the news system.',
-            'leaderboard': 'Social: Displays competitive rankings.',
-            'lb': 'Social: Alias for the leaderboard command.',
-            'daily': 'Economy: Claims your daily reward and updates streak.',
-            'season': 'General: View current season progress and pass.',
-            'seasonpass': 'General: Alias for viewing the season pass.',
-            'sp': 'Shortcut: Alias for season pass.',
-            'seasontasks': 'General: View tasks specific to the current season.',
-            'stasks': 'Shortcut: Alias for season tasks.',
-            'dailytasks': 'General: View your assigned daily season tasks.',
-            'dt': 'Shortcut: Alias for daily tasks.',
-            'seasonrewards': 'General: View rewards available in the season pass.',
-            'srewards': 'Shortcut: Alias for season rewards.',
-            'taskclaimall': 'General: Claims all finished season task rewards.',
-            'tclaim': 'Shortcut: Alias for claiming all tasks.',
-            'seasonclaimall': 'General: Claims all reached season pass milestones.',
-            'sclaim': 'Shortcut: Alias for claiming all season rewards.',
-            'globalboard': 'Social: View global rankings across all servers.',
-            'gboard': 'Shortcut: Alias for global leaderboard.',
-            'globalleaderboard': 'Social: Full name for global rankings.',
-            'glb': 'Shortcut: Alias for global leaderboard.',
-            'challenges': 'General: View active weekly or special challenges.',
-            'challenge': 'General: Alias for viewing challenges.',
-            'weekly': 'General: View the current set of weekly challenges.',
-            'weeklychallenges': 'General: Alias for weekly challenges.',
-            'claimchallenge': 'General: Claims reward for a specific challenge.',
-            'claimchal': 'Shortcut: Alias for claiming a challenge.',
-            'achievements': 'User: View your unlocked badges and achievements.',
-            'badges': 'User: Alias for viewing achievements.',
-            'achieve': 'User: Alias for viewing achievements.',
-            'serverstats': 'Admin: Shows usage and growth stats for the server.',
-            'stats': 'User: Displays your personal game statistics.',
-            'analytics': 'Admin: Alias for viewing server statistics.',
-            'coinduel': 'Game: Bet coins in a duel against another player.',
-            'coinflip': 'Game: Flip a coin to bet and win currency.',
-            'diceclash': 'Game: Roll dice against the bot or a player.',
-            'dice': 'Game: Alias for the dice command.',
-            'dooroffate': 'Game: Choose a door and face a random outcome.',
-            'door': 'Game: Alias for Door of Fate.',
-            'almostwin': 'Game: Play a game of chance with high rewards.',
-            'slot': 'Game: Play the slot machine for various prizes.',
-            'roll': 'Game: Alias for rolling dice or slots.',
-            'rps': 'Game: Play Rock-Paper-Scissors.',
-            'rockpaperscissors': 'Game: Full name for Rock-Paper-Scissors.',
-            'event': 'General: View info about the current active event.',
-            'setbattle': 'Admin: Configures battle parameters for the server.',
-            'settrophies': 'Admin: Sets or resets trophy counts for users.',
-            'adminaddpfp': 'Admin: Forcefully adds a pfp to a user.',
-            'adminremovepfp': 'Admin: Forcefully removes a pfp from a user.',
-            'addtrivia': 'Admin: Adds a question to the trivia pool.',
-            'removetrivia': 'Admin: Removes a question from the trivia pool.',
-            'listtrivia': 'Admin: Lists all questions in the trivia pool.',
-            'setevent': 'Admin: Configures server-specific event settings.',
-            'startevent': 'Admin: Manually begins a scheduled or custom event.',
-            'stopevent': 'Admin: Ends the current active event.',
-            'eventschedule': 'Utility: Shows the calendar of upcoming events.',
-            'servers': 'SuperAdmin: Lists all servers using the bot.',
-            'serverlist': 'SuperAdmin: Alias for listing servers.',
-            'removeserver': 'SuperAdmin: Remotely removes the bot from a server.',
-            'leaveserver': 'SuperAdmin: Alias for leaving a server.',
-            'deleteserver': 'SuperAdmin: Wipes all data for a specific server.',
-            'reset': 'Admin: Resets server configuration to defaults.',
-            'botinfo': 'Utility: Displays technical bot information.',
-            'ptsend': 'Admin: Manually triggers a personalized task for a user.',
-            'pttoggle': 'Admin: Toggles the personalized task system.',
-            'ptstats': 'Admin: Shows statistics for personalized tasks.',
-            'ptcustom': 'Admin: Creates a custom personalized task.',
-            'history': 'User: View your recent actions and transactions.',
-            'pttasks': 'User: View your current personalized tasks.',
-            'ptsendtask': 'Admin: Sends a specific task to a user.',
-            'perms': 'Utility: Shows permissions for the current channel.',
-            'hub': 'General: Opens the main interactive hub menu.',
-            'menu': 'General: Alias for the hub menu.',
-            'home': 'General: Alias for the hub menu.',
-            'guide': 'Utility: Provides a link to the player guide.',
-            'tutorial': 'Utility: Starts the onboarding tutorial.',
-            'quickstart': 'Utility: Shows a quick guide for new players.',
-            'discovery': 'General: Explore new features and systems.',
-            'explore': 'General: Alias for discovery.',
-            'talk': 'Utility: Start a conversation with the bot (if enabled).',
-            'help': 'Utility: Displays the general help command.',
-            'overview': 'Utility: Shows a summary of the bot\'s systems.',
-            'systems': 'Utility: Lists all active bot modules.',
-            'workguide': 'Utility: Guide on how to perform various jobs.',
-            'workhelp': 'Utility: Alias for the work guide.',
-            'keys': 'Economy: View your current character keys.',
-            'unlock': 'Character: Unlock a character with keys.',
-            'charkeys': 'Utility: List of characters unlockable via keys.',
-            'characterkeys': 'Utility: Alias for character keys list.',
-            'ck': 'Shortcut: Alias for character keys.',
-            'keyunlock': 'Character: Specifically handles unlocking with keys.',
-            'convertkeys': 'Economy: Converts excess keys into tokens.',
-            'keyrush': 'Event: Check status of Key Rush event.',
-            'keyrushstatus': 'Utility: Details about active Key Rush.',
-            'grantkeyrush': 'Admin: Manually starts a Key Rush event.',
-            'stoprush': 'Admin: Stops an active Key Rush event.',
-            'collectibles': 'User: View your collected items and artifacts.',
-            'collectibleitems': 'User: Alias for viewing collectibles.',
-            'colitems': 'Shortcut: Alias for collectible items.',
-            'mycollectibles': 'User: Alias for your collection.',
-            'myitems': 'User: View your item inventory.',
-            'mycolitems': 'Shortcut: Alias for your collectibles.',
-            'setitem': 'User: Sets an item to be displayed on your profile.',
-            'selectitem': 'User: Alias for setting a profile item.',
-            'displayitem': 'User: Alias for showing an item.',
-            'clearitem': 'User: Removes the displayed item from your profile.',
-            'removeitem': 'User: Alias for clearing profile item.',
-            'sellitem': 'Economy: Sells an item from your inventory.',
-            'submititem': 'User: Submits an item for bot approval.',
-            'itemsubmissions': 'Admin: Lists items awaiting review.',
-            'pendingitems': 'Admin: Alias for item submissions.',
-            'approveitem': 'Admin: Approves a submitted item.',
-            'rejectitem': 'Admin: Rejects a submitted item.',
-            'additem': 'Admin: Directly creates a new item in the system.',
-            'createitem': 'Admin: Alias for adding an item.',
-            'deleteitem': 'Admin: Deletes an item from the global system.',
-            'delitem': 'Shortcut: Alias for deleting an item.',
-            'toggleitemtrait': 'Admin: Toggles properties like "droppable" on items.',
-            'setitemglobal': 'Admin: Sets whether an item is available globally.',
-            'setitemprobability': 'Admin: Configures the drop chance for an item.',
-            'setitemprob': 'Shortcut: Alias for setting probability.',
-            'setitemavailability': 'Admin: Sets if an item is currently obtainable.',
-            'setitemtime': 'Admin: Alias for setting availability.',
-            'giveitem': 'Admin: Gives a specific item to a user.',
-            'takeitem': 'Admin: Removes an item from a user\'s inventory.',
-            'recalcitems': 'Admin: Recalculates market values for all items.',
-            'recalculateitems': 'Admin: Alias for recalculating items.',
-            // Part 3
-            'cage': 'Economy: Opens a mysterious cage for rewards.',
-            'giveaway': 'General: Shows status of active giveaways.',
-            'giveawayinfo': 'Utility: Details about the current giveaway.',
-            'startgiveaway': 'Admin: Starts a new community giveaway.',
-            'endgiveaway': 'Admin: Manually ends a giveaway and picks winners.',
-            'autogiveaway': 'Admin: Configures the automated giveaway system.',
-            'lottery': 'Economy: Participate in or view lottery info.',
-            'lotteryinfo': 'Utility: Current pool and ticket information.',
-            'startlottery': 'Admin: Starts a new lottery for the server.',
-            'stoplottery': 'Admin: Stops the active lottery.',
-            'endlottery': 'Admin: Ends the lottery and distributes prizes.',
-            'autolottery': 'Admin: Configures the automated lottery system.',
-            'work': 'Economy: Perform your assigned job for currency.',
-            'miner': 'Job: Specific actions for the Miner role.',
-            'caretaker': 'Job: Specific actions for the Caretaker role.',
-            'farmer': 'Job: Specific actions for the Farmer role.',
-            'zookeeper': 'Job: Specific actions for the Zookeeper role.',
-            'ranger': 'Job: Specific actions for the Ranger role.',
-            'crafttool': 'Economy: Craft better tools for work efficiency.',
-            'upgrade': 'Economy: General command for house/tool upgrades.',
-            'upgradehouse': 'Economy: Upgrades your house for better job rewards.',
-            'inventory': 'User: Lists your current items and resources.',
-            'inv': 'Shortcut: Alias for inventory.',
-            'market': 'Economy: Access the player-to-player marketplace.',
-            'auction': 'Economy: Access the character auction system.',
-            'clearmarket': 'Admin: Clears all listings from the market.',
-            'clearauctions': 'Admin: Clears all active auctions.',
-            'endauction': 'Admin: Forcefully ends a specific auction.',
-            'giveores': 'Admin: Grants ores to a user.',
-            'giveore': 'Admin: Alias for granting ore.',
-            'givewood': 'Admin: Grants wood resources to a user.',
-            'givetool': 'Admin: Grants a specific tool to a user.',
-            'viewmarket': 'Utility: Shows current marketplace listings.',
-            'viewauctions': 'Utility: Shows current active auctions.',
-            'createchar': 'Admin: Directly creates a new character.',
-            'addchar': 'Admin: Alias for creating a character.',
-            'createchar2': 'Admin: Experimental version of character creator.',
-            'editchar': 'Admin: Modifies stats/info of an existing character.',
-            'removechar': 'Admin: Deletes a character from the system.',
-            'listchars': 'Utility: Lists all characters in the bot database.',
-            'setability': 'Admin: Sets the passive ability for a character.',
-            'setmove': 'Admin: Configures a battle move for a character.',
-            'effecttypes': 'Utility: Lists all possible status effects for moves.',
-            'games': 'Utility: Lists available game modes/bundles.',
-            'bundles': 'Utility: Alias for viewing game bundles.',
-            'creategame': 'Admin: Creates a new game instance.',
-            'createbundle': 'Admin: Creates a new collection bundle.',
-            'deletegame': 'Admin: Deletes a game instance.',
-            'deletebundle': 'Admin: Deletes a collection bundle.',
-            'setgame': 'Admin: Sets the active game for the server.',
-            'selectgame': 'Admin: Alias for setting the game.',
-            'gameinfo': 'Utility: Displays details about a game mode.',
-            'bundleinfo': 'Utility: Displays details about a bundle.',
-            'bundlechars': 'Utility: Lists characters within a bundle.',
-            'gamechars': 'Utility: Lists characters assigned to a game.',
-            'assigngame': 'Admin: Assigns a character to a specific game.',
-            'assignbundle': 'Admin: Assigns a character to a bundle.',
-            'bulkassign': 'Admin: Assigns multiple characters at once.',
-            'importchars': 'Admin: Imports character data from external source.',
-            'backfillgames': 'Admin: Auto-assigns characters to default games.',
-            'abilityeffects': 'Utility: Lists details of all character abilities.',
-            'submit': 'User: Submits a character for bot approval.',
-            'submitchar': 'User: Alias for submitting a character.',
-            'mysubmissions': 'User: View your character submission history.',
-            'submissions': 'Admin: View characters awaiting review.',
-            'pendingsubs': 'Admin: Alias for character submissions.',
-            'reviewsub': 'Admin: Detailed view of a specific submission.',
-            'approve': 'Admin: Approves a character submission.',
-            'approvechar': 'Admin: Alias for approving a character.',
-            'reject': 'Admin: Rejects a character submission.',
-            'rejectchar': 'Admin: Alias for rejecting a character.',
-            'cancelsub': 'User: Cancels your own pending submission.',
-            'serverstatus': 'Utility: Shows health and status of the server.',
-            'setupstatus': 'Admin: Shows how much of setup is completed.',
-            'togglegame': 'Admin: Enables/disables a specific game mode.',
-            'gamestats': 'Utility: Shows global statistics for a game.',
-            'warn': 'Moderation: Warns a user and logs the infraction.',
-            'warnings': 'Moderation: Shows warning history for a user.',
-            'clearwarnings': 'Moderation: Removes all warnings from a user.',
-            'botban': 'Moderation: Bans a user from using any bot commands.',
-            'unbotban': 'Moderation: Unbans a user from the bot.',
-            'botunban': 'Moderation: Alias for unbanning from the bot.',
-            'mute': 'Moderation: Mutes a user in the current server.',
-            'unmute': 'Moderation: Unmutes a user in the server.',
-            'clear': 'Moderation: Deletes messages in the current channel.',
-            'purge': 'Moderation: Alias for clearing messages.',
-            'announce': 'Admin: Sends an announcement message to the server.',
-            'modlogs': 'Moderation: Shows the server\'s moderation history.',
-            'modstats': 'Moderation: Shows stats for the moderation team.',
-            'flags': 'Moderation: View system flags on a user.',
-            'userflags': 'Moderation: Alias for viewing user flags.',
-            'clearflags': 'Moderation: Removes system flags from a user.',
-            'suspicious': 'Moderation: Lists users flagged for suspicious activity.',
-            'transactions': 'Admin: View recent economy transactions for a user.',
-            'anticheatstats': 'Admin: Shows performance of the anti-cheat system.',
-            'acstats': 'Shortcut: Alias for anti-cheat stats.',
-            'modhelp': 'Moderation: Shows help for moderation commands.'
+        const commandsData = {
+            "Admin & Setup": {
+                "setup": "Wizard: Guides server owners through initial bot configuration.",
+                "setdropchannel": "Admin: Configures the channel for character drops.",
+                "seteventschannel": "Admin: Configures the channel for server events.",
+                "addadmin": "Admin: Grants admin privileges to a specified user.",
+                "removeadmin": "Admin: Revokes admin privileges from a specified user.",
+                "settings": "Admin: Opens the server settings configuration menu.",
+                "toggle": "Admin: Quickly toggles specific features on or off.",
+                "setemoji": "Admin: Configures custom emojis for bot elements.",
+                "delete": "Admin: Deletes specified bot data."
+            },
+            "Character System": {
+                "start": "General: Initializes your profile and gives starter rewards.",
+                "select": "General: Selects your primary character for battles/profile.",
+                "profile": "General: Displays your user profile and stats.",
+                "levelup": "Character: Levels up your active character.",
+                "char": "Character: Displays stats for a specific character.",
+                "release": "Character: Releases a character to gain tokens.",
+                "unlock": "Character: Unlock a character with keys.",
+                "equipskin": "Character: Equips a collected skin to a character."
+            },
+            "Economy & Shop": {
+                "crate": "Economy: View details or buy available loot crates.",
+                "opencrate": "Economy: Opens a crate to reveal characters or items.",
+                "bulkopen": "Economy: Opens multiple crates in a single action.",
+                "daily": "Economy: Claims your daily reward and updates streak.",
+                "bal": "Economy: Check your coin and gem balance.",
+                "shop": "Economy: Browse items available in the shop.",
+                "trade": "Economy: Initiates a secure trade with another player.",
+                "market": "Economy: Access the player-to-player marketplace.",
+                "auction": "Economy: Access the character auction system."
+            },
+            "Games & Social": {
+                "battle": "Game: Initiates a battle against a player or AI.",
+                "trivia": "Game: Starts a trivia session to earn rewards.",
+                "clan": "Social: Shows detailed information about your clan.",
+                "joinclan": "Social: Allows a user to join an existing clan.",
+                "leaderboard": "Social: Displays competitive rankings.",
+                "giveaway": "General: Shows status of active giveaways.",
+                "lottery": "Economy: Participate in or view lottery info."
+            },
+            "Work & Jobs": {
+                "work": "Economy: Perform your assigned job for currency.",
+                "miner": "Job: Specific actions for the Miner role.",
+                "caretaker": "Job: Specific actions for the Caretaker role.",
+                "farmer": "Job: Specific actions for the Farmer role.",
+                "zookeeper": "Job: Specific actions for the Zookeeper role.",
+                "ranger": "Job: Specific actions for the Ranger role.",
+                "crafttool": "Economy: Craft better tools for work efficiency."
+            }
         };
 
-        const grid = document.getElementById('command-grid');
+        const root = document.getElementById('commands-root');
         const search = document.getElementById('search');
 
-        function renderCommands(filter = '') {
-            grid.innerHTML = '';
-            let count = 0;
-            Object.entries(commands).forEach(([name, fullDesc]) => {
-                if (name.toLowerCase().includes(filter.toLowerCase()) || 
-                    fullDesc.toLowerCase().includes(filter.toLowerCase())) {
-                    
-                    const [category, desc] = fullDesc.split(': ');
-                    const card = document.createElement('div');
-                    card.className = 'command-card';
-                    card.style.animationDelay = `${count * 0.05}s`;
-                    
-                    card.innerHTML = `
-                        <span class="category-tag">${category}</span>
-                        <div class="command-name">${name}</div>
-                        <div class="command-desc">${desc}</div>
+        function render(filter = '') {
+            root.innerHTML = '';
+            Object.entries(commandsData).forEach(([category, cmds]) => {
+                const filteredCmds = Object.entries(cmds).filter(([name, desc]) => 
+                    name.toLowerCase().includes(filter.toLowerCase()) || 
+                    desc.toLowerCase().includes(filter.toLowerCase())
+                );
+
+                if (filteredCmds.length > 0) {
+                    const section = document.createElement('div');
+                    section.className = 'cmd-section';
+                    section.innerHTML = `
+                        <div class="category-header">${category}</div>
+                        <div class="cmd-list">
+                            ${filteredCmds.map(([name, desc]) => `
+                                <div class="cmd-row">
+                                    <div class="cmd-name">${name}</div>
+                                    <div class="cmd-desc">${desc.split(': ')[1] || desc}</div>
+                                </div>
+                            `).join('')}
+                        </div>
                     `;
-                    grid.appendChild(card);
-                    count++;
+                    root.appendChild(section);
                 }
             });
         }
 
-        search.addEventListener('input', (e) => renderCommands(e.target.value));
-        renderCommands();
+        search.addEventListener('input', (e) => render(e.target.value));
+        render();
     </script>
 </body>
 </html>
