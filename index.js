@@ -83,7 +83,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/:page.html', (req, res, next) => {
-  const validPages = ['index', 'features', 'guide', 'changelog', 'about', 'admin', 'dashboard'];
+  const validPages = ['index', 'features', 'guide', 'changelog', 'about', 'admin', 'dashboard', 'all-cmds'];
   if (validPages.includes(req.params.page)) {
     res.sendFile(path.join(__dirname, 'public', `${req.params.page}.html`));
   } else {
