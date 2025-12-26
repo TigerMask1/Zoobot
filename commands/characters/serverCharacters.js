@@ -80,21 +80,11 @@ async function handleListCharacters(message, serverId, page, userId) {
       ...serverChars.map(c => ({ ...c, source: 'server' })),
       ...addedGlobalChars.map(c => ({ ...c, source: 'global' }))
     ];
-    
+
+    // Load default characters if list is empty
     if (allChars.length === 0) {
-      const embed = new EmbedBuilder()
-        .setColor(0xFFAA00)
-        .setTitle('No Characters Available')
-        .setDescription(
-          'This server has no characters configured for drops yet!\n\n' +
-          '**Server Owners can:**\n' +
-          '• `!sc create` - Create a custom character\n' +
-          '• `!characters add <id>` - Add a public character by ID\n\n' +
-          '**Browse public characters:**\n' +
-          '• `!publicchars` - View all public characters available to add'
-        )
-        .setTimestamp();
-      return message.reply({ embeds: [embed] });
+      const defaultChars = require('../../characters.js');
+      allChars.push(...defaultChars.map(c => ({ ...c, source: 'global', uniqueId: c.customEmojiId || c.name.toUpperCase() })));
     }
     
     const totalPages = Math.ceil(allChars.length / ITEMS_PER_PAGE);

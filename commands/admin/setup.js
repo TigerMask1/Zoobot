@@ -47,12 +47,11 @@ module.exports = {
     
     const embed = new EmbedBuilder()
       .setColor(0x00D9FF)
-      .setTitle('ZooBot Setup - Step 1/3')
+      .setTitle('ZooBot Setup - Step 1/2')
       .setDescription(
         'Welcome! Let\'s set up ZooBot for your server.\n\n' +
         `**Requirements:**\n` +
-        `• 3 Channels (drop, events, updates)\n` +
-        `• ${REQUIRED_CHARACTER_COUNT} Characters (currently: ${currentCharCount}/${REQUIRED_CHARACTER_COUNT})\n\n` +
+        `• 2 Channels (drop, events)\n\n` +
         '**Step 1: Drop Channel**\n' +
         'Where should characters appear for players to catch?\n\n' +
         'Please **mention a channel** (e.g., #game-drops) or type **skip** to keep the current setting.'
@@ -118,24 +117,6 @@ module.exports = {
             }
             data.eventsChannelId = channel.id;
           }
-          data.step = 3;
-          await sendStep3(m, data);
-          break;
-        }
-        
-        case 3: {
-          const channel = m.mentions.channels.first();
-          if (content !== 'skip') {
-            if (!channel) {
-              await m.reply('Please mention a valid channel (e.g., #bot-updates) or type "skip".');
-              return;
-            }
-            if (channel.type !== ChannelType.GuildText) {
-              await m.reply('Please select a text channel.');
-              return;
-            }
-            data.updatesChannelId = channel.id;
-          }
           await finalizeSetup(m, data, setupId, member);
           collector.stop('completed');
           break;
@@ -154,42 +135,6 @@ module.exports = {
   }
 };
 
-async function sendStep2(m, data) {
-  const embed = new EmbedBuilder()
-    .setColor(0x00D9FF)
-    .setTitle('ZooBot Setup - Step 2/3')
-    .setDescription(
-      '**Step 2: Events Channel**\n' +
-      'Where should special events, tournaments, and announcements be posted?\n\n' +
-      'Please **mention a channel** (e.g., #events) or type **skip**.'
-    )
-    .addFields({
-      name: 'Current Setting',
-      value: data.eventsChannelId ? `<#${data.eventsChannelId}>` : 'Not set',
-      inline: true
-    })
-    .setFooter({ text: 'Mention a channel or type "skip"' });
-  await m.reply({ embeds: [embed] });
-}
-
-async function sendStep3(m, data) {
-  const embed = new EmbedBuilder()
-    .setColor(0x00D9FF)
-    .setTitle('ZooBot Setup - Step 3/3')
-    .setDescription(
-      '**Step 3: Updates Channel**\n' +
-      'Where should bot updates and patch notes be posted?\n\n' +
-      'Please **mention a channel** (e.g., #bot-updates) or type **skip**.'
-    )
-    .addFields({
-      name: 'Current Setting',
-      value: data.updatesChannelId ? `<#${data.updatesChannelId}>` : 'Not set',
-      inline: true
-    })
-    .setFooter({ text: 'Mention a channel or type "skip"' });
-  await m.reply({ embeds: [embed] });
-}
-
 async function finalizeSetup(m, data, setupId, member) {
   try {
     const config = getServerConfig(data.serverId) || { serverId: data.serverId };
@@ -200,21 +145,12 @@ async function finalizeSetup(m, data, setupId, member) {
     if (data.eventsChannelId) {
       config.eventsChannelId = data.eventsChannelId;
     }
-    if (data.updatesChannelId) {
-      config.updatesChannelId = data.updatesChannelId;
-    }
     
-    const allChannelsSet = config.dropChannelId && config.eventsChannelId && config.updatesChannelId;
+    const allChannelsSet = config.dropChannelId && config.eventsChannelId;
     
-    const characterCount = await characterManager.getServerCharacterCount(data.serverId);
-    const hasEnoughCharacters = characterCount >= REQUIRED_CHARACTER_COUNT;
-    
-    const isFullySetup = allChannelsSet && hasEnoughCharacters;
-    if (isFullySetup) {
-      config.setupComplete = true;
+    config.setupComplete = allChannelsSet;
+    if (allChannelsSet) {
       config.setupDate = new Date().toISOString();
-    } else {
-      config.setupComplete = false;
     }
     
     config.serverId = data.serverId;
@@ -222,27 +158,16 @@ async function finalizeSetup(m, data, setupId, member) {
     
     pendingSetups.delete(setupId);
     
-    let statusEmoji, statusText, embedColor;
-    if (isFullySetup) {
-      statusEmoji = '✅';
-      statusText = 'Setup Complete!';
-      embedColor = 0x00FF00;
-    } else if (allChannelsSet && !hasEnoughCharacters) {
-      statusEmoji = '⚠️';
-      statusText = 'Channels Set - Characters Needed';
-      embedColor = 0xFFAA00;
-    } else {
-      statusEmoji = '⚠️';
-      statusText = 'Partial Setup';
-      embedColor = 0xFFAA00;
-    }
+    const statusEmoji = allChannelsSet ? '✅' : '⚠️';
+    const statusText = allChannelsSet ? 'Setup Complete!' : 'Partial Setup';
+    const embedColor = allChannelsSet ? 0x00FF00 : 0xFFAA00;
     
     const embed = new EmbedBuilder()
       .setColor(embedColor)
       .setTitle(`${statusEmoji} ${statusText}`)
-      .setDescription(isFullySetup 
-        ? 'ZooBot has been fully configured for your server! You can now start using all features.'
-        : 'Channel settings saved! Complete the requirements below to finish setup.')
+      .setDescription(allChannelsSet 
+        ? 'ZooBot has been fully configured for your server! Default characters have been loaded.'
+        : 'Channel settings saved! Set both channels to complete setup.')
       .addFields(
         { 
           name: 'Drop Channel', 
@@ -253,27 +178,15 @@ async function finalizeSetup(m, data, setupId, member) {
           name: 'Events Channel', 
           value: config.eventsChannelId ? `<#${config.eventsChannelId}>` : '❌ Not set', 
           inline: true 
-        },
-        { 
-          name: 'Updates Channel', 
-          value: config.updatesChannelId ? `<#${config.updatesChannelId}>` : '❌ Not set', 
-          inline: true 
         }
-      )
-      .addFields({
-        name: `Characters: ${characterCount}/${REQUIRED_CHARACTER_COUNT}`,
-        value: hasEnoughCharacters 
-          ? '✅ Character requirement met!' 
-          : `❌ You need **${REQUIRED_CHARACTER_COUNT - characterCount} more character(s)** to complete setup.\n\nAdd characters using:\n• \`!sc create\` - Create a custom character\n• \`!chars add <name>\` - Add a public character from the directory`,
-        inline: false
-      });
+      );
     
-    if (isFullySetup) {
+    if (allChannelsSet) {
       embed.addFields({
         name: 'What\'s Next?',
         value: 
-          '• `!chars` - Browse the global character directory\n' +
-          '• `!sc create` - Create more custom characters\n' +
+          '• `!chars` - Browse available characters\n' +
+          '• `!sc create` - Create custom characters\n' +
           '• `!help` - See all available commands'
       });
     }
@@ -288,4 +201,22 @@ async function finalizeSetup(m, data, setupId, member) {
     await m.reply('An error occurred while saving settings. Please try again.');
     pendingSetups.delete(setupId);
   }
+}
+
+async function sendStep2(m, data) {
+  const embed = new EmbedBuilder()
+    .setColor(0x00D9FF)
+    .setTitle('ZooBot Setup - Step 2/2')
+    .setDescription(
+      '**Step 2: Events Channel**\n' +
+      'Where should special events, tournaments, and announcements be posted?\n\n' +
+      'Please **mention a channel** (e.g., #events) or type **skip**.'
+    )
+    .addFields({
+      name: 'Current Setting',
+      value: data.eventsChannelId ? `<#${data.eventsChannelId}>` : 'Not set',
+      inline: true
+    })
+    .setFooter({ text: 'Mention a channel or type "skip"' });
+  await m.reply({ embeds: [embed] });
 }
