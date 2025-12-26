@@ -1916,21 +1916,19 @@ client.on('messageCreate', async (message) => {
   if (serverId && !isMainServer(serverId) && GAMEPLAY_COMMANDS.includes(command)) {
     const characterCount = await characterManager.getServerCharacterCount(serverId);
     const setupStatusCheck = getSetupStatus(serverId);
-    const channelsSet = setupStatusCheck.hasDropChannel && setupStatusCheck.hasEventsChannel && setupStatusCheck.hasUpdatesChannel;
-    const hasEnoughChars = characterCount >= MINIMUM_CHARACTERS_REQUIRED;
+    const channelsSet = setupStatusCheck.hasDropChannel && setupStatusCheck.hasEventsChannel;
+    const hasEnoughChars = true; // ZooBot default characters are always available
     
-    if (!hasEnoughChars || !channelsSet) {
+    if (!channelsSet) {
       let missingItems = [];
-      if (!hasEnoughChars) missingItems.push(`Add ${MINIMUM_CHARACTERS_REQUIRED - characterCount} more character(s) using \`!chars add <name>\` or \`!sc create\``);
       if (!setupStatusCheck.hasDropChannel) missingItems.push('Set drop channel using `!setdropchannel #channel`');
       if (!setupStatusCheck.hasEventsChannel) missingItems.push('Set events channel using `!seteventschannel #channel`');
-      if (!setupStatusCheck.hasUpdatesChannel) missingItems.push('Set updates channel using `!ss updates #channel`');
       
       await message.reply({
         embeds: [new EmbedBuilder()
           .setColor('#FF6B6B')
           .setTitle('⚠️ Server Setup Required')
-          .setDescription(`This server needs to complete setup before gameplay commands work.\n\n**Current Status:**\n🎭 Characters: **${characterCount}/${MINIMUM_CHARACTERS_REQUIRED}** ${hasEnoughChars ? '✅' : '❌'}\n📣 Channels: ${channelsSet ? '✅ All set' : '❌ Missing'}\n\n**To complete setup:**\n${missingItems.map(item => `• ${item}`).join('\n')}\n\nUse \`!setup\` to see full status.`)
+          .setDescription(`This server needs to complete setup before gameplay commands work.\n\n**Current Status:**\n📣 Channels: ${channelsSet ? '✅ All set' : '❌ Missing'}\n\n**To complete setup:**\n${missingItems.map(item => `• ${item}`).join('\n')}\n\nUse \`!setup\` to see full status.`)
           .setFooter({ text: 'Need help? Use !help or join our support server' })]
       });
       return;
@@ -1951,10 +1949,8 @@ client.on('messageCreate', async (message) => {
         }
         
         const setupStatusInfo = getSetupStatus(serverId);
-        const characterCount = await characterManager.getServerCharacterCount(serverId);
-        const channelsConfigured = setupStatusInfo.hasDropChannel && setupStatusInfo.hasEventsChannel && setupStatusInfo.hasUpdatesChannel;
-        const hasEnoughChars = characterCount >= MINIMUM_CHARACTERS_REQUIRED;
-        const setupIsComplete = channelsConfigured && hasEnoughChars;
+        const channelsConfigured = setupStatusInfo.hasDropChannel && setupStatusInfo.hasEventsChannel;
+        const setupIsComplete = channelsConfigured;
         
         const setupEmbed = new EmbedBuilder()
           .setColor(setupIsComplete ? '#10B981' : '#F59E0B')
@@ -1963,25 +1959,19 @@ client.on('messageCreate', async (message) => {
             ? `Your server is fully set up and ready to go!`
             : `Welcome! Let's set up ZooBot for your server.`)
           .addFields(
-            { name: 'Characters', value: `${characterCount}/${MINIMUM_CHARACTERS_REQUIRED} ${hasEnoughChars ? '✅' : '❌'}`, inline: true },
             { name: 'Drop Channel', value: setupStatusInfo.hasDropChannel ? '✅ Set' : '❌ Not set', inline: true },
-            { name: 'Events Channel', value: setupStatusInfo.hasEventsChannel ? '✅ Set' : '❌ Not set', inline: true },
-            { name: 'Updates Channel', value: setupStatusInfo.hasUpdatesChannel ? '✅ Set' : '❌ Not set', inline: true }
+            { name: 'Events Channel', value: setupStatusInfo.hasEventsChannel ? '✅ Set' : '❌ Not set', inline: true }
           )
           .setThumbnail(message.guild?.iconURL({ dynamic: true }) || null);
         
         if (!setupIsComplete) {
           let todoList = '';
-          if (!hasEnoughChars) {
-            todoList += `\n• Add **${MINIMUM_CHARACTERS_REQUIRED - characterCount}** more character(s):\n  \`!chars\` - Browse & add from global directory\n  \`!sc create\` - Create a custom character`;
-          }
           if (!setupStatusInfo.hasDropChannel) {
             todoList += `\n• \`!setdropchannel #channel\` - Set drop channel`;
           }
           if (!setupStatusInfo.hasEventsChannel) {
             todoList += `\n• \`!seteventschannel #channel\` - Set events channel`;
           }
-          // Updates channel removed - only drop and events channels required
           setupEmbed.addFields({ name: 'To Complete Setup:', value: todoList, inline: false });
         }
         
@@ -6664,7 +6654,7 @@ client.on('messageCreate', async (message) => {
             },
             { 
               name: '🛡️ ZooAdmin (Server Customization)', 
-              value: '**Role Name:** `ZooAdmin` (case insensitive)\n\nCreate this role in your Discord server and assign it to trusted users who should manage the bot.\n\n**Commands:**\n• `!setup` - Server setup\n• `!setdropchannel` - Configure drop channel\n• `!seteventschannel` - Configure events channel\n• `!setupdateschannel` - Configure updates channel\n• `!paydrops` - Activate drops (100 gems/3h)\n• `!setemoji` - Custom character emojis\n• `!setchestgif` - Custom chest GIFs'
+              value: '**Role Name:** `ZooAdmin` (case insensitive)\n\nCreate this role in your Discord server and assign it to trusted users who should manage the bot.\n\n**Commands:**\n• `!setup` - Server setup\n• `!setdropchannel` - Configure drop channel\n• `!seteventschannel` - Configure events channel\n• `!paydrops` - Activate drops (100 gems/3h)\n• `!setemoji` - Custom character emojis\n• `!setchestgif` - Custom chest GIFs'
             },
             { 
               name: '🔧 Bot Admin (Legacy System)', 
@@ -6781,7 +6771,7 @@ client.on('messageCreate', async (message) => {
             { name: '👥 Clans', value: '`!clan` - View your clan\n`!joinclan <name>` - Join clan\n`!leaveclan` - Leave clan\n`!clandonate` - Donate to clan\n`!clanleaderboard` - Clan rankings' },
             { name: '🎉 Giveaways **[AUTO-SCHEDULED]**', value: '`!giveaway` - View active giveaway\n`!autogiveaway enable/disable` - Auto daily giveaways (Bot Admin)\n`!startgiveaway <mins>` - Manual giveaway (Bot Admin)\n`!endgiveaway` - End giveaway (Bot Admin)\n\n💎 Prizes: 5000 gems, 10000 coins, 2x legendary crates' },
             { name: '🎰 Lottery **[AUTO-SCHEDULED]**', value: '`!lottery` - View lottery info (shows if you joined)\n`!lottery join <tickets>` - Buy lottery tickets\n`!autolottery enable/disable <fee> <coins/gems>` - Auto 12h lottery (Bot Admin)\n`!startlottery <3h/6h/24h> <fee> <coins/gems>` - Manual lottery (Bot Admin)\n`!stoplottery` - End lottery early (Bot Admin)' },
-            { name: '🔧 Server Setup (Admins)', value: '`!setup` - Server setup guide\n`!setdropchannel #channel`\n`!seteventschannel #channel`\n`!setupdateschannel #channel`\n`!addadmin @user` - Add bot admin\n`!removeadmin @user` - Remove admin' },
+            { name: '🔧 Server Setup (Admins)', value: '`!setup` - Server setup guide\n`!setdropchannel #channel`\n`!seteventschannel #channel`\n`!addadmin @user` - Add bot admin\n`!removeadmin @user` - Remove admin' },
             { name: '👑 Super Admin', value: '`!servers` - List all servers\n`!removeserver <id>` - Remove bot from server\n`!postupdate <msg>` - Post update to all servers\n`!grant` - Grant resources\n`!grantchar` - Grant characters\n`!sendmail` - Send mail to all\n`!postnews` - Post news\n`!reset` - Reset all data' },
             { name: '⚒️ Work & Economy **[NEW!]**', value: '`!work` - Complete jobs for rewards\n`!workguide` - Complete work system guide\n`!craft` - Craft tools\n`!market` - Buy/sell items\n`!auctions` - Bid on auctions\n💡 **All new workers get FREE starter tools!**' },
             { name: 'ℹ️ Information', value: '`!overview` - Game systems overview\n`!botinfo` - About ZooBot\n`!history @user` - Transaction history' }
@@ -6812,7 +6802,7 @@ client.on('messageCreate', async (message) => {
             { name: '👥 Clan Wars', value: 'Join clans, donate resources, compete in weekly clan wars for exclusive prizes!' },
             { name: '🔑 Key & Cage System', value: 'Collect character keys (1000 to unlock specific character) or cage keys (250 for random unlock)!' },
             { name: '📬 Mail System **[UPDATED]**', value: 'Receive mail from admins with rewards. **New:** Use `!clearmail` to clean up claimed messages!' },
-            { name: '📰 News & Updates **[NEW]**', value: 'Stay informed with bot updates posted to your server\'s updates channel!' },
+            { name: '📰 News & Updates **[NEW]**', value: 'Stay informed with bot updates posted to your server!' },
             { name: '🎨 Custom Emojis & Visuals', value: 'Characters can have custom Discord emojis, and crates have customizable opening GIF animations!' },
             { name: '💎 Economy System', value: 'Earn and spend Coins, Gems, Shards, Trophies, and character-specific Tokens!' }
           )
