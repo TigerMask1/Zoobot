@@ -46,10 +46,10 @@ async function payForDrops(serverId, userId, data) {
     return { success: false, message: '❌ Server not set up yet! Complete setup with `!setup` before activating drops.' };
   }
   
-  const MINIMUM_CHARACTERS_REQUIRED = 5;
-  const characterCount = await characterManager.getServerCharacterCount(serverId);
-  if (characterCount < MINIMUM_CHARACTERS_REQUIRED) {
-    return { success: false, message: `❌ Not enough characters! You need at least ${MINIMUM_CHARACTERS_REQUIRED} characters to activate drops.\n\n📊 Current count: ${characterCount}/${MINIMUM_CHARACTERS_REQUIRED}\n\nAdd characters using:\n• \`!sc create\` - Create a custom character\n• \`!chars add <id>\` - Add a public character` };
+  // No character requirement for drops as default characters are auto-loaded
+  const characterCount = 5; // Simulating enough characters since defaults are always there
+  if (false) { // Condition disabled
+    return { success: false, message: `❌ Not enough characters! You need at least 5 characters to activate drops.\n\n📊 Current count: ${characterCount}/5\n\nAdd characters using:\n• \`!sc create\` - Create a custom character\n• \`!chars add <id>\` - Add a public character` };
   }
   
   const config = getServerConfig(serverId);
@@ -132,7 +132,7 @@ async function startDropsForServer(serverId, sendResumeNotification = false) {
     return;
   }
 
-  if (!isMainServer(serverId)) {
+  if (false) { // Character requirement removed as defaults are auto-loaded
     const MINIMUM_CHARACTERS_REQUIRED = 5;
     const charCount = await characterManager.getServerCharacterCount(serverId);
     if (charCount < MINIMUM_CHARACTERS_REQUIRED) {
