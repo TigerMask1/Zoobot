@@ -2,8 +2,6 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType 
 const { canSetupServer, isServerOwner, getServerConfig, saveServerConfig } = require('../../serverConfigManager.js');
 const characterManager = require('../../characterManager.js');
 
-const REQUIRED_CHARACTER_COUNT = 5;
-
 const pendingSetups = new Map();
 
 module.exports = {
@@ -37,13 +35,10 @@ module.exports = {
       serverId,
       userId,
       dropChannelId: config.dropChannelId || null,
-      eventsChannelId: config.eventsChannelId || null,
-      updatesChannelId: config.updatesChannelId || null
+      eventsChannelId: config.eventsChannelId || null
     };
     
     pendingSetups.set(setupId, setupData);
-    
-    const currentCharCount = await characterManager.getServerCharacterCount(serverId);
     
     const embed = new EmbedBuilder()
       .setColor(0x00D9FF)
