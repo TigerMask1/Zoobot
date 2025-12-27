@@ -2,9 +2,9 @@ const { EmbedBuilder } = require('discord.js');
 const { saveDataImmediate } = require('./dataManager.js');
 
 const UST_RATES = {
-  firstPlace: 100,
-  secondPlace: 60,
-  thirdPlace: 40,
+  firstPlace: 50,
+  secondPlace: 25,
+  thirdPlace: 10,
   minimumPool: 200
 };
 
@@ -105,24 +105,22 @@ async function distributeUSTRewards(client, data, clanRankings) {
   
   for (let i = 0; i < Math.min(clanRankings.length, 3); i++) {
     const clan = clanRankings[i];
-    const ustReward = ustDistribution[i];
+    const baseUstReward = ustDistribution[i];
     
-    clan.lastWeekUSTReward = ustReward;
+    clan.lastWeekUSTReward = baseUstReward;
     
-    const totalWeeklyContribution = Object.values(clan.members)
-      .reduce((sum, member) => sum + member.weeklyContribution, 0);
+    const memberCount = Object.keys(clan.members).length;
+    if (memberCount === 0) continue;
     
-    if (totalWeeklyContribution === 0) continue;
-    
+    // Total pool for this clan is based on the rank
+    // Each member gets the base amount for their rank
     for (const userId in clan.members) {
       const member = clan.members[userId];
       
+      // Only reward members who were active this week
       if (member.weeklyContribution === 0) continue;
       
-      const userShare = (member.weeklyContribution / totalWeeklyContribution);
-      const ustAmount = Math.floor(ustReward * userShare);
-      
-      if (ustAmount === 0) continue;
+      const ustAmount = baseUstReward;
       
       if (data.users[userId]) {
         initializeUSTData(data.users[userId]);

@@ -77,6 +77,9 @@ async function payForDrops(serverId, userId, data) {
   // Restart drops for this server to begin immediately
   await startDropsForServer(serverId);
   
+  // Force an immediate drop execution to confirm it works
+  setTimeout(() => executeDrop(serverId), 5000);
+  
   console.log(`✅ payForDrops: Drops started for server ${serverId}, expires at ${new Date(expiryTime).toISOString()}`);
   
   const expiryDate = new Date(expiryTime);
@@ -129,6 +132,12 @@ async function startDropsForServer(serverId, sendResumeNotification = false) {
 
   if (!isMainServer(serverId) && !isServerSetup(serverId)) {
     console.log(`⚠️ Server ${serverId} not set up yet, skipping drops`);
+    return;
+  }
+  
+  // Ensure we have active data and client
+  if (!activeClient || !activeData) {
+    console.log(`⚠️ Bot not fully ready, delaying drops for ${serverId}`);
     return;
   }
 
