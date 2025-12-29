@@ -626,6 +626,14 @@ async function endAIBattle(battle, channel, data) {
     }
     
     await saveDataImmediate(data);
+
+    // Record New Year Event progress for AI battles
+    try {
+      const { recordEventProgress } = require('./newYearEventSystem.js');
+      await recordEventProgress(data, battle.player1, 'battle');
+    } catch (e) {
+      console.error('Error recording New Year AI battle progress:', e);
+    }
     
     const victoryEmbed = new EmbedBuilder()
       .setColor('#FFD700')
@@ -651,6 +659,14 @@ async function endAIBattle(battle, channel, data) {
     }
     
     await saveDataImmediate(data);
+
+    // Record New Year Event progress for AI battles (even on loss)
+    try {
+      const { recordEventProgress } = require('./newYearEventSystem.js');
+      await recordEventProgress(data, battle.player1, 'battle');
+    } catch (e) {
+      console.error('Error recording New Year AI battle progress:', e);
+    }
     
     const defeatEmbed = new EmbedBuilder()
       .setColor('#FF0000')
