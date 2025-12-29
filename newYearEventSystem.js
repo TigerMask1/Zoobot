@@ -35,7 +35,6 @@ async function recordEventProgress(data, userId, type) {
   if (!data || !data.users) return;
   const user = data.users[userId];
   if (!user) return;
-  if (!user) return;
 
   const event = initializeNewYearData(user);
   if (event.completed) return;
