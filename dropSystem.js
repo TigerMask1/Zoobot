@@ -509,6 +509,14 @@ async function executeDrop(serverId) {
       isServerSpecific: selectedDrop.isServerSpecific || false
     };
 
+    // Record New Year Event progress for catching a drop
+    try {
+      const { recordEventProgress } = require('./newYearEventSystem.js');
+      await recordEventProgress(activeData, userId, 'drop');
+    } catch (e) {
+      console.error('Error recording New Year drop progress:', e);
+    }
+
     saveData(activeData);
 
   } catch (error) {
