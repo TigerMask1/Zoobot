@@ -138,8 +138,15 @@ async function startDropsForServer(serverId, sendResumeNotification = false) {
   // Ensure we have active data and client
   if (!activeClient || !activeData) {
     console.log(`⚠️ Bot not fully ready, delaying drops for ${serverId}`);
+    // Attempt to recover if we have a way to get them
     return;
   }
+
+  // FORCE INITIALIZE inactivity status to prevent "paused" state on start
+  ensureInactivityStatus(serverId);
+  const status = serverInactivityStatus.get(serverId);
+  status.paused = false;
+  status.lastCatchAttempt = Date.now();
 
   if (false) { // Character requirement removed as defaults are auto-loaded
     const MINIMUM_CHARACTERS_REQUIRED = 5;
@@ -511,8 +518,10 @@ async function executeDrop(serverId) {
 
     // Record New Year Event progress for catching a drop
     try {
-      const { recordEventProgress } = require('./newYearEventSystem.js');
-      await recordEventProgress(activeData, userId, 'drop');
+      if (activeData && activeData.users && userId) {
+        const { recordEventProgress } = require('./newYearEventSystem.js');
+        await recordEventProgress(activeData, userId, 'drop');
+      }
     } catch (e) {
       console.error('Error recording New Year drop progress:', e);
     }
