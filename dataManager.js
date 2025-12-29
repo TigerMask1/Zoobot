@@ -94,6 +94,17 @@ function backfillUserData(data) {
       needsSave = true;
     }
     
+    if (user.newYearEvent === undefined) {
+      user.newYearEvent = {
+        points: 0,
+        piecesUnlocked: [],
+        battlesCompleted: 0,
+        dropsCaught: 0,
+        completed: false
+      };
+      needsSave = true;
+    }
+    
     if (user.completedQuests === undefined) {
       user.completedQuests = [];
       needsSave = true;

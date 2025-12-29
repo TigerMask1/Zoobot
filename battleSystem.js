@@ -1120,6 +1120,15 @@ async function endBattle(battle, channel, data, reason, winner = null) {
     
     await eventSystem.recordProgress(winner, data.users[winner].username, 5, 'trophy_hunt');
     
+    // Record New Year Event progress for battles
+    try {
+      const { recordEventProgress } = require('./newYearEventSystem.js');
+      await recordEventProgress(data, winner, 'battle');
+      await recordEventProgress(data, loser, 'battle');
+    } catch (e) {
+      console.error('Error recording New Year battle progress:', e);
+    }
+    
     await saveDataImmediate(data);
     
     if (reason === 'flee') {
