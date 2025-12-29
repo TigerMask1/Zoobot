@@ -12,7 +12,6 @@
   "description": "",
   "dependencies": {
     "bcryptjs": "^3.0.3",
-    "canvas": "^3.2.0",
     "cli-progress": "^3.12.0",
     "cookie-parser": "^1.4.7",
     "discord.js": "^14.25.1",
