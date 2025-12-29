@@ -517,14 +517,8 @@ async function executeDrop(serverId) {
     };
 
     // Record New Year Event progress for catching a drop
-    try {
-      if (activeData && activeData.users && userId) {
-        const { recordEventProgress } = require('./newYearEventSystem.js');
-        await recordEventProgress(activeData, userId, 'drop');
-      }
-    } catch (e) {
-      console.error('Error recording New Year drop progress:', e);
-    }
+    // Note: Progress is now recorded inside catch.js or index.js when a user successfully catches the drop
+    // as executeDrop doesn't have the catching user's ID yet.
 
     saveData(activeData);
 

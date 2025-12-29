@@ -4021,6 +4021,14 @@ client.on('messageCreate', async (message) => {
                 trackChallengeProgress(data.users[userId], 'dropsCaught', 1);
                 checkAchievements(data.users[userId]);
                 updateTaskProgress(data.users[userId], 'dropsCaught', 1);
+
+                // Record New Year Event progress
+                try {
+                  const { recordEventProgress } = require('./newYearEventSystem.js');
+                  await recordEventProgress(data, userId, 'drop');
+                } catch (e) {
+                  console.error('Error recording New Year drop progress:', e);
+                }
                 
                 if (message.guild) {
                   recordEvent(data, message.guild.id, 'dropsClaimed', 1, userId);
