@@ -23,7 +23,15 @@ function initializeNewYearData(user) {
   return user.newYearEvent;
 }
 
+function isEventActive() {
+  const now = new Date();
+  const endEvent = new Date('2026-01-03T00:00:00Z'); // Ends after January 2nd
+  return now < endEvent;
+}
+
 async function recordEventProgress(data, userId, type) {
+  if (!isEventActive()) return;
+
   const user = data.users[userId];
   if (!user) return;
 
@@ -81,6 +89,7 @@ module.exports = {
   recordEventProgress,
   getPuzzleDisplay,
   createProgressBar,
+  isEventActive,
   PIECES_COUNT,
   MILESTONE_POINTS,
   UNLOCK_ORDER

@@ -4,13 +4,18 @@ const {
   getPuzzleDisplay, 
   createProgressBar, 
   PIECES_COUNT, 
-  MILESTONE_POINTS 
+  MILESTONE_POINTS,
+  isEventActive
 } = require('../../newYearEventSystem.js');
 
 module.exports = {
   name: 'newyear',
   description: 'Check your New Year jigsaw puzzle progress!',
   async execute(message, args, data) {
+    if (!isEventActive()) {
+      return message.reply('🎆 The New Year event has ended! Happy 2026!');
+    }
+
     const user = data.users[message.author.id];
     if (!user) return;
 
