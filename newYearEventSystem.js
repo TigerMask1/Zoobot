@@ -10,6 +10,24 @@ const POINTS_PER_DROP = 10;
 // Then others: Top-Middle (1), Middle-Left (3), Middle-Middle (4), Middle-Right (5), Bottom-Middle (7)
 const UNLOCK_ORDER = [0, 2, 6, 8, 1, 3, 4, 5, 7];
 
+// 10 progressive images (0 to 9 pieces)
+const PROGRESSIVE_IMAGES = [
+  'https://replit.com/attached_assets/IMG_20251231_091732_1767152907483.jpg', // 0 pieces
+  'https://replit.com/attached_assets/IMG_20251231_084319_1767152907516.jpg', // 1 piece
+  'https://replit.com/attached_assets/IMG_20251231_084349_1767152907553.jpg', // 2 pieces
+  'https://replit.com/attached_assets/IMG_20251231_084420_1767152907581.jpg', // 3 pieces
+  'https://replit.com/attached_assets/IMG_20251231_084447_1767152907611.jpg', // 4 pieces
+  'https://replit.com/attached_assets/IMG_20251231_091253_1767152907631.jpg', // 5 pieces
+  'https://replit.com/attached_assets/IMG_20251231_091355_1767152907654.jpg', // 6 pieces
+  'https://replit.com/attached_assets/IMG_20251231_091428_1767152907684.jpg', // 7 pieces
+  'https://replit.com/attached_assets/IMG_20251231_091507_1767152907714.jpg', // 8 pieces
+  'https://replit.com/attached_assets/IMG_20251231_091540_1767152907746.jpg'  // 9 pieces (Complete)
+];
+
+function getPuzzleImage(piecesCount) {
+  return PROGRESSIVE_IMAGES[piecesCount] || PROGRESSIVE_IMAGES[0];
+}
+
 function initializeNewYearData(user) {
   if (!user.newYearEvent) {
     user.newYearEvent = {
@@ -110,6 +128,7 @@ module.exports = {
   initializeNewYearData,
   recordEventProgress,
   getPuzzleDisplay,
+  getPuzzleImage,
   createProgressBar,
   isEventActive,
   PIECES_COUNT,
