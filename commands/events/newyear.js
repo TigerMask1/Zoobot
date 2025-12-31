@@ -11,11 +11,15 @@ const {
 module.exports = {
   name: 'newyear',
   description: 'Check your New Year jigsaw puzzle progress!',
-  async execute(message, args, data) {
+  async execute(context) {
+    const { message, args, data } = context;
     if (!isEventActive()) {
       return message.reply('🎆 The New Year event has ended! Happy 2026!');
     }
 
+    if (!data || !data.users) {
+      return message.reply('❌ System error: User data not found. Please try again later.');
+    }
     const user = data.users[message.author.id];
     if (!user) return;
 
