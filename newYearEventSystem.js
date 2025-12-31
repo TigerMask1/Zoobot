@@ -57,6 +57,16 @@ async function recordEventProgress(data, userId, type) {
     if (nextPieceIndex !== undefined && !event.piecesUnlocked.includes(nextPieceIndex)) {
       event.piecesUnlocked.push(nextPieceIndex);
       newlyUnlocked.push(nextPieceIndex);
+      
+      // Grant incremental rewards for each piece
+      // Pieces 1-8: Coins and Gems
+      // Piece 9: Tyrant Crate (handled below)
+      if (event.piecesUnlocked.length < PIECES_COUNT) {
+        const coinReward = 500;
+        const gemReward = 5;
+        user.coins = (user.coins || 0) + coinReward;
+        user.gems = (user.gems || 0) + gemReward;
+      }
     } else if (nextPieceIndex === undefined) {
       break;
     } else {

@@ -52,11 +52,18 @@ module.exports = {
       .setColor('#FF4500')
       .setTitle('🎆 New Year Jigsaw Puzzle')
       .setDescription(`Complete tasks to unlock pieces and earn a **Tyrant Crate**!\n\n**Time Remaining:** \`${timeString}\` ⏳\n\n**Progress:** ${event.piecesUnlocked.length}/${PIECES_COUNT} Pieces\n${progressText}\n\n**Next Reward:** ${nextReward}\n\n**How to earn points:**\n⚔️ **Battle (AI or PvP):** +5 points\n🎁 **Catch a Drop:** +10 points\n\n**Stats:**\n⚔️ Battles: ${event.battlesCompleted}\n🎁 Drops: ${event.dropsCaught}\n✨ Total: ${event.points}/${totalMaxPoints}\n\n**Puzzle Map:**\n${puzzleGrid}`)
-      .addFields({ 
-        name: '🎁 Grand Reward', 
-        value: 'Unlock all 9 pieces to receive 1x **Tyrant Crate**! 🔴', 
-        inline: false 
-      })
+      .addFields(
+        { 
+          name: '🧩 Individual Piece Rewards', 
+          value: 'Each piece unlocked grants **500 Coins** 💰 and **5 Gems** 💎!', 
+          inline: false 
+        },
+        { 
+          name: '🎁 Grand Reward', 
+          value: 'Unlock all 9 pieces to receive 1x **Tyrant Crate**! 🔴', 
+          inline: false 
+        }
+      )
       .setFooter({ text: 'Unlock pieces every 50 points! Corners first.' })
       .setTimestamp();
 
