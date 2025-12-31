@@ -25,7 +25,8 @@ function initializeNewYearData(user) {
 
 function isEventActive() {
   const now = new Date();
-  const endEvent = new Date('2026-01-03T00:00:00Z'); // Ends after January 2nd
+  // Ensure we use a fixed UTC date for consistent expiration
+  const endEvent = new Date(Date.UTC(2026, 0, 3, 0, 0, 0)); // January 3rd, 2026 00:00:00 UTC
   return now < endEvent;
 }
 
@@ -53,13 +54,23 @@ async function recordEventProgress(data, userId, type) {
 
   while (event.piecesUnlocked.length < piecesShouldHave) {
     const nextPieceIndex = UNLOCK_ORDER[event.piecesUnlocked.length];
-    event.piecesUnlocked.push(nextPieceIndex);
-    newlyUnlocked.push(nextPieceIndex);
+    if (nextPieceIndex !== undefined && !event.piecesUnlocked.includes(nextPieceIndex)) {
+      event.piecesUnlocked.push(nextPieceIndex);
+      newlyUnlocked.push(nextPieceIndex);
+    } else if (nextPieceIndex === undefined) {
+      break;
+    } else {
+      // Avoid infinite loop if somehow already included but length is smaller (integrity check)
+      event.piecesUnlocked = [...new Set(event.piecesUnlocked)];
+      if (event.piecesUnlocked.length >= piecesShouldHave) break;
+    }
   }
 
   if (piecesShouldHave === PIECES_COUNT && !event.completed) {
     event.completed = true;
     user.tyrantCrates = (user.tyrantCrates || 0) + 1;
+    // Save immediately to prevent double-granting crate if called rapidly
+    await saveDataImmediate(data);
     return { completed: true, newlyUnlocked };
   }
 
